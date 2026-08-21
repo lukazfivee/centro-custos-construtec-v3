@@ -1,0 +1,138 @@
+name: Bootstrap V3
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/bootstrap-v3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  importar:
+    name: Importar base completa para V3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do novo repositorio
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Clonar a versao final validada
+        run: |
+          git clone --depth 1 --branch chatgpt/p5-p8-suite-final https://github.com/lukazfivee/centro-custos-construtec.git /tmp/origem
+          rm -rf /tmp/origem/.git
+
+      - name: Copiar todos os arquivos
+        run: |
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/origem/. .
+          mkdir -p .github/workflows
+          cp /tmp/origem/.github/workflows/ci.yml .github/workflows/ci.yml || true
+
+      - name: Ajustar identidade V3 e workflows
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = JSON.parse(fs.readFileSync('package.json','utf8'));
+          p.version = '3.0.0';
+          p.description = 'Centro de Custos Construtec V3 - gestao financeira offline com sincronizacao inteligente';
+          p.devDependencies = p.devDependencies || {};
+          p.devDependencies.electron = '^41.7.1';
+          p.devDependencies['electron-builder'] = '^26.15.3';
+          p.build = p.build || {};
+          p.build.publish = { provider:'github', owner:'lukazfivee', repo:'centro-custos-construtec-v3' };
+          p.build.win = p.build.win || {};
+          p.build.win.artifactName = 'Centro-de-Custos-Construtec-${version}-${arch}.${ext}';
+          p.build.nsis = p.build.nsis || {};
+          p.build.nsis.artifactName = 'Centro-de-Custos-Construtec-Setup-${version}-${arch}.${ext}';
+          p.build.portable = { artifactName:'Centro-de-Custos-Construtec-Portable-${version}-${arch}.${ext}' };
+          fs.writeFileSync('package.json', JSON.stringify(p,null,2)+'\n');
+          NODE
+          rm -f .github/workflows/build-final-windows.yml .github/workflows/refresh-lock.yml .github/workflows/bootstrap-v3.yml
+
+      - name: Regenerar lockfile com dependencias seguras
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --package-lock-only --ignore-scripts
+          npm audit --audit-level=high
+
+      - name: Validar codigo
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+          JWT_SECRET: segredo-v3-ci-com-mais-de-trinta-e-dois-caracteres
+          ADMIN_INITIAL_PASSWORD: senha-v3-ci-segura-123
+        run: |
+          npm ci
+          npm run verify
+
+      - name: Criar workflow de build Windows
+        run: |
+          mkdir -p .github/workflows
+          cat > .github/workflows/build-windows.yml <<'YAML'
+          name: Build Windows V3
+
+          on:
+            workflow_dispatch:
+            push:
+              branches: [main]
+              paths:
+                - 'package.json'
+                - 'package-lock.json'
+                - 'desktop/**'
+                - 'public/**'
+                - 'routes/**'
+                - 'services/**'
+                - 'lib/**'
+                - 'middleware/**'
+                - 'migrations/**'
+                - 'server.js'
+                - 'db.js'
+                - '.github/workflows/build-windows.yml'
+
+          permissions:
+            contents: read
+
+          jobs:
+            build:
+              name: Gerar instalador Windows x64
+              runs-on: windows-latest
+              timeout-minutes: 35
+              env:
+                JWT_SECRET: build-local-v3-sem-uso-em-producao-123456789
+                ADMIN_INITIAL_PASSWORD: senha-build-v3-local-123
+              steps:
+                - uses: actions/checkout@v6
+                - uses: actions/setup-node@v6
+                  with:
+                    node-version: 20
+                    cache: npm
+                - name: Instalar dependencias
+                  run: npm ci
+                - name: Auditoria de seguranca
+                  run: npm audit --audit-level=high
+                - name: Testar aplicacao
+                  run: npm run verify
+                - name: Gerar instalador e versao portatil
+                  run: npm run build
+                - name: Publicar artefatos
+                  uses: actions/upload-artifact@v4
+                  with:
+                    name: Centro-de-Custos-Construtec-v3.0.0-Windows
+                    path: |
+                      dist/*.exe
+                      dist/latest*.yml
+                    if-no-files-found: error
+                    retention-days: 30
+          YAML
+
+      - name: Registrar importacao no novo repositorio
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat: importa Centro de Custos Construtec V3 completo'
+          git push origin main
