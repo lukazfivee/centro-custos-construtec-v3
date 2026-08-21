@@ -1,5 +1,6 @@
 require('dotenv').config();
 if (!process.env.REPORT_API_URL) process.env.REPORT_API_URL = 'https://centro-custos-reports.construtec-reports.workers.dev';
+if (!process.env.SYNC_API_URL) process.env.SYNC_API_URL = 'https://centro-custos-api.construtec-reports.workers.dev';
 const express = require('express');
 const os = require('os');
 const path = require('path');
@@ -36,7 +37,7 @@ function createApp() {
         status:'ok',database:'connected',version:pkg.version,uptimeSeconds:Math.round(process.uptime()),
         databaseLatencyMs:Math.round(databaseLatencyMs * 100) / 100,instancia:getInstanceIdentity(),
         reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL),
-        cloudSyncConfigured:Boolean(process.env.SYNC_API_URL && process.env.SYNC_SHARED_KEY),
+        cloudSyncConfigured:Boolean(process.env.SYNC_API_URL),
       });
     } catch (error) { next(error); }
   });
@@ -154,13 +155,13 @@ async function start() {
   startReportDelivery();
 
   const t4 = Date.now();
-  logger.info('application_started', { performanceMs:{env:t1-t0,database:t2-t1,app:t3-t2,listen:t4-t3,total:t4-t0}, databaseMode:info.mode, instance:info.instance.name, host, port, reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL), cloudSyncConfigured:Boolean(process.env.SYNC_API_URL && process.env.SYNC_SHARED_KEY) });
+  logger.info('application_started', { performanceMs:{env:t1-t0,database:t2-t1,app:t3-t2,listen:t4-t3,total:t4-t0}, databaseMode:info.mode, instance:info.instance.name, host, port, reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL), cloudSyncConfigured:Boolean(process.env.SYNC_API_URL) });
   console.log(`\nCentro de Custos — ${info.instance.name}`);
   console.log(`Banco: ${info.mode === 'pglite' ? `local (${info.dataDir})` : 'PostgreSQL central'}`);
   console.log(`Abrir no navegador: http://localhost:${port}`);
   if (host === '0.0.0.0') localIPv4s().forEach((ip) => console.log(`Rede local: http://${ip}:${port}`));
   console.log(`Reports: ${process.env.REPORT_API_URL ? 'entrega central habilitada' : 'fila local aguardando configuração central'}.`);
-  console.log(`Cloud Sync: ${process.env.SYNC_API_URL && process.env.SYNC_SHARED_KEY ? 'habilitado para contas corporativas' : 'aguardando configuração'}.\n`);
+  console.log(`Cloud Sync: ${process.env.SYNC_API_URL ? 'API corporativa configurada' : 'aguardando configuração'}.\n`);
 
   let shuttingDown = false;
   async function shutdown(reason = 'manual') {
