@@ -42,7 +42,6 @@
       "output": "dist"
     },
     "files": [
-      ".env",
       "server.js",
       "db.js",
       "routes/**/*",
