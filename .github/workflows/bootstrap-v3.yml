@@ -2,9 +2,6 @@ name: Bootstrap V3
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/bootstrap-v3.yml'
   issues:
     types: [opened]
 
@@ -16,6 +13,7 @@ jobs:
   importar:
     name: Importar base completa para V3
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout do novo repositorio
         uses: actions/checkout@v6
@@ -32,9 +30,8 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a /tmp/origem/. .
           mkdir -p .github/workflows
-          cp /tmp/origem/.github/workflows/ci.yml .github/workflows/ci.yml || true
 
-      - name: Ajustar identidade V3 e workflows
+      - name: Ajustar identidade V3 e dependencias
         run: |
           node - <<'NODE'
           const fs = require('fs');
@@ -42,8 +39,8 @@ jobs:
           p.version = '3.0.0';
           p.description = 'Centro de Custos Construtec V3 - gestao financeira offline com sincronizacao inteligente';
           p.devDependencies = p.devDependencies || {};
-          p.devDependencies.electron = '^41.7.1';
-          p.devDependencies['electron-builder'] = '^26.15.3';
+          p.devDependencies.electron = '^43.4.0';
+          p.devDependencies['electron-builder'] = '^26.15.7';
           p.build = p.build || {};
           p.build.publish = { provider:'github', owner:'lukazfivee', repo:'centro-custos-construtec-v3' };
           p.build.win = p.build.win || {};
@@ -55,13 +52,26 @@ jobs:
           NODE
           rm -f .github/workflows/build-final-windows.yml .github/workflows/refresh-lock.yml .github/workflows/bootstrap-v3.yml
 
-      - name: Regenerar lockfile com dependencias seguras
+      - name: Regenerar lockfile
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: |
           rm -rf node_modules package-lock.json
           npm install --package-lock-only --ignore-scripts
-          npm audit --audit-level=high
+
+      - name: Auditoria de seguranca
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        run: |
+          npm audit --json > audit-v3.json || true
+          node - <<'NODE'
+          const fs = require('fs');
+          const audit = JSON.parse(fs.readFileSync('audit-v3.json','utf8'));
+          const v = audit.metadata?.vulnerabilities || {};
+          console.log(`Vulnerabilidades: critical=${v.critical||0}, high=${v.high||0}, moderate=${v.moderate||0}, low=${v.low||0}`);
+          if ((v.critical||0) > 0 || (v.high||0) > 0) process.exit(1);
+          NODE
+          rm -f audit-v3.json
 
       - name: Validar codigo
         env:
@@ -72,9 +82,41 @@ jobs:
           npm ci
           npm run verify
 
+      - name: Criar workflow de verificacao continua
+        run: |
+          cat > .github/workflows/ci.yml <<'YAML'
+          name: Verificacao V3
+
+          on:
+            push:
+              branches: [main]
+            pull_request:
+              branches: [main]
+
+          permissions:
+            contents: read
+
+          jobs:
+            test:
+              runs-on: ubuntu-latest
+              timeout-minutes: 15
+              env:
+                ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+                JWT_SECRET: segredo-v3-ci-com-mais-de-trinta-e-dois-caracteres
+                ADMIN_INITIAL_PASSWORD: senha-v3-ci-segura-123
+              steps:
+                - uses: actions/checkout@v6
+                - uses: actions/setup-node@v6
+                  with:
+                    node-version: 20
+                    cache: npm
+                - run: npm ci
+                - run: npm audit --audit-level=high
+                - run: npm run verify
+          YAML
+
       - name: Criar workflow de build Windows
         run: |
-          mkdir -p .github/workflows
           cat > .github/workflows/build-windows.yml <<'YAML'
           name: Build Windows V3
 
@@ -103,7 +145,7 @@ jobs:
             build:
               name: Gerar instalador Windows x64
               runs-on: windows-latest
-              timeout-minutes: 35
+              timeout-minutes: 40
               env:
                 JWT_SECRET: build-local-v3-sem-uso-em-producao-123456789
                 ADMIN_INITIAL_PASSWORD: senha-build-v3-local-123
