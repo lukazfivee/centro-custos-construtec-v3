@@ -48,9 +48,9 @@ router.post('/alterar-senha', autenticar, asyncRoute(async (req, res) => {
     'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
     [await bcrypt.hash(newPassword, 12), req.usuario.id]
   );
-  const bootstrapPath = process.env.BOOTSTRAP_CREDENTIAL_PATH;
-  if (bootstrapPath) {
-    try { if (fs.existsSync(bootstrapPath)) fs.unlinkSync(bootstrapPath); } catch {}
+  for (const filePath of [process.env.BOOTSTRAP_CREDENTIAL_PATH, process.env.FIRST_ACCESS_FILE_PATH]) {
+    if (!filePath) continue;
+    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
   }
   res.json({ ok: true });
 }));
