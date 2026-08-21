@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#021D26">
+  <title>Centro de Custos — Teste ChatGPT Final</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#021d26}
+    iframe{display:block;width:100%;height:100%;border:0;background:#f2f6f7}
+    .status{position:fixed;inset:0;display:grid;place-items:center;color:#fff;font:600 14px system-ui,sans-serif;letter-spacing:.02em}
+  </style>
+</head>
+<body>
+  <div id="status" class="status">Carregando a versão final de teste…</div>
+  <iframe id="app-frame" title="Centro de Custos Construtec" src="/"></iframe>
+  <script>
+    (() => {
+      const frame = document.getElementById('app-frame');
+      const status = document.getElementById('status');
+      frame.addEventListener('load', () => {
+        try {
+          const doc = frame.contentDocument;
+          if (!doc || doc.getElementById('chatgpt-p1-script')) return;
+          const addCss = (id,href) => { const css=doc.createElement('link'); css.id=id; css.rel='stylesheet'; css.href=href; doc.head.appendChild(css); };
+          const addScript = (id,src,onload,onerror) => { const s=doc.createElement('script'); s.id=id; s.src=src; s.addEventListener('load',onload); s.addEventListener('error',onerror); doc.body.appendChild(s); };
+          addCss('chatgpt-p1-style','/chatgpt-p1.css?v=8');
+          addCss('chatgpt-p2-style','/chatgpt-p2.css?v=8');
+          addCss('chatgpt-p4-style','/chatgpt-p4.css?v=8');
+          addCss('chatgpt-final-style','/chatgpt-final.css?v=8');
+          addScript('chatgpt-p1-script','/chatgpt-p1.js?v=8',() => {
+            addScript('chatgpt-p2-script','/chatgpt-p2.js?v=8',() => {
+              addScript('chatgpt-p3-script','/chatgpt-p3.js?v=8',() => {
+                addScript('chatgpt-p4-script','/chatgpt-p4.js?v=8',() => {
+                  addScript('chatgpt-final-script','/chatgpt-final.js?v=8',() => { status.style.display='none'; },() => { status.textContent='Não foi possível carregar o cockpit final.'; });
+                },() => { status.textContent='Não foi possível carregar as melhorias P4.'; });
+              },() => { status.textContent='Não foi possível carregar as melhorias P3.'; });
+            },() => { status.textContent='Não foi possível carregar as melhorias P2.'; });
+          },() => { status.textContent='Não foi possível carregar as melhorias P1.'; });
+        } catch (error) {
+          status.textContent = `Falha ao abrir a versão de teste: ${error.message}`;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
