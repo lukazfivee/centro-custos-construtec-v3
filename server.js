@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const os = require('os');
 const path = require('path');
+const fs = require('fs');
 const { initializeDatabase, closeDatabase, getDb, getInstanceIdentity } = require('./db');
 const { observability } = require('./middleware/observability');
 const logger = require('./lib/logger');
@@ -64,8 +65,22 @@ function createApp() {
   app.use('/api/sistema', require('./routes/system'));
 
   const publicDir = path.join(__dirname, 'public');
+  const indexPath = path.join(publicDir, 'index.html');
+  const sendIndex = (req, res, next) => {
+    try {
+      let html = fs.readFileSync(indexPath, 'utf8');
+      if (!html.includes('report-v2.js')) {
+        html = html.replace('</body>', '  <script src="report-v2.js"></script>\n</body>');
+      }
+      res.setHeader('Cache-Control', 'no-cache');
+      res.type('html').send(html);
+    } catch (error) { next(error); }
+  };
+
+  app.get('/', sendIndex);
   app.use(express.static(publicDir, {
     etag:true,
+    index:false,
     setHeaders(res, filePath) {
       if (/\.(?:woff2?|png|jpe?g|gif|svg|ico)$/i.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=604800');
       else if (/\.(?:js|css|html)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
@@ -73,7 +88,7 @@ function createApp() {
   }));
 
   app.use('/api', (req, res) => res.status(404).json({ erro:'Rota da API não encontrada.', requestId:req.requestId }));
-  app.get('*', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
+  app.get('*', sendIndex);
 
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);
