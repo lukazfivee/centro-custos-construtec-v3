@@ -26,6 +26,22 @@ router.get('/atividade', exigirPapel('admin','gestor','supervisor'), asyncRoute(
   res.json(await cloud.activitySince(req.usuario, req.query.after));
 }));
 
+router.get('/clientes', exigirPapel('admin','gestor','supervisor'), asyncRoute(async (req, res) => {
+  res.json(await cloud.listClients(req.usuario));
+}));
+
+router.post('/clientes', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+  res.status(201).json(await cloud.createClient(req.usuario, req.body));
+}));
+
+router.put('/clientes/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+  res.json(await cloud.updateClient(req.usuario, req.params.id, req.body));
+}));
+
+router.post('/clientes/:id/status', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+  res.json(await cloud.setClientStatus(req.usuario, req.params.id, req.body?.active === true));
+}));
+
 router.get('/cobrancas', exigirPapel('admin','gestor','supervisor'), asyncRoute(async (req, res) => {
   res.json(await cloud.listClientFollowups(req.usuario));
 }));
