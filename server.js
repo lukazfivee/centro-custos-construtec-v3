@@ -1,4 +1,5 @@
 require('dotenv').config();
+if (!process.env.REPORT_API_URL) process.env.REPORT_API_URL = 'https://centro-custos-reports.construtec-reports.workers.dev';
 const express = require('express');
 const os = require('os');
 const path = require('path');
