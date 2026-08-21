@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, ipcMain, clipboard } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, ipcMain, clipboard, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -9,6 +9,8 @@ let server = null;
 let isQuitting = false;
 let firstAccessCredentials = null;
 let runtimeEnvPath = null;
+let bootstrapCredentialsPath = null;
+let shouldPersistBootstrap = false;
 
 const PORT = 3333;
 const SERVER_URL = `http://127.0.0.1:${PORT}`;
@@ -68,6 +70,40 @@ if (!gotLock) {
     return `Cc-${crypto.randomBytes(9).toString('base64url')}-26`;
   }
 
+  function readBootstrapCredentials() {
+    if (!bootstrapCredentialsPath || !fs.existsSync(bootstrapCredentialsPath)) return null;
+    try {
+      if (!safeStorage.isEncryptionAvailable()) return null;
+      const encrypted = Buffer.from(fs.readFileSync(bootstrapCredentialsPath, 'utf8'), 'base64');
+      const parsed = JSON.parse(safeStorage.decryptString(encrypted));
+      if (!parsed?.email || !parsed?.password || String(parsed.password).length < 10) return null;
+      return { email: String(parsed.email), password: String(parsed.password) };
+    } catch {
+      return null;
+    }
+  }
+
+  function persistBootstrapCredentials(credentials) {
+    if (!bootstrapCredentialsPath || !credentials) return false;
+    try {
+      if (!safeStorage.isEncryptionAvailable()) return false;
+      const encrypted = safeStorage.encryptString(JSON.stringify(credentials));
+      fs.mkdirSync(path.dirname(bootstrapCredentialsPath), { recursive: true });
+      fs.writeFileSync(bootstrapCredentialsPath, encrypted.toString('base64'), 'utf8');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function localDatabaseAlreadyExists(dataDir) {
+    try {
+      return fs.existsSync(dataDir) && fs.readdirSync(dataDir).length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   function loadEnv() {
     const appData = app.getPath('appData');
     const dataRoot = path.join(appData, 'Construtec', 'CentroCustosV3');
@@ -75,6 +111,11 @@ if (!gotLock) {
 
     if (!process.env.PGLITE_DATA_DIR) process.env.PGLITE_DATA_DIR = path.join(dataRoot, 'pglite');
     if (!process.env.RESTORE_ROOT_DIR) process.env.RESTORE_ROOT_DIR = path.join(dataRoot, 'dados');
+
+    bootstrapCredentialsPath = path.join(dataRoot, 'bootstrap-credentials.dat');
+    process.env.BOOTSTRAP_CREDENTIAL_PATH = bootstrapCredentialsPath;
+    const existingBootstrap = readBootstrapCredentials();
+    const databaseAlreadyExists = localDatabaseAlreadyExists(process.env.PGLITE_DATA_DIR);
 
     // Configuração opcional para ambiente de desenvolvimento. O .env não é empacotado no instalador.
     readEnvFile(path.join(getAppDir(), '.env'));
@@ -103,12 +144,18 @@ if (!gotLock) {
     }
 
     if (!process.env.ADMIN_INITIAL_PASSWORD || process.env.ADMIN_INITIAL_PASSWORD.length < 10) {
-      const temporaryPassword = generateInitialPassword();
-      process.env.ADMIN_INITIAL_PASSWORD = temporaryPassword;
-      firstAccessCredentials = {
-        email: process.env.ADMIN_INITIAL_EMAIL,
-        password: temporaryPassword,
-      };
+      if (existingBootstrap) {
+        process.env.ADMIN_INITIAL_PASSWORD = existingBootstrap.password;
+        firstAccessCredentials = existingBootstrap;
+      } else if (!databaseAlreadyExists) {
+        const temporaryPassword = generateInitialPassword();
+        process.env.ADMIN_INITIAL_PASSWORD = temporaryPassword;
+        firstAccessCredentials = {
+          email: process.env.ADMIN_INITIAL_EMAIL,
+          password: temporaryPassword,
+        };
+        shouldPersistBootstrap = true;
+      }
     }
 
     if (!process.env.NODE_ENV) {
@@ -131,13 +178,12 @@ if (!gotLock) {
     await dialog.showMessageBox({
       type: 'info',
       title: 'Primeiro acesso',
-      message: 'O Centro de Custos V3 foi configurado automaticamente.',
-      detail: `Usuário: ${firstAccessCredentials.email}\nSenha temporária: ${firstAccessCredentials.password}\n\nAs credenciais foram copiadas para a área de transferência. Altere a senha após entrar no sistema. A senha temporária não é gravada em arquivo.`,
+      message: 'Credenciais de primeiro acesso do Centro de Custos V3.',
+      detail: `Usuário: ${firstAccessCredentials.email}\nSenha temporária: ${firstAccessCredentials.password}\n\nAs credenciais foram copiadas para a área de transferência. Enquanto a senha não for alterada, elas ficam protegidas pelo armazenamento seguro do Windows para poderem ser exibidas novamente.`,
       buttons: ['Entendi'],
       defaultId: 0,
       noLink: true,
     });
-    firstAccessCredentials = null;
   }
 
   function getIcon() {
@@ -248,6 +294,10 @@ if (!gotLock) {
       createWindow();
       createTray();
       await startServer();
+      if (shouldPersistBootstrap && firstAccessCredentials) {
+        persistBootstrapCredentials(firstAccessCredentials);
+        shouldPersistBootstrap = false;
+      }
       if (mainWindow) mainWindow.loadURL(SERVER_URL);
       await showFirstAccessInfo();
     } catch (error) {
