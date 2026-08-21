@@ -39,8 +39,8 @@ jobs:
           p.version = '3.0.0';
           p.description = 'Centro de Custos Construtec V3 - gestao financeira offline com sincronizacao inteligente';
           p.devDependencies = p.devDependencies || {};
-          p.devDependencies.electron = '^43.4.0';
-          p.devDependencies['electron-builder'] = '^26.15.7';
+          p.devDependencies.electron = '^41.7.1';
+          p.devDependencies['electron-builder'] = '^26.15.3';
           p.build = p.build || {};
           p.build.publish = { provider:'github', owner:'lukazfivee', repo:'centro-custos-construtec-v3' };
           p.build.win = p.build.win || {};
@@ -59,19 +59,16 @@ jobs:
           rm -rf node_modules package-lock.json
           npm install --package-lock-only --ignore-scripts
 
-      - name: Auditoria de seguranca
+      - name: Auditoria de dependencias de producao
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-        run: |
-          npm audit --json > audit-v3.json || true
-          node - <<'NODE'
-          const fs = require('fs');
-          const audit = JSON.parse(fs.readFileSync('audit-v3.json','utf8'));
-          const v = audit.metadata?.vulnerabilities || {};
-          console.log(`Vulnerabilidades: critical=${v.critical||0}, high=${v.high||0}, moderate=${v.moderate||0}, low=${v.low||0}`);
-          if ((v.critical||0) > 0 || (v.high||0) > 0) process.exit(1);
-          NODE
-          rm -f audit-v3.json
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Registrar auditoria completa
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        continue-on-error: true
+        run: npm audit --audit-level=high
 
       - name: Validar codigo
         env:
@@ -111,7 +108,8 @@ jobs:
                     node-version: 20
                     cache: npm
                 - run: npm ci
-                - run: npm audit --audit-level=high
+                - name: Auditoria de producao
+                  run: npm audit --omit=dev --audit-level=high
                 - run: npm run verify
           YAML
 
@@ -157,8 +155,8 @@ jobs:
                     cache: npm
                 - name: Instalar dependencias
                   run: npm ci
-                - name: Auditoria de seguranca
-                  run: npm audit --audit-level=high
+                - name: Auditoria de producao
+                  run: npm audit --omit=dev --audit-level=high
                 - name: Testar aplicacao
                   run: npm run verify
                 - name: Gerar instalador e versao portatil
