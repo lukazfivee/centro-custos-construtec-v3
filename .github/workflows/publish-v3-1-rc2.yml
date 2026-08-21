@@ -1,0 +1,65 @@
+name: Publicar V3.1.0 RC2
+
+on:
+  push:
+    branches:
+      - chatgpt/v3-1-multiusuario-cloudflare
+    paths:
+      - .github/workflows/publish-v3-1-rc2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    name: Gerar e publicar Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Definir versao do pre-lancamento
+        run: npm version 3.1.0-rc.2 --no-git-tag-version
+
+      - name: Validar aplicacao
+        run: npm run verify
+
+      - name: Gerar instalador e portable
+        run: npm run build
+
+      - name: Publicar pre-lancamento no GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.1.0-rc.2
+          name: Centro de Custos Construtec V3.1.0 RC2
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          body: |
+            Pre-lancamento RC2 da V3.1.
+
+            Inclui:
+            - melhoria de contraste no modo noturno;
+            - menu lateral recolhivel;
+            - configuracoes organizadas em lista;
+            - notificacoes de atividade multiusuario com usuario e horario;
+            - acompanhamento de obras e cobrancas;
+            - rascunho, autorizacao e auditoria de e-mails aos clientes;
+            - login corporativo e sincronizacao Cloudflare/D1.
+
+            Use o Setup x64 para instalacao normal.
+          files: |
+            dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
+          fail_on_unmatched_files: false
