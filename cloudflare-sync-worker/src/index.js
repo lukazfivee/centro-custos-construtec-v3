@@ -20,10 +20,64 @@ function validUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text(value));
 }
 
-async function sha256(value) {
-  const bytes = new TextEncoder().encode(JSON.stringify(value));
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
+function validRole(value) {
+  return ['admin','gestor','supervisor'].includes(text(value));
+}
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+}
+
+function timingSafeEqual(a, b) {
+  const left = String(a || '');
+  const right = String(b || '');
+  if (left.length !== right.length) return false;
+  let diff = 0;
+  for (let i = 0; i < left.length; i += 1) diff |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  return diff === 0;
+}
+
+async function sha256Text(value) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(value)));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256(value) {
+  return sha256Text(JSON.stringify(value));
+}
+
+async function passwordHash(password, saltBase64, iterations = 210000) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(String(password)),
+    { name:'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits({
+    name:'PBKDF2',
+    hash:'SHA-256',
+    salt:base64ToBytes(saltBase64),
+    iterations,
+  }, key, 256);
+  return bytesToBase64(new Uint8Array(bits));
+}
+
+async function makePasswordRecord(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iterations = 210000;
+  return {
+    salt:bytesToBase64(salt),
+    hash:await passwordHash(password, bytesToBase64(salt), iterations),
+    iterations,
+  };
 }
 
 function dateValue(value) {
@@ -45,8 +99,177 @@ async function consumeRate(db, ip) {
   await db.prepare('UPDATE sync_rate_limits SET count=count+1 WHERE bucket=?').bind(bucket).run();
   if (Math.random() < 0.03) {
     await db.prepare('DELETE FROM sync_rate_limits WHERE expires_at < ?').bind(now).run();
+    await db.prepare('DELETE FROM cloud_sessions WHERE expires_at < ?').bind(now).run();
   }
   return true;
+}
+
+function publicUser(row) {
+  return {
+    id:row.id,
+    name:row.name,
+    email:row.email,
+    role:row.role,
+    active:Boolean(row.active),
+    createdAt:row.created_at,
+    updatedAt:row.updated_at,
+    lastLoginAt:row.last_login_at || null,
+  };
+}
+
+async function createSession(env, user, request) {
+  const token = bytesToBase64(crypto.getRandomValues(new Uint8Array(32))).replace(/=+$/,'');
+  const tokenHash = await sha256Text(token);
+  const nowIso = new Date().toISOString();
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = now + 8 * 3600;
+  const instanceId = text(request.headers.get('x-instance-id')) || null;
+  const instanceName = text(request.headers.get('x-instance-name')) || null;
+  await env.DB.prepare(`
+    INSERT INTO cloud_sessions(token_hash,user_id,org_id,instance_id,instance_name,created_at,expires_at,last_seen_at)
+    VALUES(?,?,?,?,?,?,?,?)
+  `).bind(tokenHash,user.id,user.org_id,instanceId,instanceName,nowIso,expiresAt,nowIso).run();
+  return { token, expiresAt };
+}
+
+async function sessionUser(request, env) {
+  const header = request.headers.get('authorization') || '';
+  if (!header.startsWith('Bearer ')) return null;
+  const token = header.slice(7).trim();
+  if (!token) return null;
+  const tokenHash = await sha256Text(token);
+  const now = Math.floor(Date.now() / 1000);
+  const row = await env.DB.prepare(`
+    SELECT s.token_hash,s.expires_at,u.*
+    FROM cloud_sessions s
+    JOIN cloud_users u ON u.id=s.user_id AND u.org_id=s.org_id
+    WHERE s.token_hash=? AND s.expires_at>? AND u.active=1
+  `).bind(tokenHash,now).first();
+  if (!row) return null;
+  await env.DB.prepare('UPDATE cloud_sessions SET last_seen_at=? WHERE token_hash=?')
+    .bind(new Date().toISOString(),tokenHash).run();
+  return row;
+}
+
+async function requireSession(request, env, roles = []) {
+  const user = await sessionUser(request, env);
+  if (!user) return { error:'Sessao invalida ou expirada.', status:401 };
+  if (roles.length && !roles.includes(user.role)) return { error:'Sem permissao para esta acao.', status:403 };
+  return { user };
+}
+
+async function handleLogin(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ ok:false,error:'JSON invalido.' },400); }
+  const email = text(body?.email).toLowerCase();
+  const password = String(body?.password || '');
+  if (!validCorporateEmail(email) || !password) return json({ ok:false,error:'E-mail ou senha invalidos.' },401);
+  const count = await env.DB.prepare('SELECT COUNT(*) AS total FROM cloud_users WHERE org_id=?').bind('rcconstrutec.com.br').first();
+  if (Number(count?.total || 0) === 0) return json({ ok:false,error:'Diretorio corporativo ainda nao inicializado.',code:'DIRECTORY_EMPTY' },409);
+  const user = await env.DB.prepare('SELECT * FROM cloud_users WHERE org_id=? AND email=?').bind('rcconstrutec.com.br',email).first();
+  if (!user || !user.active) return json({ ok:false,error:'E-mail ou senha invalidos.' },401);
+  const hash = await passwordHash(password,user.password_salt,Number(user.password_iterations || 210000));
+  if (!timingSafeEqual(hash,user.password_hash)) return json({ ok:false,error:'E-mail ou senha invalidos.' },401);
+  const now = new Date().toISOString();
+  await env.DB.prepare('UPDATE cloud_users SET last_login_at=?,updated_at=updated_at WHERE id=?').bind(now,user.id).run();
+  user.last_login_at = now;
+  const session = await createSession(env,user,request);
+  return json({ ok:true, sessionToken:session.token, expiresAt:session.expiresAt, user:publicUser(user) });
+}
+
+async function handleBootstrap(request, env) {
+  const key = request.headers.get('x-sync-key') || '';
+  if (!env.SYNC_SHARED_KEY || key !== env.SYNC_SHARED_KEY) return json({ ok:false,error:'Nao autorizado.' },401);
+  const count = await env.DB.prepare('SELECT COUNT(*) AS total FROM cloud_users WHERE org_id=?').bind('rcconstrutec.com.br').first();
+  if (Number(count?.total || 0) > 0) return json({ ok:false,error:'Diretorio corporativo ja inicializado.' },409);
+  let body;
+  try { body = await request.json(); } catch { return json({ ok:false,error:'JSON invalido.' },400); }
+  const name = text(body?.name).slice(0,120);
+  const email = text(body?.email).toLowerCase();
+  const password = String(body?.password || '');
+  const role = validRole(body?.role) ? body.role : 'admin';
+  if (!name || !validCorporateEmail(email) || password.length < 10) return json({ ok:false,error:'Dados de bootstrap invalidos.' },400);
+  const record = await makePasswordRecord(password);
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await env.DB.prepare(`
+    INSERT INTO cloud_users(id,org_id,name,email,password_salt,password_hash,password_iterations,role,active,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,1,?,?)
+  `).bind(id,'rcconstrutec.com.br',name,email,record.salt,record.hash,record.iterations,role,now,now).run();
+  return json({ ok:true,user:{ id,name,email,role,active:true,createdAt:now,updatedAt:now,lastLoginAt:null } },201);
+}
+
+async function handleListUsers(request, env) {
+  const auth = await requireSession(request,env,['admin']);
+  if (auth.error) return json({ ok:false,error:auth.error },auth.status);
+  const rows = (await env.DB.prepare(`
+    SELECT id,name,email,role,active,created_at,updated_at,last_login_at
+    FROM cloud_users WHERE org_id=? ORDER BY active DESC,name,email
+  `).bind(auth.user.org_id).all()).results || [];
+  return json({ ok:true, users:rows.map(publicUser) });
+}
+
+async function handleCreateUser(request, env) {
+  const auth = await requireSession(request,env,['admin']);
+  if (auth.error) return json({ ok:false,error:auth.error },auth.status);
+  let body;
+  try { body = await request.json(); } catch { return json({ ok:false,error:'JSON invalido.' },400); }
+  const name = text(body?.name).slice(0,120);
+  const email = text(body?.email).toLowerCase();
+  const password = String(body?.password || '');
+  const role = text(body?.role);
+  if (!name || !validCorporateEmail(email) || password.length < 10 || !validRole(role)) {
+    return json({ ok:false,error:'Preencha nome, e-mail corporativo, senha de 10+ caracteres e perfil valido.' },400);
+  }
+  const exists = await env.DB.prepare('SELECT id FROM cloud_users WHERE org_id=? AND email=?').bind(auth.user.org_id,email).first();
+  if (exists) return json({ ok:false,error:'Ja existe um usuario com este e-mail.' },409);
+  const record = await makePasswordRecord(password);
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await env.DB.prepare(`
+    INSERT INTO cloud_users(id,org_id,name,email,password_salt,password_hash,password_iterations,role,active,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,1,?,?)
+  `).bind(id,auth.user.org_id,name,email,record.salt,record.hash,record.iterations,role,now,now).run();
+  return json({ ok:true,user:{ id,name,email,role,active:true,createdAt:now,updatedAt:now,lastLoginAt:null } },201);
+}
+
+async function handleUserStatus(request, env) {
+  const auth = await requireSession(request,env,['admin']);
+  if (auth.error) return json({ ok:false,error:auth.error },auth.status);
+  let body;
+  try { body = await request.json(); } catch { return json({ ok:false,error:'JSON invalido.' },400); }
+  const email = text(body?.email).toLowerCase();
+  const active = body?.active === true ? 1 : 0;
+  if (!validCorporateEmail(email)) return json({ ok:false,error:'E-mail invalido.' },400);
+  if (email === auth.user.email && active === 0) return json({ ok:false,error:'Voce nao pode desativar o proprio acesso.' },400);
+  const result = await env.DB.prepare('UPDATE cloud_users SET active=?,updated_at=? WHERE org_id=? AND email=?')
+    .bind(active,new Date().toISOString(),auth.user.org_id,email).run();
+  if (!result.meta?.changes) return json({ ok:false,error:'Usuario nao encontrado.' },404);
+  if (!active) {
+    await env.DB.prepare(`DELETE FROM cloud_sessions WHERE user_id IN (SELECT id FROM cloud_users WHERE org_id=? AND email=?)`)
+      .bind(auth.user.org_id,email).run();
+  }
+  return json({ ok:true });
+}
+
+async function handleChangePassword(request, env) {
+  const auth = await requireSession(request,env);
+  if (auth.error) return json({ ok:false,error:auth.error },auth.status);
+  let body;
+  try { body = await request.json(); } catch { return json({ ok:false,error:'JSON invalido.' },400); }
+  const currentPassword = String(body?.currentPassword || '');
+  const newPassword = String(body?.newPassword || '');
+  if (newPassword.length < 10) return json({ ok:false,error:'A nova senha precisa ter pelo menos 10 caracteres.' },400);
+  const currentHash = await passwordHash(currentPassword,auth.user.password_salt,Number(auth.user.password_iterations || 210000));
+  if (!timingSafeEqual(currentHash,auth.user.password_hash)) return json({ ok:false,error:'Senha atual incorreta.' },401);
+  const record = await makePasswordRecord(newPassword);
+  const now = new Date().toISOString();
+  await env.DB.prepare(`
+    UPDATE cloud_users SET password_salt=?,password_hash=?,password_iterations=?,updated_at=? WHERE id=?
+  `).bind(record.salt,record.hash,record.iterations,now,auth.user.id).run();
+  await env.DB.prepare('DELETE FROM cloud_sessions WHERE user_id=? AND token_hash<>?')
+    .bind(auth.user.id,await sha256Text((request.headers.get('authorization') || '').slice(7).trim())).run();
+  return json({ ok:true });
 }
 
 function packageEntities(pack) {
@@ -122,7 +345,6 @@ async function upsertEntity(env, meta, type, incomingItem) {
   }
 
   if (incomingRevision === localRevision) {
-    const current = JSON.parse(existing.payload);
     if (dateValue(incoming.updatedAt) < dateValue(existing.updated_at)) {
       return { action:'server_newer', publicId:incoming.publicId, revision:localRevision };
     }
@@ -172,14 +394,18 @@ async function buildSnapshot(env, orgId) {
   };
 }
 
-async function authorize(request, env) {
+async function authorizeSync(request, env) {
+  const bearerUser = await sessionUser(request, env);
+  const instanceId = text(request.headers.get('x-instance-id'));
+  const instanceName = text(request.headers.get('x-instance-name')) || 'Instalacao';
+  if (!validUuid(instanceId)) return { error:'Instalacao invalida.' };
+  if (bearerUser) {
+    return { orgId:bearerUser.org_id, userEmail:bearerUser.email, instanceId, instanceName };
+  }
   const key = request.headers.get('x-sync-key') || '';
   if (!env.SYNC_SHARED_KEY || key !== env.SYNC_SHARED_KEY) return { error:'Nao autorizado.' };
   const userEmail = text(request.headers.get('x-user-email')).toLowerCase();
-  const instanceId = text(request.headers.get('x-instance-id'));
-  const instanceName = text(request.headers.get('x-instance-name')) || 'Instalacao';
   if (!validCorporateEmail(userEmail)) return { error:'Use uma conta @rcconstrutec.com.br para sincronizar.' };
-  if (!validUuid(instanceId)) return { error:'Instalacao invalida.' };
   return { orgId:'rcconstrutec.com.br', userEmail, instanceId, instanceName };
 }
 
@@ -200,13 +426,20 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health') {
-      return json({ ok:true, service:'centro-custos-sync', mode:'cloudflare-d1' });
+      return json({ ok:true, service:'centro-custos-sync', mode:'cloudflare-d1', auth:'central' });
     }
 
     const ip = request.headers.get('cf-connecting-ip') || 'unknown';
     if (!(await consumeRate(env.DB, ip))) return json({ ok:false, error:'Limite temporario de sincronizacao atingido.' }, 429);
 
-    const meta = await authorize(request, env);
+    if (request.method === 'POST' && url.pathname === '/v1/auth/login') return handleLogin(request, env);
+    if (request.method === 'POST' && url.pathname === '/v1/auth/bootstrap') return handleBootstrap(request, env);
+    if (request.method === 'POST' && url.pathname === '/v1/auth/change-password') return handleChangePassword(request, env);
+    if (request.method === 'GET' && url.pathname === '/v1/users') return handleListUsers(request, env);
+    if (request.method === 'POST' && url.pathname === '/v1/users') return handleCreateUser(request, env);
+    if (request.method === 'POST' && url.pathname === '/v1/users/status') return handleUserStatus(request, env);
+
+    const meta = await authorizeSync(request, env);
     if (meta.error) return json({ ok:false, error:meta.error }, 401);
     await touchClient(env, meta, request);
 
