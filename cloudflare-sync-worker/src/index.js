@@ -1,3 +1,5 @@
+const PASSWORD_ITERATIONS = 10000;
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -53,7 +55,7 @@ async function sha256(value) {
   return sha256Text(JSON.stringify(value));
 }
 
-async function passwordHash(password, saltBase64, iterations = 210000) {
+async function passwordHash(password, saltBase64, iterations = PASSWORD_ITERATIONS) {
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(String(password)),
@@ -72,7 +74,7 @@ async function passwordHash(password, saltBase64, iterations = 210000) {
 
 async function makePasswordRecord(password) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iterations = 210000;
+  const iterations = PASSWORD_ITERATIONS;
   return {
     salt:bytesToBase64(salt),
     hash:await passwordHash(password, bytesToBase64(salt), iterations),
@@ -85,17 +87,17 @@ function dateValue(value) {
   return Number.isFinite(ms) ? ms : 0;
 }
 
-async function consumeRate(db, ip) {
+async function consumeRate(db, ip, scope = 'api', limit = 5000) {
   const now = Math.floor(Date.now() / 1000);
   const hour = Math.floor(now / 3600);
-  const bucket = `${ip || 'unknown'}:${hour}`;
+  const bucket = `${scope}:${ip || 'unknown'}:${hour}`;
   const current = await db.prepare('SELECT count FROM sync_rate_limits WHERE bucket=?').bind(bucket).first();
   if (!current) {
     await db.prepare('INSERT INTO sync_rate_limits(bucket,count,expires_at) VALUES(?,?,?)')
       .bind(bucket, 1, (hour + 2) * 3600).run();
     return true;
   }
-  if (Number(current.count) >= 240) return false;
+  if (Number(current.count) >= limit) return false;
   await db.prepare('UPDATE sync_rate_limits SET count=count+1 WHERE bucket=?').bind(bucket).run();
   if (Math.random() < 0.03) {
     await db.prepare('DELETE FROM sync_rate_limits WHERE expires_at < ?').bind(now).run();
@@ -168,7 +170,11 @@ async function handleLogin(request, env) {
   if (Number(count?.total || 0) === 0) return json({ ok:false,error:'Diretorio corporativo ainda nao inicializado.',code:'DIRECTORY_EMPTY' },409);
   const user = await env.DB.prepare('SELECT * FROM cloud_users WHERE org_id=? AND email=?').bind('rcconstrutec.com.br',email).first();
   if (!user || !user.active) return json({ ok:false,error:'E-mail ou senha invalidos.' },401);
-  const hash = await passwordHash(password,user.password_salt,Number(user.password_iterations || 210000));
+  const iterations = Number(user.password_iterations || PASSWORD_ITERATIONS);
+  if (iterations > PASSWORD_ITERATIONS) {
+    return json({ ok:false,error:'Credencial central precisa ser reinicializada para o Workers Free.',code:'PASSWORD_PROFILE_LEGACY' },409);
+  }
+  const hash = await passwordHash(password,user.password_salt,iterations);
   if (!timingSafeEqual(hash,user.password_hash)) return json({ ok:false,error:'E-mail ou senha invalidos.' },401);
   const now = new Date().toISOString();
   await env.DB.prepare('UPDATE cloud_users SET last_login_at=?,updated_at=updated_at WHERE id=?').bind(now,user.id).run();
@@ -260,7 +266,9 @@ async function handleChangePassword(request, env) {
   const currentPassword = String(body?.currentPassword || '');
   const newPassword = String(body?.newPassword || '');
   if (newPassword.length < 10) return json({ ok:false,error:'A nova senha precisa ter pelo menos 10 caracteres.' },400);
-  const currentHash = await passwordHash(currentPassword,auth.user.password_salt,Number(auth.user.password_iterations || 210000));
+  const iterations = Number(auth.user.password_iterations || PASSWORD_ITERATIONS);
+  if (iterations > PASSWORD_ITERATIONS) return json({ ok:false,error:'Credencial central precisa ser reinicializada.',code:'PASSWORD_PROFILE_LEGACY' },409);
+  const currentHash = await passwordHash(currentPassword,auth.user.password_salt,iterations);
   if (!timingSafeEqual(currentHash,auth.user.password_hash)) return json({ ok:false,error:'Senha atual incorreta.' },401);
   const record = await makePasswordRecord(newPassword);
   const now = new Date().toISOString();
@@ -426,11 +434,13 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health') {
-      return json({ ok:true, service:'centro-custos-sync', mode:'cloudflare-d1', auth:'central' });
+      return json({ ok:true, service:'centro-custos-sync', mode:'cloudflare-d1', auth:'central', passwordProfile:'workers-free' });
     }
 
     const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-    if (!(await consumeRate(env.DB, ip))) return json({ ok:false, error:'Limite temporario de sincronizacao atingido.' }, 429);
+    const isLogin = request.method === 'POST' && url.pathname === '/v1/auth/login';
+    const allowed = await consumeRate(env.DB, ip, isLogin ? 'login' : 'api', isLogin ? 60 : 5000);
+    if (!allowed) return json({ ok:false, error:'Limite temporario de requisicoes atingido.' }, 429);
 
     if (request.method === 'POST' && url.pathname === '/v1/auth/login') return handleLogin(request, env);
     if (request.method === 'POST' && url.pathname === '/v1/auth/bootstrap') return handleBootstrap(request, env);
