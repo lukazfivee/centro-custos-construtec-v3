@@ -1,0 +1,54 @@
+name: Build Windows V3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'desktop/**'
+      - 'public/**'
+      - 'routes/**'
+      - 'services/**'
+      - 'lib/**'
+      - 'middleware/**'
+      - 'migrations/**'
+      - 'server.js'
+      - 'db.js'
+      - '.github/workflows/build-windows.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Gerar instalador Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      JWT_SECRET: build-local-v3-sem-uso-em-producao-123456789
+      ADMIN_INITIAL_PASSWORD: senha-build-v3-local-123
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Auditoria de producao
+        run: npm audit --omit=dev --audit-level=high
+      - name: Testar aplicacao
+        run: npm run verify
+      - name: Gerar instalador e versao portatil
+        run: npm run build
+      - name: Publicar artefatos
+        uses: actions/upload-artifact@v4
+        with:
+          name: Centro-de-Custos-Construtec-v3.0.0-Windows
+          path: |
+            dist/*.exe
+            dist/latest*.yml
+          if-no-files-found: error
+          retention-days: 30
