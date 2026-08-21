@@ -5,9 +5,12 @@ on:
   push:
     paths:
       - '.github/workflows/bootstrap-v3.yml'
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
+  issues: read
 
 jobs:
   importar:
