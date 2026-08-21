@@ -1,11 +1,14 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, ipcMain, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 let mainWindow = null;
 let tray = null;
 let server = null;
 let isQuitting = false;
+let firstAccessCredentials = null;
+let runtimeEnvPath = null;
 
 const PORT = 3333;
 const SERVER_URL = `http://127.0.0.1:${PORT}`;
@@ -28,14 +31,10 @@ if (!gotLock) {
     return path.join(__dirname, '..');
   }
 
-  function loadEnv() {
-    const appData = app.getPath('appData');
-    const dataRoot = path.join(appData, 'Construtec', 'CentroCustos');
-    if (!process.env.PGLITE_DATA_DIR) process.env.PGLITE_DATA_DIR = path.join(dataRoot, 'pglite');
-    if (!process.env.RESTORE_ROOT_DIR) process.env.RESTORE_ROOT_DIR = path.join(dataRoot, 'dados');
-    const envPath = path.join(getAppDir(), '.env');
-    if (!fs.existsSync(envPath)) return;
-    const lines = fs.readFileSync(envPath, 'utf-8').split('\n');
+  function readEnvFile(filePath) {
+    if (!fs.existsSync(filePath)) return {};
+    const values = {};
+    const lines = fs.readFileSync(filePath, 'utf-8').split(/\r?\n/);
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('#')) continue;
@@ -46,8 +45,109 @@ if (!gotLock) {
       if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
         value = value.slice(1, -1);
       }
+      values[key] = value;
       if (!process.env[key]) process.env[key] = value;
     }
+    return values;
+  }
+
+  function writeRuntimeEnv(values) {
+    if (!runtimeEnvPath) return;
+    const lines = [
+      '# Configuração automática do aplicativo desktop. Não compartilhe este arquivo.',
+      ...Object.entries(values).map(([key, value]) => `${key}=${String(value).replace(/[\r\n]/g, '')}`),
+      '',
+    ];
+    fs.mkdirSync(path.dirname(runtimeEnvPath), { recursive: true });
+    fs.writeFileSync(runtimeEnvPath, lines.join('\n'), 'utf8');
+  }
+
+  function generateInitialPassword() {
+    return `Cc-${crypto.randomBytes(9).toString('base64url')}-26`;
+  }
+
+  function loadEnv() {
+    const appData = app.getPath('appData');
+    const dataRoot = path.join(appData, 'Construtec', 'CentroCustos');
+    fs.mkdirSync(dataRoot, { recursive: true });
+
+    if (!process.env.PGLITE_DATA_DIR) process.env.PGLITE_DATA_DIR = path.join(dataRoot, 'pglite');
+    if (!process.env.RESTORE_ROOT_DIR) process.env.RESTORE_ROOT_DIR = path.join(dataRoot, 'dados');
+
+    // Configuração opcional empacotada/manual.
+    readEnvFile(path.join(getAppDir(), '.env'));
+
+    // Configuração persistente exclusiva desta instalação desktop.
+    runtimeEnvPath = path.join(dataRoot, 'desktop.env');
+    const runtime = readEnvFile(runtimeEnvPath);
+    let changed = false;
+
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+      runtime.JWT_SECRET = crypto.randomBytes(48).toString('hex');
+      process.env.JWT_SECRET = runtime.JWT_SECRET;
+      changed = true;
+    }
+
+    if (!process.env.ADMIN_INITIAL_NAME) {
+      runtime.ADMIN_INITIAL_NAME = runtime.ADMIN_INITIAL_NAME || 'Administrador';
+      process.env.ADMIN_INITIAL_NAME = runtime.ADMIN_INITIAL_NAME;
+      changed = true;
+    }
+
+    if (!process.env.ADMIN_INITIAL_EMAIL) {
+      runtime.ADMIN_INITIAL_EMAIL = runtime.ADMIN_INITIAL_EMAIL || 'admin@construtec.local';
+      process.env.ADMIN_INITIAL_EMAIL = runtime.ADMIN_INITIAL_EMAIL;
+      changed = true;
+    }
+
+    if (!process.env.ADMIN_INITIAL_PASSWORD || process.env.ADMIN_INITIAL_PASSWORD.length < 10) {
+      runtime.ADMIN_INITIAL_PASSWORD = generateInitialPassword();
+      process.env.ADMIN_INITIAL_PASSWORD = runtime.ADMIN_INITIAL_PASSWORD;
+      firstAccessCredentials = {
+        email: process.env.ADMIN_INITIAL_EMAIL,
+        password: runtime.ADMIN_INITIAL_PASSWORD,
+        filePath: path.join(dataRoot, 'PRIMEIRO-ACESSO.txt'),
+      };
+      changed = true;
+    }
+
+    if (!process.env.NODE_ENV) {
+      runtime.NODE_ENV = runtime.NODE_ENV || 'production';
+      process.env.NODE_ENV = runtime.NODE_ENV;
+      changed = true;
+    }
+
+    if (changed || !fs.existsSync(runtimeEnvPath)) writeRuntimeEnv(runtime);
+  }
+
+  function finalizeFirstAccessFile() {
+    if (!firstAccessCredentials) return;
+    const content = [
+      'CENTRO DE CUSTOS CONSTRUTEC - PRIMEIRO ACESSO',
+      '',
+      `Usuário: ${firstAccessCredentials.email}`,
+      `Senha temporária: ${firstAccessCredentials.password}`,
+      '',
+      'Entre no sistema e altere esta senha assim que possível.',
+      'Depois disso, você pode excluir este arquivo.',
+      '',
+    ].join('\r\n');
+    fs.writeFileSync(firstAccessCredentials.filePath, content, 'utf8');
+    clipboard.writeText(`Usuário: ${firstAccessCredentials.email}\nSenha: ${firstAccessCredentials.password}`);
+  }
+
+  async function showFirstAccessInfo() {
+    if (!firstAccessCredentials) return;
+    finalizeFirstAccessFile();
+    await dialog.showMessageBox({
+      type: 'info',
+      title: 'Primeiro acesso',
+      message: 'O Centro de Custos foi configurado automaticamente.',
+      detail: `Usuário: ${firstAccessCredentials.email}\nSenha temporária: ${firstAccessCredentials.password}\n\nAs credenciais também foram copiadas para a área de transferência e salvas em:\n${firstAccessCredentials.filePath}\n\nAltere a senha após entrar no sistema.`,
+      buttons: ['Entendi'],
+      defaultId: 0,
+      noLink: true,
+    });
   }
 
   function getIcon() {
@@ -159,6 +259,7 @@ if (!gotLock) {
       createTray();
       await startServer();
       if (mainWindow) mainWindow.loadURL(SERVER_URL);
+      await showFirstAccessInfo();
     } catch (error) {
       dialog.showErrorBox('Erro ao iniciar', `Não foi possível iniciar: ${error.message}`);
       app.quit();
