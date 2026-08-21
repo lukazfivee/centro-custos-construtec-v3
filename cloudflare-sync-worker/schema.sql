@@ -60,3 +60,38 @@ CREATE TABLE IF NOT EXISTS sync_rate_limits (
 
 CREATE INDEX IF NOT EXISTS sync_rate_limits_expiry_idx
   ON sync_rate_limits(expires_at);
+
+CREATE TABLE IF NOT EXISTS cloud_users (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  password_salt TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  password_iterations INTEGER NOT NULL DEFAULT 210000,
+  role TEXT NOT NULL CHECK (role IN ('admin','gestor','supervisor')),
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  last_login_at TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS cloud_users_email_unique
+  ON cloud_users(org_id, email);
+
+CREATE TABLE IF NOT EXISTS cloud_sessions (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  org_id TEXT NOT NULL,
+  instance_id TEXT,
+  instance_name TEXT,
+  created_at TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  last_seen_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS cloud_sessions_user_idx
+  ON cloud_sessions(user_id, expires_at);
+
+CREATE INDEX IF NOT EXISTS cloud_sessions_expiry_idx
+  ON cloud_sessions(expires_at);
