@@ -30,7 +30,7 @@ function createApp() {
       await getDb().query('SELECT 1');
       const pkg = require('./package.json');
       const databaseLatencyMs = Number(process.hrtime.bigint() - started) / 1e6;
-      res.json({ status:'ok', database:'connected', version:pkg.version, uptimeSeconds:Math.round(process.uptime()), databaseLatencyMs:Math.round(databaseLatencyMs * 100) / 100, instancia:getInstanceIdentity() });
+      res.json({ status:'ok', database:'connected', version:pkg.version, uptimeSeconds:Math.round(process.uptime()), databaseLatencyMs:Math.round(databaseLatencyMs * 100) / 100, instancia:getInstanceIdentity(), reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL) });
     } catch (error) { next(error); }
   });
   app.get('/api/version', (req, res) => {
@@ -60,7 +60,6 @@ function createApp() {
   app.use('/api/recorrentes', require('./routes/recurring'));
   app.use('/api/update', require('./routes/update'));
   app.use('/api/bug-reports', require('./routes/bugReports'));
-  app.use('/api/email-settings', require('./routes/emailSettings'));
   app.use('/api/appearance', require('./routes/appearance'));
   app.use('/api/sistema', require('./routes/system'));
 
@@ -123,21 +122,26 @@ async function start() {
   server.keepAliveTimeout = positiveEnv('HTTP_KEEP_ALIVE_TIMEOUT_MS', 5000);
   server.headersTimeout = Math.max(positiveEnv('HTTP_HEADERS_TIMEOUT_MS', 6500), server.keepAliveTimeout + 1000);
   server.requestTimeout = positiveEnv('HTTP_REQUEST_TIMEOUT_MS', 120000);
+
   const { startAutoBackup, stopAutoBackup } = require('./services/autoBackup');
+  const { startReportDelivery, stopReportDelivery } = require('./services/reportDelivery');
   startAutoBackup();
+  startReportDelivery();
+
   const t4 = Date.now();
-  logger.info('application_started', { performanceMs:{env:t1-t0,database:t2-t1,app:t3-t2,listen:t4-t3,total:t4-t0}, databaseMode:info.mode, instance:info.instance.name, host, port });
+  logger.info('application_started', { performanceMs:{env:t1-t0,database:t2-t1,app:t3-t2,listen:t4-t3,total:t4-t0}, databaseMode:info.mode, instance:info.instance.name, host, port, reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL) });
   console.log(`\nCentro de Custos — ${info.instance.name}`);
   console.log(`Banco: ${info.mode === 'pglite' ? `local (${info.dataDir})` : 'PostgreSQL central'}`);
   console.log(`Abrir no navegador: http://localhost:${port}`);
   if (host === '0.0.0.0') localIPv4s().forEach((ip) => console.log(`Rede local: http://${ip}:${port}`));
-  console.log('Operação local: nenhuma API de IA ou serviço online é utilizado.\n');
+  console.log(`Reports: ${process.env.REPORT_API_URL ? 'entrega central habilitada' : 'fila local aguardando configuração central'}.\n`);
 
   let shuttingDown = false;
   async function shutdown(reason = 'manual') {
     if (shuttingDown) return;
     shuttingDown = true;
     stopAutoBackup();
+    stopReportDelivery();
     logger.info('application_shutdown_started', { reason });
     const forceTimer = setTimeout(() => { logger.error('application_shutdown_forced', { reason }); process.exit(1); }, positiveEnv('SHUTDOWN_TIMEOUT_MS', 10000));
     forceTimer.unref();
