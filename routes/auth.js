@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
 const { getDb, getInstanceIdentity } = require('../db');
 const { autenticar } = require('../middleware/auth');
 const { asyncRoute, httpError } = require('../lib/http');
@@ -47,6 +48,10 @@ router.post('/alterar-senha', autenticar, asyncRoute(async (req, res) => {
     'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
     [await bcrypt.hash(newPassword, 12), req.usuario.id]
   );
+  const bootstrapPath = process.env.BOOTSTRAP_CREDENTIAL_PATH;
+  if (bootstrapPath) {
+    try { if (fs.existsSync(bootstrapPath)) fs.unlinkSync(bootstrapPath); } catch {}
+  }
   res.json({ ok: true });
 }));
 
