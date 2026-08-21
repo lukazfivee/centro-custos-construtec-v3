@@ -25,11 +25,10 @@ jobs:
           git clone --depth 1 --branch chatgpt/p5-p8-suite-final https://github.com/lukazfivee/centro-custos-construtec.git /tmp/origem
           rm -rf /tmp/origem/.git
 
-      - name: Copiar todos os arquivos
+      - name: Copiar aplicacao preservando workflows
         run: |
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a /tmp/origem/. .
-          mkdir -p .github/workflows
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github -exec rm -rf {} +
+          rsync -a --exclude='.git' --exclude='.github' /tmp/origem/ ./
 
       - name: Ajustar identidade V3 e dependencias
         run: |
@@ -50,7 +49,6 @@ jobs:
           p.build.portable = { artifactName:'Centro-de-Custos-Construtec-Portable-${version}-${arch}.${ext}' };
           fs.writeFileSync('package.json', JSON.stringify(p,null,2)+'\n');
           NODE
-          rm -f .github/workflows/build-final-windows.yml .github/workflows/refresh-lock.yml .github/workflows/bootstrap-v3.yml
 
       - name: Regenerar lockfile
         env:
@@ -78,99 +76,6 @@ jobs:
         run: |
           npm ci
           npm run verify
-
-      - name: Criar workflow de verificacao continua
-        run: |
-          cat > .github/workflows/ci.yml <<'YAML'
-          name: Verificacao V3
-
-          on:
-            push:
-              branches: [main]
-            pull_request:
-              branches: [main]
-
-          permissions:
-            contents: read
-
-          jobs:
-            test:
-              runs-on: ubuntu-latest
-              timeout-minutes: 15
-              env:
-                ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-                JWT_SECRET: segredo-v3-ci-com-mais-de-trinta-e-dois-caracteres
-                ADMIN_INITIAL_PASSWORD: senha-v3-ci-segura-123
-              steps:
-                - uses: actions/checkout@v6
-                - uses: actions/setup-node@v6
-                  with:
-                    node-version: 20
-                    cache: npm
-                - run: npm ci
-                - name: Auditoria de producao
-                  run: npm audit --omit=dev --audit-level=high
-                - run: npm run verify
-          YAML
-
-      - name: Criar workflow de build Windows
-        run: |
-          cat > .github/workflows/build-windows.yml <<'YAML'
-          name: Build Windows V3
-
-          on:
-            workflow_dispatch:
-            push:
-              branches: [main]
-              paths:
-                - 'package.json'
-                - 'package-lock.json'
-                - 'desktop/**'
-                - 'public/**'
-                - 'routes/**'
-                - 'services/**'
-                - 'lib/**'
-                - 'middleware/**'
-                - 'migrations/**'
-                - 'server.js'
-                - 'db.js'
-                - '.github/workflows/build-windows.yml'
-
-          permissions:
-            contents: read
-
-          jobs:
-            build:
-              name: Gerar instalador Windows x64
-              runs-on: windows-latest
-              timeout-minutes: 40
-              env:
-                JWT_SECRET: build-local-v3-sem-uso-em-producao-123456789
-                ADMIN_INITIAL_PASSWORD: senha-build-v3-local-123
-              steps:
-                - uses: actions/checkout@v6
-                - uses: actions/setup-node@v6
-                  with:
-                    node-version: 20
-                    cache: npm
-                - name: Instalar dependencias
-                  run: npm ci
-                - name: Auditoria de producao
-                  run: npm audit --omit=dev --audit-level=high
-                - name: Testar aplicacao
-                  run: npm run verify
-                - name: Gerar instalador e versao portatil
-                  run: npm run build
-                - name: Publicar artefatos
-                  uses: actions/upload-artifact@v4
-                  with:
-                    name: Centro-de-Custos-Construtec-v3.0.0-Windows
-                    path: |
-                      dist/*.exe
-                      dist/latest*.yml
-                    if-no-files-found: error
-                    retention-days: 30
-          YAML
 
       - name: Registrar importacao no novo repositorio
         run: |
