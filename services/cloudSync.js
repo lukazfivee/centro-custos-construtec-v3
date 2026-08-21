@@ -67,30 +67,24 @@ async function alignNaturalKeys(snapshot) {
   const payload = snapshot?.payload;
   if (!payload) return;
   const db = getDb();
-
   await db.transaction(async (tx) => {
     for (const item of payload.categories || []) {
       const publicId = String(item?.publicId || '').trim();
       const name = String(item?.name || '').trim();
       if (!publicId || !name) continue;
-
       const sameId = await tx.query('SELECT id FROM categories WHERE public_id=$1 LIMIT 1', [publicId]);
       if (sameId.rows[0]) continue;
-
       const sameName = await tx.query('SELECT id,public_id FROM categories WHERE LOWER(name)=LOWER($1) LIMIT 1', [name]);
       if (sameName.rows[0] && String(sameName.rows[0].public_id) !== publicId) {
         await tx.query('UPDATE categories SET public_id=$1 WHERE id=$2', [publicId, sameName.rows[0].id]);
       }
     }
-
     for (const item of payload.costCenters || []) {
       const publicId = String(item?.publicId || '').trim();
       const code = String(item?.code || '').trim();
       if (!publicId || !code) continue;
-
       const sameId = await tx.query('SELECT id FROM cost_centers WHERE public_id=$1 LIMIT 1', [publicId]);
       if (sameId.rows[0]) continue;
-
       const sameCode = await tx.query('SELECT id,public_id FROM cost_centers WHERE LOWER(code)=LOWER($1) LIMIT 1', [code]);
       if (sameCode.rows[0] && String(sameCode.rows[0].public_id) !== publicId) {
         await tx.query('UPDATE cost_centers SET public_id=$1 WHERE id=$2', [publicId, sameCode.rows[0].id]);
@@ -111,10 +105,7 @@ async function importSnapshot(snapshot, user, prefix) {
 
 async function syncNow(user) {
   const before = await request('/v1/sync/snapshot', { method:'GET' }, user);
-  const receivedBefore = before.snapshot
-    ? await importSnapshot(before.snapshot, user, 'cloud-before-push')
-    : null;
-
+  const receivedBefore = before.snapshot ? await importSnapshot(before.snapshot, user, 'cloud-before-push') : null;
   const pack = await buildPackage();
   const cloud = await request('/v1/sync', { method:'POST', body:JSON.stringify(pack) }, user);
   if (!cloud.snapshot) throw new Error('A nuvem não devolveu o snapshot compartilhado.');
@@ -144,15 +135,28 @@ async function activitySince(user, after = 0) {
   return request(`/v1/activity?after=${cursor}&limit=50`, { method:'GET' }, user);
 }
 
+async function listClients(user) {
+  return request('/v1/clients', { method:'GET' }, user);
+}
+
+async function createClient(user, payload) {
+  return request('/v1/clients', { method:'POST', body:JSON.stringify(payload || {}) }, user);
+}
+
+async function updateClient(user, id, payload) {
+  return request(`/v1/clients/${encodeURIComponent(id)}`, { method:'PUT', body:JSON.stringify(payload || {}) }, user);
+}
+
+async function setClientStatus(user, id, active) {
+  return request(`/v1/clients/${encodeURIComponent(id)}/status`, { method:'POST', body:JSON.stringify({ active:Boolean(active) }) }, user);
+}
+
 async function listClientFollowups(user) {
   return request('/v1/client-followups', { method:'GET' }, user);
 }
 
 async function saveClientFollowup(user, publicId, payload) {
-  return request(`/v1/client-followups/${encodeURIComponent(publicId)}`, {
-    method:'PUT',
-    body:JSON.stringify(payload || {}),
-  }, user);
+  return request(`/v1/client-followups/${encodeURIComponent(publicId)}`, { method:'PUT', body:JSON.stringify(payload || {}) }, user);
 }
 
 async function getClientDraft(user, publicId) {
@@ -164,17 +168,11 @@ async function saveClientDraft(user, payload) {
 }
 
 async function authorizeClientDraft(user, publicId) {
-  return request('/v1/client-email-draft/authorize', {
-    method:'POST',
-    body:JSON.stringify({ costCenterPublicId:publicId, confirmar:true }),
-  }, user);
+  return request('/v1/client-email-draft/authorize', { method:'POST', body:JSON.stringify({ costCenterPublicId:publicId, confirmar:true }) }, user);
 }
 
 async function sendClientDraft(user, publicId, attachments = []) {
-  return request('/v1/client-email-draft/send', {
-    method:'POST',
-    body:JSON.stringify({ costCenterPublicId:publicId, attachments }),
-  }, user);
+  return request('/v1/client-email-draft/send', { method:'POST', body:JSON.stringify({ costCenterPublicId:publicId, attachments }) }, user);
 }
 
 module.exports = {
@@ -183,6 +181,10 @@ module.exports = {
   syncNow,
   pullNow,
   activitySince,
+  listClients,
+  createClient,
+  updateClient,
+  setClientStatus,
   listClientFollowups,
   saveClientFollowup,
   getClientDraft,
