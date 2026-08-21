@@ -80,6 +80,9 @@ function createApp() {
       if (!html.includes('v3-1-enhancements.css')) {
         html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-enhancements.css">\n</head>');
       }
+      if (!html.includes('v3-1-refinements.css')) {
+        html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-refinements.css">\n</head>');
+      }
       if (!html.includes('report-v2.js')) {
         html = html.replace('</body>', '  <script src="report-v2.js"></script>\n</body>');
       }
@@ -88,6 +91,9 @@ function createApp() {
       }
       if (!html.includes('v3-1-enhancements.js')) {
         html = html.replace('</body>', '  <script src="v3-1-enhancements.js"></script>\n</body>');
+      }
+      if (!html.includes('v3-1-refinements.js')) {
+        html = html.replace('</body>', '  <script src="v3-1-refinements.js"></script>\n</body>');
       }
       res.setHeader('Cache-Control', 'no-cache');
       res.type('html').send(html);
