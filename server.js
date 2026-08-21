@@ -32,7 +32,12 @@ function createApp() {
       await getDb().query('SELECT 1');
       const pkg = require('./package.json');
       const databaseLatencyMs = Number(process.hrtime.bigint() - started) / 1e6;
-      res.json({ status:'ok', database:'connected', version:pkg.version, uptimeSeconds:Math.round(process.uptime()), databaseLatencyMs:Math.round(databaseLatencyMs * 100) / 100, instancia:getInstanceIdentity(), reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL) });
+      res.json({
+        status:'ok',database:'connected',version:pkg.version,uptimeSeconds:Math.round(process.uptime()),
+        databaseLatencyMs:Math.round(databaseLatencyMs * 100) / 100,instancia:getInstanceIdentity(),
+        reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL),
+        cloudSyncConfigured:Boolean(process.env.SYNC_API_URL && process.env.SYNC_SHARED_KEY),
+      });
     } catch (error) { next(error); }
   });
   app.get('/api/version', (req, res) => {
@@ -54,6 +59,7 @@ function createApp() {
   app.use('/api/dashboard', require('./routes/dashboard'));
   app.use('/api/sincronizacao', require('./routes/sync'));
   app.use('/api/sincronizacao-inteligente', require('./routes/smartSync'));
+  app.use('/api/cloud-sync', require('./routes/cloudSync'));
   app.use('/api/backup', require('./routes/backup'));
   app.use('/api/backup-automatico', require('./routes/backupAuto'));
   app.use('/api/first-use', require('./routes/firstUse'));
@@ -72,6 +78,9 @@ function createApp() {
       let html = fs.readFileSync(indexPath, 'utf8');
       if (!html.includes('report-v2.js')) {
         html = html.replace('</body>', '  <script src="report-v2.js"></script>\n</body>');
+      }
+      if (!html.includes('cloud-sync.js')) {
+        html = html.replace('</body>', '  <script src="cloud-sync.js"></script>\n</body>');
       }
       res.setHeader('Cache-Control', 'no-cache');
       res.type('html').send(html);
@@ -145,12 +154,13 @@ async function start() {
   startReportDelivery();
 
   const t4 = Date.now();
-  logger.info('application_started', { performanceMs:{env:t1-t0,database:t2-t1,app:t3-t2,listen:t4-t3,total:t4-t0}, databaseMode:info.mode, instance:info.instance.name, host, port, reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL) });
+  logger.info('application_started', { performanceMs:{env:t1-t0,database:t2-t1,app:t3-t2,listen:t4-t3,total:t4-t0}, databaseMode:info.mode, instance:info.instance.name, host, port, reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL), cloudSyncConfigured:Boolean(process.env.SYNC_API_URL && process.env.SYNC_SHARED_KEY) });
   console.log(`\nCentro de Custos — ${info.instance.name}`);
   console.log(`Banco: ${info.mode === 'pglite' ? `local (${info.dataDir})` : 'PostgreSQL central'}`);
   console.log(`Abrir no navegador: http://localhost:${port}`);
   if (host === '0.0.0.0') localIPv4s().forEach((ip) => console.log(`Rede local: http://${ip}:${port}`));
-  console.log(`Reports: ${process.env.REPORT_API_URL ? 'entrega central habilitada' : 'fila local aguardando configuração central'}.\n`);
+  console.log(`Reports: ${process.env.REPORT_API_URL ? 'entrega central habilitada' : 'fila local aguardando configuração central'}.`);
+  console.log(`Cloud Sync: ${process.env.SYNC_API_URL && process.env.SYNC_SHARED_KEY ? 'habilitado para contas corporativas' : 'aguardando configuração'}.\n`);
 
   let shuttingDown = false;
   async function shutdown(reason = 'manual') {
