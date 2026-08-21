@@ -1,9 +1,10 @@
 const os = require('os');
 const { buildPackage, importPackage } = require('./smartSync');
 const { getDb, getInstanceIdentity } = require('../db');
+const { DEFAULT_API_URL } = require('./cloudAuth');
 
 function configured() {
-  return Boolean(process.env.SYNC_API_URL && process.env.SYNC_SHARED_KEY);
+  return Boolean(process.env.SYNC_API_URL || DEFAULT_API_URL);
 }
 
 function corporateEmail(email) {
@@ -13,21 +14,26 @@ function corporateEmail(email) {
 function headersFor(user) {
   const instance = getInstanceIdentity();
   const pkg = require('../package.json');
-  return {
+  const headers = {
     'content-type':'application/json',
-    'x-sync-key':process.env.SYNC_SHARED_KEY,
     'x-user-email':String(user.email || '').trim().toLowerCase(),
     'x-instance-id':instance.id,
     'x-instance-name':instance.name,
     'x-app-version':pkg.version,
     'x-platform':`${process.platform} ${os.release()}`,
   };
+  if (user.cloud_session_token) headers.Authorization = `Bearer ${user.cloud_session_token}`;
+  else if (process.env.SYNC_SHARED_KEY) headers['x-sync-key'] = process.env.SYNC_SHARED_KEY;
+  return headers;
 }
 
 async function request(path, options, user) {
   if (!configured()) throw new Error('Sincronização em nuvem ainda não configurada nesta instalação.');
   if (!corporateEmail(user?.email)) throw new Error('A sincronização compartilhada exige uma conta @rcconstrutec.com.br.');
-  const base = String(process.env.SYNC_API_URL).replace(/\/+$/, '');
+  if (!user?.cloud_session_token && !process.env.SYNC_SHARED_KEY) {
+    throw new Error('Entre novamente com sua conta corporativa para sincronizar.');
+  }
+  const base = String(process.env.SYNC_API_URL || DEFAULT_API_URL).replace(/\/+$/, '');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20000);
   timer.unref?.();
@@ -99,8 +105,6 @@ async function importSnapshot(snapshot, user, prefix) {
 }
 
 async function syncNow(user) {
-  // Sempre recebe primeiro. Isso evita que uma instalação nova publique novamente
-  // as categorias padrão com UUIDs locais diferentes e gere duplicidade na nuvem.
   const before = await request('/v1/sync/snapshot', { method:'GET' }, user);
   const receivedBefore = before.snapshot
     ? await importSnapshot(before.snapshot, user, 'cloud-before-push')
