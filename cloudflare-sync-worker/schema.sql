@@ -15,8 +15,7 @@ CREATE TABLE IF NOT EXISTS sync_entities (
   PRIMARY KEY (org_id, entity_type, public_id)
 );
 
-CREATE INDEX IF NOT EXISTS sync_entities_event_idx
-  ON sync_entities(org_id, event_id);
+CREATE INDEX IF NOT EXISTS sync_entities_event_idx ON sync_entities(org_id, event_id);
 
 CREATE TABLE IF NOT EXISTS sync_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,12 +32,8 @@ CREATE TABLE IF NOT EXISTS sync_events (
   resolution TEXT NOT NULL DEFAULT 'normal',
   created_at TEXT NOT NULL
 );
-
-CREATE INDEX IF NOT EXISTS sync_events_org_id_idx
-  ON sync_events(org_id, id);
-
-CREATE INDEX IF NOT EXISTS sync_events_entity_idx
-  ON sync_events(org_id, entity_type, public_id, id DESC);
+CREATE INDEX IF NOT EXISTS sync_events_org_id_idx ON sync_events(org_id, id);
+CREATE INDEX IF NOT EXISTS sync_events_entity_idx ON sync_events(org_id, entity_type, public_id, id DESC);
 
 CREATE TABLE IF NOT EXISTS sync_clients (
   org_id TEXT NOT NULL,
@@ -57,9 +52,7 @@ CREATE TABLE IF NOT EXISTS sync_rate_limits (
   count INTEGER NOT NULL DEFAULT 0,
   expires_at INTEGER NOT NULL
 );
-
-CREATE INDEX IF NOT EXISTS sync_rate_limits_expiry_idx
-  ON sync_rate_limits(expires_at);
+CREATE INDEX IF NOT EXISTS sync_rate_limits_expiry_idx ON sync_rate_limits(expires_at);
 
 CREATE TABLE IF NOT EXISTS cloud_users (
   id TEXT PRIMARY KEY,
@@ -75,9 +68,7 @@ CREATE TABLE IF NOT EXISTS cloud_users (
   updated_at TEXT NOT NULL,
   last_login_at TEXT
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS cloud_users_email_unique
-  ON cloud_users(org_id, email);
+CREATE UNIQUE INDEX IF NOT EXISTS cloud_users_email_unique ON cloud_users(org_id, email);
 
 CREATE TABLE IF NOT EXISTS cloud_sessions (
   token_hash TEXT PRIMARY KEY,
@@ -89,12 +80,23 @@ CREATE TABLE IF NOT EXISTS cloud_sessions (
   expires_at INTEGER NOT NULL,
   last_seen_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS cloud_sessions_user_idx ON cloud_sessions(user_id, expires_at);
+CREATE INDEX IF NOT EXISTS cloud_sessions_expiry_idx ON cloud_sessions(expires_at);
 
-CREATE INDEX IF NOT EXISTS cloud_sessions_user_idx
-  ON cloud_sessions(user_id, expires_at);
-
-CREATE INDEX IF NOT EXISTS cloud_sessions_expiry_idx
-  ON cloud_sessions(expires_at);
+CREATE TABLE IF NOT EXISTS clients (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  company TEXT NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_by_email TEXT,
+  updated_by_email TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS clients_org_email_unique ON clients(org_id, email);
+CREATE INDEX IF NOT EXISTS clients_org_company_idx ON clients(org_id, company, name);
 
 CREATE TABLE IF NOT EXISTS client_followups (
   org_id TEXT NOT NULL,
@@ -114,9 +116,7 @@ CREATE TABLE IF NOT EXISTS client_followups (
   updated_at TEXT NOT NULL,
   PRIMARY KEY (org_id, cost_center_public_id)
 );
-
-CREATE INDEX IF NOT EXISTS client_followups_status_idx
-  ON client_followups(org_id, operational_status, financial_status);
+CREATE INDEX IF NOT EXISTS client_followups_status_idx ON client_followups(org_id, operational_status, financial_status);
 
 CREATE TABLE IF NOT EXISTS client_email_drafts (
   org_id TEXT NOT NULL,
@@ -148,6 +148,4 @@ CREATE TABLE IF NOT EXISTS client_email_events (
   detail TEXT,
   created_at TEXT NOT NULL
 );
-
-CREATE INDEX IF NOT EXISTS client_email_events_center_idx
-  ON client_email_events(org_id, cost_center_public_id, id DESC);
+CREATE INDEX IF NOT EXISTS client_email_events_center_idx ON client_email_events(org_id, cost_center_public_id, id DESC);
