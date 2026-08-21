@@ -1,0 +1,80 @@
+/* V3.1 - refinamentos finais de navegacao, configuracoes e clientes */
+
+/* Menu lateral: trilho discreto que abre somente ao passar o mouse */
+@media (min-width:901px){
+  .app-shell.v31-hover-sidebar{grid-template-columns:76px minmax(0,1fr)}
+  .app-shell.v31-hover-sidebar .sidebar{
+    width:76px;z-index:120;overflow:hidden;transition:width .2s ease,box-shadow .2s ease,padding .2s ease;
+    padding-left:10px;padding-right:10px;
+  }
+  .app-shell.v31-hover-sidebar .sidebar:hover,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within{
+    width:245px;padding-left:15px;padding-right:15px;box-shadow:16px 0 32px rgba(2,29,38,.22);overflow:visible;
+  }
+  .app-shell.v31-hover-sidebar .sidebar-toggle{display:none!important}
+  .app-shell.v31-hover-sidebar.sidebar-mini .sidebar{width:76px!important;padding-left:10px!important;padding-right:10px!important}
+  .app-shell.v31-hover-sidebar.sidebar-mini .sidebar:hover,
+  .app-shell.v31-hover-sidebar.sidebar-mini .sidebar:focus-within{width:245px!important;padding-left:15px!important;padding-right:15px!important}
+  .app-shell.v31-hover-sidebar .brand{justify-content:center;padding-left:0;padding-right:0;min-height:68px}
+  .app-shell.v31-hover-sidebar .brand .sidebar-logo,
+  .app-shell.v31-hover-sidebar .brand>div,
+  .app-shell.v31-hover-sidebar .user-copy,
+  .app-shell.v31-hover-sidebar #btn-sair{display:none!important}
+  .app-shell.v31-hover-sidebar .sidebar:hover .brand .sidebar-logo,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .brand .sidebar-logo{display:block!important}
+  .app-shell.v31-hover-sidebar .sidebar:hover .brand>div,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .brand>div,
+  .app-shell.v31-hover-sidebar .sidebar:hover .user-copy,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .user-copy,
+  .app-shell.v31-hover-sidebar .sidebar:hover #btn-sair,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within #btn-sair{display:block!important}
+  .v31-rail-logo{display:block;width:38px;height:38px;object-fit:contain;flex:0 0 auto}
+  .app-shell.v31-hover-sidebar .sidebar:hover .v31-rail-logo,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .v31-rail-logo{display:none}
+  .app-shell.v31-hover-sidebar .nav-item{width:52px;min-width:52px;margin-left:auto;margin-right:auto;justify-content:center;gap:0;font-size:0;padding-left:0;padding-right:0;white-space:nowrap}
+  .app-shell.v31-hover-sidebar .nav-item span{font-size:18px;margin:0;flex:0 0 20px}
+  .app-shell.v31-hover-sidebar .sidebar:hover .nav-item,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .nav-item{width:100%;min-width:0;margin-left:0;margin-right:0;justify-content:flex-start;gap:11px;font-size:14px;padding-left:12px;padding-right:12px}
+  .app-shell.v31-hover-sidebar .user-block{justify-content:center;padding-left:0;padding-right:0}
+  .app-shell.v31-hover-sidebar .sidebar:hover .user-block,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .user-block{justify-content:flex-start;padding-left:5px;padding-right:5px}
+}
+
+/* Configuracoes com aparencia de painel administrativo */
+.v31-setting-row{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:72px}
+.v31-setting-copy{min-width:0}
+.v31-setting-copy h2{margin:0 0 5px;font-size:15px;color:var(--navy)}
+.v31-setting-copy p{margin:0;color:var(--muted);font-size:11px;line-height:1.55}
+.v31-setting-action{flex:0 0 auto}
+.v31-security-icon{width:38px;height:38px;border-radius:10px;background:#eaf3f6;display:grid;place-items:center;font-size:18px;flex:0 0 auto}
+.v31-setting-main{display:flex;align-items:center;gap:13px;min-width:0}
+html.dark .v31-setting-copy h2{color:#eef7fa}
+html.dark .v31-security-icon{background:#203b48;color:#eef7fa}
+.v31-password-rules{padding:10px 12px;border-radius:8px;background:#f4f7f8;color:var(--muted);font-size:10px;line-height:1.5;margin:10px 0 14px}
+html.dark .v31-password-rules{background:#10232c;color:#9fb7c1}
+
+/* Reports centralizados pertencem a aba Reports */
+#view-bugreports #report-v2-config{margin-bottom:16px}
+#view-bugreports #report-v2-config h2{margin-top:0}
+
+/* Cadastro central de clientes */
+.v31-clients-toolbar{display:flex;gap:10px;align-items:center}
+.v31-client-company{font-weight:700;color:var(--navy)}
+.v31-client-contact{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+html.dark .v31-client-company{color:#edf6f9}
+.v31-client-picker{padding:12px;border:1px solid var(--line);border-radius:10px;background:#f8fafb}
+.v31-client-picker label{margin-top:0!important}
+.v31-client-picker small{display:block;margin-top:5px;color:var(--muted);font-size:10px}
+html.dark .v31-client-picker{background:#10232c;border-color:#28404d}
+
+/* NF em PDF */
+.v31-nf-box{padding:14px;border:1px dashed #aebfc6;border-radius:10px;background:#f8fafb}
+.v31-nf-box label{margin-top:0!important}
+.v31-nf-file{margin-top:7px;font-size:11px;color:var(--muted)}
+.v31-nf-file.ready{color:var(--green);font-weight:700}
+html.dark .v31-nf-box{background:#10232c;border-color:#385463}
+
+@media(max-width:900px){
+  .v31-setting-row{align-items:flex-start;flex-direction:column;gap:12px}
+  .v31-setting-action{width:100%}.v31-setting-action .btn{width:100%}
+}
