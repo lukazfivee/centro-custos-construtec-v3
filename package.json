@@ -16,9 +16,9 @@
     "test:coverage": "node --test --experimental-test-coverage",
     "verify": "npm run check && npm run test:ci",
     "electron": "electron desktop/main.js",
-    "build": "electron-builder --win && node scripts/fix-latest-yml.js",
-    "build:portable": "electron-builder --win portable",
-    "build:dir": "electron-builder --win --dir",
+    "build": "electron-builder --win --publish never && node scripts/fix-latest-yml.js",
+    "build:portable": "electron-builder --win portable --publish never",
+    "build:dir": "electron-builder --win --dir --publish never",
     "fix-yml": "node scripts/fix-latest-yml.js"
   },
   "dependencies": {
