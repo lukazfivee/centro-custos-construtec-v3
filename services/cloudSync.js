@@ -1,6 +1,6 @@
 const os = require('os');
 const { buildPackage, importPackage } = require('./smartSync');
-const { getInstanceIdentity } = require('../db');
+const { getDb, getInstanceIdentity } = require('../db');
 
 function configured() {
   return Boolean(process.env.SYNC_API_URL && process.env.SYNC_SHARED_KEY);
@@ -45,15 +45,71 @@ async function request(path, options, user) {
   }
 }
 
+function snapshotHasData(snapshot) {
+  const payload = snapshot?.payload;
+  if (!payload) return false;
+  return ['categories','costCenters','suppliers','transactions']
+    .some((key) => Array.isArray(payload[key]) && payload[key].length > 0);
+}
+
+async function alignNaturalKeys(snapshot) {
+  const payload = snapshot?.payload;
+  if (!payload) return;
+  const db = getDb();
+
+  await db.transaction(async (tx) => {
+    for (const item of payload.categories || []) {
+      const publicId = String(item?.publicId || '').trim();
+      const name = String(item?.name || '').trim();
+      if (!publicId || !name) continue;
+
+      const sameId = await tx.query('SELECT id FROM categories WHERE public_id=$1 LIMIT 1', [publicId]);
+      if (sameId.rows[0]) continue;
+
+      const sameName = await tx.query('SELECT id,public_id FROM categories WHERE LOWER(name)=LOWER($1) LIMIT 1', [name]);
+      if (sameName.rows[0] && String(sameName.rows[0].public_id) !== publicId) {
+        await tx.query('UPDATE categories SET public_id=$1 WHERE id=$2', [publicId, sameName.rows[0].id]);
+      }
+    }
+
+    for (const item of payload.costCenters || []) {
+      const publicId = String(item?.publicId || '').trim();
+      const code = String(item?.code || '').trim();
+      if (!publicId || !code) continue;
+
+      const sameId = await tx.query('SELECT id FROM cost_centers WHERE public_id=$1 LIMIT 1', [publicId]);
+      if (sameId.rows[0]) continue;
+
+      const sameCode = await tx.query('SELECT id,public_id FROM cost_centers WHERE LOWER(code)=LOWER($1) LIMIT 1', [code]);
+      if (sameCode.rows[0] && String(sameCode.rows[0].public_id) !== publicId) {
+        await tx.query('UPDATE cost_centers SET public_id=$1 WHERE id=$2', [publicId, sameCode.rows[0].id]);
+      }
+    }
+  });
+}
+
+async function importSnapshot(snapshot, user, prefix) {
+  if (!snapshot || !snapshotHasData(snapshot)) return null;
+  await alignNaturalKeys(snapshot);
+  return importPackage({
+    content:JSON.stringify(snapshot),
+    filename:`${prefix}-${new Date().toISOString().replace(/[:.]/g,'-')}.ccsync`,
+    user,
+  });
+}
+
 async function syncNow(user) {
+  // Sempre recebe primeiro. Isso evita que uma instalação nova publique novamente
+  // as categorias padrão com UUIDs locais diferentes e gere duplicidade na nuvem.
+  const before = await request('/v1/sync/snapshot', { method:'GET' }, user);
+  const receivedBefore = before.snapshot
+    ? await importSnapshot(before.snapshot, user, 'cloud-before-push')
+    : null;
+
   const pack = await buildPackage();
   const cloud = await request('/v1/sync', { method:'POST', body:JSON.stringify(pack) }, user);
   if (!cloud.snapshot) throw new Error('A nuvem não devolveu o snapshot compartilhado.');
-  const imported = await importPackage({
-    content:JSON.stringify(cloud.snapshot),
-    filename:`cloud-${new Date().toISOString().replace(/[:.]/g,'-')}.ccsync`,
-    user,
-  });
+  const imported = await importSnapshot(cloud.snapshot, user, 'cloud') || receivedBefore;
   return {
     ok:true,
     enviado:{
@@ -62,7 +118,7 @@ async function syncNow(user) {
       fornecedores:pack.payload.suppliers.length,
       lancamentos:pack.payload.transactions.length,
     },
-    recebido:imported.resumo || null,
+    recebido:imported?.resumo || null,
     cursor:Number(cloud.snapshot.cursor || 0),
   };
 }
@@ -70,12 +126,8 @@ async function syncNow(user) {
 async function pullNow(user) {
   const cloud = await request('/v1/sync/snapshot', { method:'GET' }, user);
   if (!cloud.snapshot) throw new Error('A nuvem não devolveu o snapshot compartilhado.');
-  const imported = await importPackage({
-    content:JSON.stringify(cloud.snapshot),
-    filename:`cloud-pull-${new Date().toISOString().replace(/[:.]/g,'-')}.ccsync`,
-    user,
-  });
-  return { ok:true, recebido:imported.resumo || null, cursor:Number(cloud.snapshot.cursor || 0) };
+  const imported = await importSnapshot(cloud.snapshot, user, 'cloud-pull');
+  return { ok:true, recebido:imported?.resumo || null, cursor:Number(cloud.snapshot.cursor || 0) };
 }
 
 module.exports = { configured, corporateEmail, syncNow, pullNow };
