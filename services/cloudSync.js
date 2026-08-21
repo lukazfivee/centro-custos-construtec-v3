@@ -44,7 +44,12 @@ async function request(path, options, user) {
       signal:controller.signal,
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `Cloud Sync HTTP ${response.status}`);
+    if (!response.ok) {
+      const error = new Error(data.error || `Cloud Sync HTTP ${response.status}`);
+      error.status = response.status;
+      error.code = data.code || '';
+      throw error;
+    }
     return data;
   } finally {
     clearTimeout(timer);
@@ -134,4 +139,54 @@ async function pullNow(user) {
   return { ok:true, recebido:imported?.resumo || null, cursor:Number(cloud.snapshot.cursor || 0) };
 }
 
-module.exports = { configured, corporateEmail, syncNow, pullNow };
+async function activitySince(user, after = 0) {
+  const cursor = Math.max(0, Number(after) || 0);
+  return request(`/v1/activity?after=${cursor}&limit=50`, { method:'GET' }, user);
+}
+
+async function listClientFollowups(user) {
+  return request('/v1/client-followups', { method:'GET' }, user);
+}
+
+async function saveClientFollowup(user, publicId, payload) {
+  return request(`/v1/client-followups/${encodeURIComponent(publicId)}`, {
+    method:'PUT',
+    body:JSON.stringify(payload || {}),
+  }, user);
+}
+
+async function getClientDraft(user, publicId) {
+  return request(`/v1/client-email-draft?costCenterPublicId=${encodeURIComponent(publicId)}`, { method:'GET' }, user);
+}
+
+async function saveClientDraft(user, payload) {
+  return request('/v1/client-email-draft', { method:'PUT', body:JSON.stringify(payload || {}) }, user);
+}
+
+async function authorizeClientDraft(user, publicId) {
+  return request('/v1/client-email-draft/authorize', {
+    method:'POST',
+    body:JSON.stringify({ costCenterPublicId:publicId, confirmar:true }),
+  }, user);
+}
+
+async function sendClientDraft(user, publicId, attachments = []) {
+  return request('/v1/client-email-draft/send', {
+    method:'POST',
+    body:JSON.stringify({ costCenterPublicId:publicId, attachments }),
+  }, user);
+}
+
+module.exports = {
+  configured,
+  corporateEmail,
+  syncNow,
+  pullNow,
+  activitySince,
+  listClientFollowups,
+  saveClientFollowup,
+  getClientDraft,
+  saveClientDraft,
+  authorizeClientDraft,
+  sendClientDraft,
+};
