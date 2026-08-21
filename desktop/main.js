@@ -53,9 +53,11 @@ if (!gotLock) {
 
   function writeRuntimeEnv(values) {
     if (!runtimeEnvPath) return;
+    const safeValues = { ...values };
+    delete safeValues.ADMIN_INITIAL_PASSWORD;
     const lines = [
       '# Configuração automática do aplicativo desktop. Não compartilhe este arquivo.',
-      ...Object.entries(values).map(([key, value]) => `${key}=${String(value).replace(/[\r\n]/g, '')}`),
+      ...Object.entries(safeValues).map(([key, value]) => `${key}=${String(value).replace(/[\r\n]/g, '')}`),
       '',
     ];
     fs.mkdirSync(path.dirname(runtimeEnvPath), { recursive: true });
@@ -68,16 +70,16 @@ if (!gotLock) {
 
   function loadEnv() {
     const appData = app.getPath('appData');
-    const dataRoot = path.join(appData, 'Construtec', 'CentroCustos');
+    const dataRoot = path.join(appData, 'Construtec', 'CentroCustosV3');
     fs.mkdirSync(dataRoot, { recursive: true });
 
     if (!process.env.PGLITE_DATA_DIR) process.env.PGLITE_DATA_DIR = path.join(dataRoot, 'pglite');
     if (!process.env.RESTORE_ROOT_DIR) process.env.RESTORE_ROOT_DIR = path.join(dataRoot, 'dados');
 
-    // Configuração opcional empacotada/manual.
+    // Configuração opcional para ambiente de desenvolvimento. O .env não é empacotado no instalador.
     readEnvFile(path.join(getAppDir(), '.env'));
 
-    // Configuração persistente exclusiva desta instalação desktop.
+    // Configuração persistente exclusiva desta instalação V3.
     runtimeEnvPath = path.join(dataRoot, 'desktop.env');
     const runtime = readEnvFile(runtimeEnvPath);
     let changed = false;
@@ -101,14 +103,12 @@ if (!gotLock) {
     }
 
     if (!process.env.ADMIN_INITIAL_PASSWORD || process.env.ADMIN_INITIAL_PASSWORD.length < 10) {
-      runtime.ADMIN_INITIAL_PASSWORD = generateInitialPassword();
-      process.env.ADMIN_INITIAL_PASSWORD = runtime.ADMIN_INITIAL_PASSWORD;
+      const temporaryPassword = generateInitialPassword();
+      process.env.ADMIN_INITIAL_PASSWORD = temporaryPassword;
       firstAccessCredentials = {
         email: process.env.ADMIN_INITIAL_EMAIL,
-        password: runtime.ADMIN_INITIAL_PASSWORD,
-        filePath: path.join(dataRoot, 'PRIMEIRO-ACESSO.txt'),
+        password: temporaryPassword,
       };
-      changed = true;
     }
 
     if (!process.env.NODE_ENV) {
@@ -117,37 +117,27 @@ if (!gotLock) {
       changed = true;
     }
 
-    if (changed || !fs.existsSync(runtimeEnvPath)) writeRuntimeEnv(runtime);
-  }
+    if (runtime.ADMIN_INITIAL_PASSWORD) {
+      delete runtime.ADMIN_INITIAL_PASSWORD;
+      changed = true;
+    }
 
-  function finalizeFirstAccessFile() {
-    if (!firstAccessCredentials) return;
-    const content = [
-      'CENTRO DE CUSTOS CONSTRUTEC - PRIMEIRO ACESSO',
-      '',
-      `Usuário: ${firstAccessCredentials.email}`,
-      `Senha temporária: ${firstAccessCredentials.password}`,
-      '',
-      'Entre no sistema e altere esta senha assim que possível.',
-      'Depois disso, você pode excluir este arquivo.',
-      '',
-    ].join('\r\n');
-    fs.writeFileSync(firstAccessCredentials.filePath, content, 'utf8');
-    clipboard.writeText(`Usuário: ${firstAccessCredentials.email}\nSenha: ${firstAccessCredentials.password}`);
+    if (changed || !fs.existsSync(runtimeEnvPath)) writeRuntimeEnv(runtime);
   }
 
   async function showFirstAccessInfo() {
     if (!firstAccessCredentials) return;
-    finalizeFirstAccessFile();
+    clipboard.writeText(`Usuário: ${firstAccessCredentials.email}\nSenha: ${firstAccessCredentials.password}`);
     await dialog.showMessageBox({
       type: 'info',
       title: 'Primeiro acesso',
-      message: 'O Centro de Custos foi configurado automaticamente.',
-      detail: `Usuário: ${firstAccessCredentials.email}\nSenha temporária: ${firstAccessCredentials.password}\n\nAs credenciais também foram copiadas para a área de transferência e salvas em:\n${firstAccessCredentials.filePath}\n\nAltere a senha após entrar no sistema.`,
+      message: 'O Centro de Custos V3 foi configurado automaticamente.',
+      detail: `Usuário: ${firstAccessCredentials.email}\nSenha temporária: ${firstAccessCredentials.password}\n\nAs credenciais foram copiadas para a área de transferência. Altere a senha após entrar no sistema. A senha temporária não é gravada em arquivo.`,
       buttons: ['Entendi'],
       defaultId: 0,
       noLink: true,
     });
+    firstAccessCredentials = null;
   }
 
   function getIcon() {
@@ -156,7 +146,7 @@ if (!gotLock) {
   }
 
   function getPrefsPath() {
-    const dataRoot = process.env.RESTORE_ROOT_DIR || path.join(app.getPath('appData'), 'Construtec', 'CentroCustos', 'dados');
+    const dataRoot = process.env.RESTORE_ROOT_DIR || path.join(app.getPath('appData'), 'Construtec', 'CentroCustosV3', 'dados');
     return path.join(dataRoot, 'preferences.json');
   }
 

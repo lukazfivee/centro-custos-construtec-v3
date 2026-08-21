@@ -1,0 +1,19 @@
+name = "centro-custos-reports"
+main = "src/index.js"
+compatibility_date = "2026-08-21"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "centro-custos-reports"
+database_id = "COLE_AQUI_O_DATABASE_ID"
+
+[vars]
+REPORT_TO = "pcm@rcconstrutec.com.br"
+REPORT_FROM = "Centro de Custos <no-reply@reports.rcconstrutec.com.br>"
+
+# Segredos NAO devem ser colocados neste arquivo.
+# Configure no Cloudflare:
+#   wrangler secret put RESEND_API_KEY
+# Opcional:
+#   wrangler secret put REPORT_INGEST_KEY
