@@ -410,12 +410,18 @@ function eventSummary(type, payload, resolution) {
   return 'Dados compartilhados atualizados.';
 }
 
+function activityCursor(after, events, limit, latest) {
+  return events.length === limit
+    ? Number(events[events.length - 1].id)
+    : Math.max(after, Number(latest || 0));
+}
+
 async function handleActivity(request, env) {
   const auth = await requireSession(request, env);
   if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
   const url = new URL(request.url);
-  const after = Math.max(0, Number(url.searchParams.get('after') || 0));
-  const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit') || 50)));
+  const after = Math.max(0, Number(url.searchParams.get('after')) || 0);
+  const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 50));
   const instanceId = text(request.headers.get('x-instance-id'));
   const rows = (await env.DB.prepare(`
     SELECT e.id,e.entity_type,e.payload,e.resolution,e.created_at,e.source_instance_id,e.source_instance_name,e.source_user_email,u.name AS source_user_name
@@ -427,7 +433,7 @@ async function handleActivity(request, env) {
     return { id: Number(r.id), entityType: r.entity_type, createdAt: r.created_at, sourceInstanceName: r.source_instance_name || '', sourceUserEmail: r.source_user_email || '', sourceUserName: r.source_user_name || '', summary: eventSummary(r.entity_type, payload, r.resolution) };
   });
   const latest = await env.DB.prepare('SELECT MAX(id) AS cursor FROM sync_events WHERE org_id=?').bind(auth.user.org_id).first();
-  return json({ ok: true, events, cursor: Math.max(after, Number(latest?.cursor || 0)) });
+  return json({ ok: true, events, cursor: activityCursor(after, events, limit, latest?.cursor) });
 }
 
 function clientPublic(row) {
