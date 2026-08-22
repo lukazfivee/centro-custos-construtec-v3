@@ -6,6 +6,25 @@ const cloud = require('../services/cloudSync');
 const router = express.Router();
 router.use(autenticar);
 
+const BILLING_CC = [
+  'supervisao@rcconstrutec.com.br',
+  'engenharia@rcconstrutec.com.br',
+  'comercial@rcconstrutec.com.br',
+  'pcm@rcconstrutec.com.br',
+];
+
+function emailList(value) {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean))];
+}
+
+function billingCc(value, senderEmail, to = []) {
+  const sender = String(senderEmail || '').trim().toLowerCase();
+  const primary = new Set(emailList(to));
+  return [...new Set([...emailList(value), ...BILLING_CC])]
+    .filter((email) => email !== sender && !primary.has(email));
+}
+
 function validateInvoicePdfAttachments(value) {
   const attachments = Array.isArray(value) ? value : [];
   if (attachments.length > 1) throw httpError(400,'Anexe somente uma nota fiscal em PDF por envio.');
@@ -69,11 +88,23 @@ router.put('/cobrancas/:publicId', exigirPapel('admin','gestor'), asyncRoute(asy
 }));
 
 router.get('/cobrancas/:publicId/rascunho', exigirPapel('admin','gestor','supervisor'), asyncRoute(async (req, res) => {
-  res.json(await cloud.getClientDraft(req.usuario, req.params.publicId));
+  const data = await cloud.getClientDraft(req.usuario, req.params.publicId);
+  if (data?.draft) {
+    data.draft.cc = billingCc(data.draft.cc, req.usuario.email, data.draft.to);
+    data.copyPolicy = { mandatory:true, emails:BILLING_CC };
+  }
+  res.json(data);
 }));
 
 router.put('/cobrancas/:publicId/rascunho', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
-  res.json(await cloud.saveClientDraft(req.usuario, { ...req.body, costCenterPublicId:req.params.publicId }));
+  const to = emailList(req.body?.to);
+  const payload = {
+    ...req.body,
+    to,
+    cc:billingCc(req.body?.cc, req.usuario.email, to),
+    costCenterPublicId:req.params.publicId,
+  };
+  res.json(await cloud.saveClientDraft(req.usuario, payload));
 }));
 
 router.post('/cobrancas/:publicId/autorizar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
