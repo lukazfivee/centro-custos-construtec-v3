@@ -9,13 +9,19 @@ function root(){return path.resolve(process.env.RESTORE_ROOT_DIR||path.join(__di
 function dir(){return path.join(root(),'backups-automaticos');}
 
 async function runAutoBackup(force=false){
-  const db=getDb(); if(!db.dump)return {ok:false,motivo:'postgres'};
-  const settings=(await db.query('SELECT * FROM backup_settings WHERE id=1')).rows[0];
-  if(!settings?.enabled&&!force)return {ok:false,motivo:'desativado'};
-  const last=settings?.last_success_at?new Date(settings.last_success_at).getTime():0;
-  const intervalMs=Number(settings?.interval_hours||24)*3600000;
-  if(!force&&Date.now()-last<intervalMs)return {ok:false,motivo:'aguardando'};
+  const db=getDb();
+  if(!db.dump){
+    logger.warn('automatic_backup_unavailable_postgres',{
+      motivo:'O backup automático embutido não roda com PostgreSQL central. Configure uma estratégia externa com pg_dump.',
+    });
+    return {ok:false,motivo:'postgres'};
+  }
   try{
+    const settings=(await db.query('SELECT * FROM backup_settings WHERE id=1')).rows[0];
+    if(!settings?.enabled&&!force)return {ok:false,motivo:'desativado'};
+    const last=settings?.last_success_at?new Date(settings.last_success_at).getTime():0;
+    const intervalMs=Number(settings?.interval_hours||24)*3600000;
+    if(!force&&Date.now()-last<intervalMs)return {ok:false,motivo:'aguardando'};
     const dump=await db.dump();const buffer=Buffer.from(await dump.arrayBuffer());
     fs.mkdirSync(dir(),{recursive:true});
     const name=getInstanceIdentity().name.replace(/[^a-zA-Z0-9_-]+/g,'-').toLowerCase();
