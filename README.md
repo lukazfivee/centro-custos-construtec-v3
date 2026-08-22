@@ -1,6 +1,6 @@
 # Centro de Custos Construtec — local, offline e sem mensalidade
 
-Aplicação web para a operação financeira da Construtec. Ela abre no navegador, mas o servidor e o banco rodam no computador da empresa. Depois da instalação dos componentes, o uso diário não depende de internet.
+Aplicação web para a operação financeira da Construtec. Ela abre no navegador, mas o servidor e o banco rodam no computador da empresa. Depois da instalação dos componentes, o uso diário não depende de internet para os recursos locais.
 
 ## O que o sistema faz
 
@@ -18,15 +18,27 @@ Aplicação web para a operação financeira da Construtec. Ela abre no navegado
 
 ## Custo, privacidade e funcionamento offline
 
-O uso da aplicação tem custo zero:
+A maior parte da aplicação funciona localmente e sem mensalidade: o servidor Express e o banco PGlite ficam no computador da empresa, e os recursos locais continuam disponíveis sem internet.
 
-- não usa ChatGPT, OpenAI ou qualquer inteligência artificial;
-- não usa tokens, créditos, chave de API ou assinatura;
-- não envia dados para serviços online;
-- não precisa de internet durante a operação;
-- não depende de SQLite nem de módulos nativos frágeis no Windows.
+Alguns recursos opcionais usam serviços externos quando estão configurados. O principal deles é o **Report V2**. Quando `REPORT_API_URL` possui um endereço, cada report de bug criado no aplicativo entra em uma fila local e é enviado ao servidor central de reports para triagem. Esse envio contém:
 
-A internet é necessária apenas na primeira instalação para o `npm install` baixar os componentes gratuitos. Os arquivos visuais, o código e o banco ficam locais.
+- nome e e-mail do usuário autenticado que criou o report;
+- título, descrição, tipo e severidade do report;
+- data de criação;
+- identificação e nome da instalação;
+- versão do aplicativo e plataforma do computador.
+
+Antes do envio de um novo report pela interface, o aplicativo apresenta um aviso e exige confirmação explícita do usuário sobre esse compartilhamento. Se não houver internet, o report permanece na fila local e o sistema tenta entregá-lo novamente depois.
+
+Para **desativar o envio externo de reports**, defina a variável no `.env` sem valor:
+
+```env
+REPORT_API_URL=
+```
+
+Quando essa variável está vazia, os reports continuam registrados localmente, mas não são entregues ao servidor central.
+
+A sincronização corporativa em nuvem, quando configurada, também depende de internet. Fora esses recursos online configurados, os arquivos visuais, o código e o banco local permanecem no computador.
 
 ## Como iniciar no Windows
 
@@ -129,4 +141,3 @@ npm start
 ```
 
 Variáveis principais estão documentadas em `.env.example`. Para desenvolvimento isolado, use `PGLITE_DATA_DIR` e `RESTORE_ROOT_DIR` apontando para pastas temporárias.
-

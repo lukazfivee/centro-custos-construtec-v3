@@ -1,5 +1,5 @@
 require('dotenv').config();
-if (!process.env.REPORT_API_URL) process.env.REPORT_API_URL = 'https://centro-custos-reports.construtec-reports.workers.dev';
+if (process.env.REPORT_API_URL === undefined) process.env.REPORT_API_URL = 'https://centro-custos-reports.construtec-reports.workers.dev';
 if (!process.env.SYNC_API_URL) process.env.SYNC_API_URL = 'https://centro-custos-api.construtec-reports.workers.dev';
 const express = require('express');
 const os = require('os');
@@ -86,6 +86,7 @@ function createApp() {
       if (!html.includes('v3-1-enhancements.js')) html = html.replace('</body>', '  <script src="v3-1-enhancements.js"></script>\n</body>');
       if (!html.includes('v3-1-refinements.js')) html = html.replace('</body>', '  <script src="v3-1-refinements.js"></script>\n</body>');
       if (!html.includes('v3-1-invoices.js')) html = html.replace('</body>', '  <script src="v3-1-invoices.js"></script>\n</body>');
+      if (!html.includes('report-consent.js')) html = html.replace('</body>', '  <script src="report-consent.js"></script>\n</body>');
       res.setHeader('Cache-Control', 'no-cache');
       res.type('html').send(html);
     } catch (error) { next(error); }
