@@ -7,8 +7,45 @@ const { getDb, getInstanceIdentity } = require('../db');
 const { autenticar } = require('../middleware/auth');
 const { asyncRoute, httpError } = require('../lib/http');
 const cloudAuth = require('../services/cloudAuth');
+const logger = require('../lib/logger');
 
 const router = express.Router();
+const LOGIN_MAX_FAILURES = 5;
+const LOGIN_BLOCK_MS = 15 * 60 * 1000;
+const loginFailures = new Map();
+
+function loginFailureState(email) {
+  const key = String(email || '').trim().toLowerCase();
+  const state = loginFailures.get(key);
+  if (!state) return null;
+  if (state.blockedUntil && state.blockedUntil <= Date.now()) {
+    loginFailures.delete(key);
+    return null;
+  }
+  return state;
+}
+
+function assertLoginAllowed(email) {
+  const state = loginFailureState(email);
+  if (!state?.blockedUntil) return;
+  const minutes = Math.max(1, Math.ceil((state.blockedUntil - Date.now()) / 60000));
+  throw httpError(429, `Muitas tentativas de login para este e-mail. Tente novamente em ${minutes} minuto(s).`);
+}
+
+function registerLoginFailure(email) {
+  const key = String(email || '').trim().toLowerCase();
+  if (!key) return;
+  const current = loginFailureState(key) || { count:0, blockedUntil:null };
+  const count = current.count + 1;
+  loginFailures.set(key, {
+    count,
+    blockedUntil: count >= LOGIN_MAX_FAILURES ? Date.now() + LOGIN_BLOCK_MS : null,
+  });
+}
+
+function clearLoginFailures(email) {
+  loginFailures.delete(String(email || '').trim().toLowerCase());
+}
 
 async function localCorporateCandidate(email) {
   const { rows } = await getDb().query(
@@ -75,35 +112,50 @@ async function corporateLogin(email, password) {
 router.post('/login', asyncRoute(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.senha || '');
-  if (!email || !password) throw httpError(400, 'Informe e-mail e senha.');
 
-  let user;
-  if (cloudAuth.corporateEmail(email)) {
-    try {
-      user = await corporateLogin(email,password);
-    } catch (error) {
-      if (error.status === 401 || error.status === 400) throw httpError(error.status,error.message);
-      if (error.code === 'BOOTSTRAP_KEY_MISSING') throw httpError(503,error.message);
-      if (error.status === 409) throw httpError(409,error.message);
-      throw httpError(503,'Não foi possível validar o acesso corporativo agora. Verifique a internet e tente novamente.');
+  try {
+    assertLoginAllowed(email);
+    if (!email || !password) throw httpError(400, 'Informe e-mail e senha.');
+
+    let user;
+    if (cloudAuth.corporateEmail(email)) {
+      try {
+        user = await corporateLogin(email,password);
+      } catch (error) {
+        if (error.status === 401 || error.status === 400) throw httpError(error.status,error.message);
+        if (error.code === 'BOOTSTRAP_KEY_MISSING') throw httpError(503,error.message);
+        if (error.status === 409) throw httpError(409,error.message);
+        throw httpError(503,'Não foi possível validar o acesso corporativo agora. Verifique a internet e tente novamente.');
+      }
+    } else {
+      const { rows } = await getDb().query(
+        `SELECT id, name, email, password_hash, role
+         FROM users WHERE LOWER(email) = $1 AND active = TRUE`, [email]
+      );
+      user = rows[0];
+      if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+        throw httpError(401, 'E-mail ou senha inválidos.');
+      }
     }
-  } else {
-    const { rows } = await getDb().query(
-      `SELECT id, name, email, password_hash, role
-       FROM users WHERE LOWER(email) = $1 AND active = TRUE`, [email]
-    );
-    user = rows[0];
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-      throw httpError(401, 'E-mail ou senha inválidos.');
-    }
+
+    clearLoginFailures(email);
+    const token = jwt.sign({}, process.env.JWT_SECRET, { subject: String(user.id), expiresIn: '8h' });
+    res.json({
+      token,
+      usuario: { id:user.id, nome:user.name, email:user.email, role:user.role },
+      instancia: getInstanceIdentity(),
+    });
+  } catch (error) {
+    const status = Number(error.statusCode || error.status || 500);
+    if (status === 401) registerLoginFailure(email);
+    logger.warn('login_failed', {
+      email: email || null,
+      requestId:req.requestId,
+      status,
+      motivo:error.message,
+    });
+    throw error;
   }
-
-  const token = jwt.sign({}, process.env.JWT_SECRET, { subject: String(user.id), expiresIn: '8h' });
-  res.json({
-    token,
-    usuario: { id:user.id, nome:user.name, email:user.email, role:user.role },
-    instancia: getInstanceIdentity(),
-  });
 }));
 
 router.get('/me', autenticar, (req, res) => res.json({
