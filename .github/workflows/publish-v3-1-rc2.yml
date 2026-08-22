@@ -1,4 +1,4 @@
-name: Publicar V3.1.0 RC2
+name: Publicar V3.1.0 RC3
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - chatgpt/v3-1-multiusuario-cloudflare
     paths:
       - .github/workflows/publish-v3-1-rc2.yml
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -29,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Definir versao do pre-lancamento
-        run: npm version 3.1.0-rc.2 --no-git-tag-version
+        run: npm version 3.1.0-rc.3 --no-git-tag-version
 
       - name: Validar aplicacao
         run: npm run verify
@@ -40,21 +41,26 @@ jobs:
       - name: Publicar pre-lancamento no GitHub
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.0-rc.2
-          name: Centro de Custos Construtec V3.1.0 RC2
+          tag_name: v3.1.0-rc.3
+          name: Centro de Custos Construtec V3.1.0 RC3
           target_commitish: ${{ github.sha }}
           prerelease: true
           make_latest: false
           body: |
-            Pre-lancamento RC2 da V3.1.
+            Pre-lancamento RC3 da V3.1 para validacao interna.
 
             Inclui:
-            - melhoria de contraste no modo noturno;
-            - menu lateral recolhivel;
-            - configuracoes organizadas em lista;
+            - correcao de contraste no modo noturno;
+            - menu lateral compacto que expande ao passar o mouse;
+            - configuracoes em formato de lista;
+            - troca de senha em janela dedicada;
+            - Reports centralizados dentro da aba Reports;
+            - nova aba Clientes com empresa/hospital, contato e e-mail;
+            - selecao de cliente dentro de Cobrancas;
             - notificacoes de atividade multiusuario com usuario e horario;
             - acompanhamento de obras e cobrancas;
             - rascunho, autorizacao e auditoria de e-mails aos clientes;
+            - envio de NF em PDF anexada ao e-mail, com limite de 5 MB;
             - login corporativo e sincronizacao Cloudflare/D1.
 
             Use o Setup x64 para instalacao normal.
