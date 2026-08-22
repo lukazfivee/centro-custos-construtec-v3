@@ -75,21 +75,20 @@ function createApp() {
 
   const publicDir = path.join(__dirname, 'public');
   const indexPath = path.join(publicDir, 'index.html');
-  const sendIndex = (req, res, next) => {
-    try {
-      let html = fs.readFileSync(indexPath, 'utf8');
-      if (!html.includes('v3-1-enhancements.css')) html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-enhancements.css">\n</head>');
-      if (!html.includes('v3-1-refinements.css')) html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-refinements.css">\n</head>');
-      if (!html.includes('v3-1-figma.css')) html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-figma.css">\n</head>');
-      if (!html.includes('report-v2.js')) html = html.replace('</body>', '  <script src="report-v2.js"></script>\n</body>');
-      if (!html.includes('cloud-sync.js')) html = html.replace('</body>', '  <script src="cloud-sync.js"></script>\n</body>');
-      if (!html.includes('v3-1-enhancements.js')) html = html.replace('</body>', '  <script src="v3-1-enhancements.js"></script>\n</body>');
-      if (!html.includes('v3-1-refinements.js')) html = html.replace('</body>', '  <script src="v3-1-refinements.js"></script>\n</body>');
-      if (!html.includes('v3-1-invoices.js')) html = html.replace('</body>', '  <script src="v3-1-invoices.js"></script>\n</body>');
-      if (!html.includes('report-consent.js')) html = html.replace('</body>', '  <script src="report-consent.js"></script>\n</body>');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.type('html').send(html);
-    } catch (error) { next(error); }
+  let indexHtml = fs.readFileSync(indexPath, 'utf8');
+  if (!indexHtml.includes('v3-1-enhancements.css')) indexHtml = indexHtml.replace('</head>', '  <link rel="stylesheet" href="v3-1-enhancements.css">\n</head>');
+  if (!indexHtml.includes('v3-1-refinements.css')) indexHtml = indexHtml.replace('</head>', '  <link rel="stylesheet" href="v3-1-refinements.css">\n</head>');
+  if (!indexHtml.includes('v3-1-figma.css')) indexHtml = indexHtml.replace('</head>', '  <link rel="stylesheet" href="v3-1-figma.css">\n</head>');
+  if (!indexHtml.includes('report-v2.js')) indexHtml = indexHtml.replace('</body>', '  <script src="report-v2.js"></script>\n</body>');
+  if (!indexHtml.includes('cloud-sync.js')) indexHtml = indexHtml.replace('</body>', '  <script src="cloud-sync.js"></script>\n</body>');
+  if (!indexHtml.includes('v3-1-enhancements.js')) indexHtml = indexHtml.replace('</body>', '  <script src="v3-1-enhancements.js"></script>\n</body>');
+  if (!indexHtml.includes('v3-1-refinements.js')) indexHtml = indexHtml.replace('</body>', '  <script src="v3-1-refinements.js"></script>\n</body>');
+  if (!indexHtml.includes('v3-1-invoices.js')) indexHtml = indexHtml.replace('</body>', '  <script src="v3-1-invoices.js"></script>\n</body>');
+  if (!indexHtml.includes('report-consent.js')) indexHtml = indexHtml.replace('</body>', '  <script src="report-consent.js"></script>\n</body>');
+
+  const sendIndex = (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.type('html').send(indexHtml);
   };
 
   app.get('/', sendIndex);
