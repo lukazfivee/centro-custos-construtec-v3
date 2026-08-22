@@ -85,6 +85,7 @@ function createApp() {
       if (!html.includes('cloud-sync.js')) html = html.replace('</body>', '  <script src="cloud-sync.js"></script>\n</body>');
       if (!html.includes('v3-1-enhancements.js')) html = html.replace('</body>', '  <script src="v3-1-enhancements.js"></script>\n</body>');
       if (!html.includes('v3-1-refinements.js')) html = html.replace('</body>', '  <script src="v3-1-refinements.js"></script>\n</body>');
+      if (!html.includes('v3-1-invoices.js')) html = html.replace('</body>', '  <script src="v3-1-invoices.js"></script>\n</body>');
       res.setHeader('Cache-Control', 'no-cache');
       res.type('html').send(html);
     } catch (error) { next(error); }
