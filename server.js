@@ -49,6 +49,7 @@ function createApp() {
   app.use('/api/auth', require('./routes/auth'));
   app.use('/api/usuarios', require('./routes/users'));
   app.use('/api/centros-custo', require('./routes/costCenters'));
+  app.use('/api/notas-fiscais-centro', require('./routes/costCenterInvoices'));
   app.use('/api/categorias', require('./routes/categories'));
   app.use('/api/fornecedores', require('./routes/suppliers'));
   app.use('/api/historico', require('./routes/history'));
@@ -77,27 +78,13 @@ function createApp() {
   const sendIndex = (req, res, next) => {
     try {
       let html = fs.readFileSync(indexPath, 'utf8');
-      if (!html.includes('v3-1-enhancements.css')) {
-        html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-enhancements.css">\n</head>');
-      }
-      if (!html.includes('v3-1-refinements.css')) {
-        html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-refinements.css">\n</head>');
-      }
-      if (!html.includes('v3-1-figma.css')) {
-        html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-figma.css">\n</head>');
-      }
-      if (!html.includes('report-v2.js')) {
-        html = html.replace('</body>', '  <script src="report-v2.js"></script>\n</body>');
-      }
-      if (!html.includes('cloud-sync.js')) {
-        html = html.replace('</body>', '  <script src="cloud-sync.js"></script>\n</body>');
-      }
-      if (!html.includes('v3-1-enhancements.js')) {
-        html = html.replace('</body>', '  <script src="v3-1-enhancements.js"></script>\n</body>');
-      }
-      if (!html.includes('v3-1-refinements.js')) {
-        html = html.replace('</body>', '  <script src="v3-1-refinements.js"></script>\n</body>');
-      }
+      if (!html.includes('v3-1-enhancements.css')) html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-enhancements.css">\n</head>');
+      if (!html.includes('v3-1-refinements.css')) html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-refinements.css">\n</head>');
+      if (!html.includes('v3-1-figma.css')) html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-figma.css">\n</head>');
+      if (!html.includes('report-v2.js')) html = html.replace('</body>', '  <script src="report-v2.js"></script>\n</body>');
+      if (!html.includes('cloud-sync.js')) html = html.replace('</body>', '  <script src="cloud-sync.js"></script>\n</body>');
+      if (!html.includes('v3-1-enhancements.js')) html = html.replace('</body>', '  <script src="v3-1-enhancements.js"></script>\n</body>');
+      if (!html.includes('v3-1-refinements.js')) html = html.replace('</body>', '  <script src="v3-1-refinements.js"></script>\n</body>');
       res.setHeader('Cache-Control', 'no-cache');
       res.type('html').send(html);
     } catch (error) { next(error); }
@@ -105,8 +92,7 @@ function createApp() {
 
   app.get('/', sendIndex);
   app.use(express.static(publicDir, {
-    etag:true,
-    index:false,
+    etag:true,index:false,
     setHeaders(res, filePath) {
       if (/\.(?:woff2?|png|jpe?g|gif|svg|ico)$/i.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=604800');
       else if (/\.(?:js|css|html)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
