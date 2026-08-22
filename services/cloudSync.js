@@ -11,6 +11,13 @@ function corporateEmail(email) {
   return /^[^\s@]+@rcconstrutec\.com\.br$/i.test(String(email || '').trim());
 }
 
+function requestError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.publicMessage = message;
+  return error;
+}
+
 function headersFor(user) {
   const instance = getInstanceIdentity();
   const pkg = require('../package.json');
@@ -28,10 +35,10 @@ function headersFor(user) {
 }
 
 async function request(path, options, user) {
-  if (!configured()) throw new Error('Sincronização em nuvem ainda não configurada nesta instalação.');
-  if (!corporateEmail(user?.email)) throw new Error('A sincronização compartilhada exige uma conta @rcconstrutec.com.br.');
+  if (!configured()) throw requestError(503,'Sincronização em nuvem ainda não configurada nesta instalação.');
+  if (!corporateEmail(user?.email)) throw requestError(403,'A sincronização compartilhada exige uma conta @rcconstrutec.com.br.');
   if (!user?.cloud_session_token && !process.env.SYNC_SHARED_KEY) {
-    throw new Error('Entre novamente com sua conta corporativa para sincronizar.');
+    throw requestError(401,'Entre novamente com sua conta corporativa para sincronizar.');
   }
   const base = String(process.env.SYNC_API_URL || DEFAULT_API_URL).replace(/\/+$/, '');
   const controller = new AbortController();

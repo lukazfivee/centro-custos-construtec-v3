@@ -36,3 +36,11 @@ test('falha D1 mantém diagnóstico interno e devolve mensagem segura', async ()
     delete require.cache[require.resolve('../services/cloudSync')];
   }
 });
+
+test('conta não corporativa recebe erro de acesso em vez de falha interna', async () => {
+  const cloud = require('../services/cloudSync');
+  await assert.rejects(
+    cloud.listClientFollowups({ email:'usuario@teste.local' }),
+    (error) => error.statusCode === 403 && /@rcconstrutec\.com\.br/.test(error.publicMessage)
+  );
+});
