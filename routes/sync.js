@@ -81,13 +81,14 @@ router.post('/conflitos/:id/resolver', asyncRoute(async (req, res) => {
   const cat = catMap.get(catName);
 
   if (existing.rows[0]) {
+    if (!centerId || !cat) return res.status(400).json({ erro:'Centro ou categoria da versão escolhida não encontrado no cadastro local.' });
     await db.query(
       `UPDATE transactions SET type=$1, cost_center_id=$2, category_id=$3, description=$4,
         counterparty=$5, amount=$6, transaction_date=$7, notes=$8, due_date=$9,
         settlement_date=$10, financial_status=$11, document_number=$12, payment_method=$13,
         revision=revision+1, updated_by=$14, updated_at=NOW(), deleted_at=$15
        WHERE public_id=$16`,
-      [data.tipo || data.type, centerId || 1, cat?.id || 1,
+      [data.tipo || data.type, centerId, cat.id,
         (data.descricao || data.description || '').slice(0,240),
         (data.cliente_fornecedor || data.counterparty || '').slice(0,160) || null,
         Number(String(data.valor || data.amount || 0).replace(',','.')),
