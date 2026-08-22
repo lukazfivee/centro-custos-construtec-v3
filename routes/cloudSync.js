@@ -6,6 +6,24 @@ const cloud = require('../services/cloudSync');
 const router = express.Router();
 router.use(autenticar);
 
+function validateInvoicePdfAttachments(value) {
+  const attachments = Array.isArray(value) ? value : [];
+  if (attachments.length > 1) throw httpError(400,'Anexe somente uma nota fiscal em PDF por envio.');
+  if (!attachments.length) return attachments;
+
+  const file = attachments[0] || {};
+  const filename = String(file.filename || '').trim();
+  const contentType = String(file.contentType || '').trim().toLowerCase();
+  const contentBase64 = String(file.contentBase64 || '').trim();
+  if (!filename || !contentBase64) throw httpError(400,'O arquivo da nota fiscal é inválido.');
+  if (!/\.pdf$/i.test(filename) || contentType !== 'application/pdf') {
+    throw httpError(400,'A nota fiscal deve ser enviada em formato PDF.');
+  }
+  const estimatedBytes = Math.ceil(contentBase64.length * 0.75);
+  if (estimatedBytes > 5 * 1024 * 1024) throw httpError(413,'A nota fiscal em PDF deve ter no máximo 5 MB.');
+  return attachments;
+}
+
 router.get('/status', asyncRoute(async (req, res) => {
   res.json({
     configured:cloud.configured(),
@@ -64,7 +82,8 @@ router.post('/cobrancas/:publicId/autorizar', exigirPapel('admin','gestor'), asy
 }));
 
 router.post('/cobrancas/:publicId/enviar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
-  res.json(await cloud.sendClientDraft(req.usuario, req.params.publicId, req.body?.attachments || []));
+  const attachments = validateInvoicePdfAttachments(req.body?.attachments);
+  res.json(await cloud.sendClientDraft(req.usuario, req.params.publicId, attachments));
 }));
 
 module.exports = router;
