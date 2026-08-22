@@ -19,8 +19,12 @@
       .v31-center-invoice-file{margin-top:12px;padding:11px 12px;border:1px dashed rgba(50,169,205,.5);border-radius:10px;color:var(--muted);font-size:11px}
       .v31-center-invoice-file.ready{color:var(--green);font-weight:700;border-style:solid}
       .v31-billing-linked-nf{margin-top:8px;padding:9px 11px;border-radius:8px;background:rgba(30,166,114,.1);color:var(--green);font-size:11px;font-weight:700}
-      html.dark .v31-center-invoice{background:rgba(50,169,205,.045)}
-      @media(max-width:640px){.v31-center-invoice-actions{width:100%}.v31-center-invoice-actions .btn{flex:1 1 140px}}
+      .v31-auto-cc{padding:12px;border:1px solid var(--line);border-radius:10px;background:rgba(50,169,205,.05)}
+      .v31-auto-cc-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;font-size:11px;font-weight:700}
+      .v31-auto-cc-label small{font-weight:400;color:var(--muted)}
+      .v31-auto-cc-chips{display:flex;gap:6px;flex-wrap:wrap}.v31-auto-cc-chip{display:inline-flex;align-items:center;min-height:28px;padding:5px 9px;border-radius:999px;background:rgba(50,169,205,.12);border:1px solid rgba(50,169,205,.28);font-size:10px;font-weight:700}
+      html.dark .v31-center-invoice,html.dark .v31-auto-cc{background:rgba(50,169,205,.045)}
+      @media(max-width:640px){.v31-center-invoice-actions{width:100%}.v31-center-invoice-actions .btn{flex:1 1 140px}.v31-auto-cc-label{align-items:flex-start;flex-direction:column}}
     `;
     document.head.appendChild(style);
   }
@@ -154,6 +158,20 @@
     }
   }
 
+  function decorateCorporateCc() {
+    const input = q('#v31-e-cc');
+    const form = q('#v31-email-form');
+    if (!input || !form || input.dataset.v31CorporateCc === 'true') return;
+    input.dataset.v31CorporateCc = 'true';
+    const emails = String(input.value || '').split(/[;,\n]+/).map(v => v.trim()).filter(Boolean);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'span-2 v31-auto-cc';
+    wrapper.innerHTML = `<div class="v31-auto-cc-label"><span>Cópias corporativas automáticas</span><small>Aplicadas pelo sistema; o usuário que envia não é copiado para si mesmo.</small></div><div class="v31-auto-cc-chips">${emails.map(email => `<span class="v31-auto-cc-chip">${esc(email)}</span>`).join('') || '<span class="muted">As cópias serão aplicadas ao salvar o rascunho.</span>'}</div>`;
+    const holder = input.parentElement;
+    holder.style.display = 'none';
+    holder.insertAdjacentElement('afterend', wrapper);
+  }
+
   function captureContext(event) {
     const billing = event.target.closest?.('[data-email-followup]');
     if (billing) lastBillingPublicId = billing.dataset.emailFollowup || null;
@@ -165,7 +183,10 @@
     document.addEventListener('click', captureContext, true);
     const observer = new MutationObserver(() => {
       if (q('.center-detail-header') && lastCenterId) renderCenterInvoice(lastCenterId);
-      if (q('#v31-email-form') && lastBillingPublicId) attachLinkedInvoiceToBilling(lastBillingPublicId);
+      if (q('#v31-email-form') && lastBillingPublicId) {
+        attachLinkedInvoiceToBilling(lastBillingPublicId);
+        decorateCorporateCc();
+      }
     });
     observer.observe(document.body, { childList:true, subtree:true });
   }
