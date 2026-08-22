@@ -106,6 +106,28 @@ async function changePassword(sessionToken, currentPassword, newPassword) {
   });
 }
 
+async function getProfilePhoto(sessionToken) {
+  return request('/v1/auth/profile-photo', {
+    method:'GET',
+    headers:{ Authorization:`Bearer ${sessionToken}` },
+  });
+}
+
+async function setProfilePhoto(sessionToken, payload) {
+  return request('/v1/auth/profile-photo', {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${sessionToken}` },
+    body:JSON.stringify(payload),
+  });
+}
+
+async function removeProfilePhoto(sessionToken) {
+  return request('/v1/auth/profile-photo', {
+    method:'DELETE',
+    headers:{ Authorization:`Bearer ${sessionToken}` },
+  });
+}
+
 module.exports = {
   DEFAULT_API_URL,
   apiUrl,
@@ -117,4 +139,7 @@ module.exports = {
   createUser,
   setUserStatus,
   changePassword,
+  getProfilePhoto,
+  setProfilePhoto,
+  removeProfilePhoto,
 };

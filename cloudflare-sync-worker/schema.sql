@@ -66,7 +66,9 @@ CREATE TABLE IF NOT EXISTS cloud_users (
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  last_login_at TEXT
+  last_login_at TEXT,
+  profile_photo_base64 TEXT,
+  profile_photo_mime TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS cloud_users_email_unique ON cloud_users(org_id, email);
 

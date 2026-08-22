@@ -79,6 +79,35 @@ $('#form-login').addEventListener('submit',async (event) => {
 });
 $('#btn-sair').addEventListener('click',logout);
 
+function userInitials(){return usuario?.nome?.split(/\s+/).filter(Boolean).slice(0,2).map((part)=>part[0]).join('').toUpperCase() || '?';}
+function renderProfilePhoto(photo){
+  const targets=[$('#usuario-avatar'),$('#profile-photo-preview')].filter(Boolean);
+  const hasPhoto=Boolean(photo?.mime && photo?.contentBase64);
+  targets.forEach((target)=>{target.innerHTML=hasPhoto?`<img src="data:${esc(photo.mime)};base64,${photo.contentBase64}" alt="">`:userInitials();});
+  $('#profile-photo-remove')?.classList.toggle('oculto',!hasPhoto);
+}
+async function loadProfilePhoto(){
+  try{const photo=await api('/auth/foto-perfil');renderProfilePhoto(photo);}
+  catch{renderProfilePhoto(null);}
+}
+function readBlobBase64(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',').pop()||'');reader.onerror=()=>reject(new Error('Não foi possível ler a foto selecionada.'));reader.readAsDataURL(blob);});}
+function loadPhotoImage(file){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file);const image=new Image();image.onload=()=>{URL.revokeObjectURL(url);resolve(image);};image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Não foi possível abrir a foto selecionada.'));};image.src=url;});}
+async function prepareProfilePhoto(file){
+  if(!['image/jpeg','image/png','image/webp'].includes(file?.type))throw new Error('Use uma foto JPG, PNG ou WEBP.');
+  const image=await loadPhotoImage(file);
+  const scale=Math.min(1,512/Math.max(image.naturalWidth,image.naturalHeight));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+  canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+  let output=null;
+  for(const quality of [.86,.72,.58]){
+    output=await new Promise((resolve)=>canvas.toBlob(resolve,'image/jpeg',quality));
+    if(output&&output.size<=512*1024)break;
+  }
+  if(!output||output.size>512*1024)throw new Error('Não foi possível reduzir a foto para o limite de 512 KB.');
+  return {mime:'image/jpeg',contentBase64:await readBlobBase64(output)};
+}
+
 async function startApp() {
   try {
     const me=await api('/auth/me');
@@ -87,13 +116,13 @@ async function startApp() {
   } catch (error) { return; }
   $('#tela-login').classList.add('oculto'); $('#app').classList.remove('oculto');
   $('#usuario-nome').textContent=usuario.nome; $('#usuario-papel').textContent=roleName[usuario.role];
-  $('#usuario-avatar').textContent=usuario.nome.split(/\s+/).slice(0,2).map((part)=>part[0]).join('').toUpperCase();
+  renderProfilePhoto(null);
   $('#instancia-nome').textContent=instancia.name; $('#config-instancia').textContent=instancia.name;
   try { const v=await api('/version'); $('#config-versao').textContent=v.version; } catch {}
   $$('.admin-only').forEach((item)=>item.classList.toggle('oculto',usuario.role!=='admin'));
   $$('.manager-only').forEach((item)=>item.classList.toggle('oculto',!['admin','gestor'].includes(usuario.role)));
   $('#dash-mes').value=currentMonth();
-  await loadReferences(); showView('dashboard');
+  await Promise.all([loadReferences(),loadProfilePhoto()]); showView('dashboard');
   loadFirstUse();
 }
 
@@ -390,18 +419,35 @@ async function loadFirstUse() {
       { id: 'categorias', count: data.counts.categorias, min: 1 },
       { id: 'fornecedores', count: data.counts.fornecedores, min: 1 },
       { id: 'usuarios', count: data.counts.usuarios, min: 2 },
+      { id: 'foto', count: data.counts.foto, min: 1 },
     ];
     checks.forEach((item) => {
       $(`#count-${item.id}`).textContent = item.count;
       const done = item.count >= item.min;
       $(`#check-${item.id}`).classList.toggle('done', done);
       $(`#check-${item.id} .check-icon`).textContent = done ? '✓' : '○';
+      if(item.id==='foto')$('#first-use-photo').textContent=done?'Alterar':'Adicionar';
     });
   } catch {}
 }
 $('#first-use-dismiss').addEventListener('click', () => $('#first-use-banner').classList.add('oculto'));
+$('#first-use-photo').addEventListener('click',()=>{showView('config');$('#profile-photo-input').click();});
 $('#first-use-complete').addEventListener('click', async () => {
   try { await api('/first-use/complete', { method: 'POST' }); $('#first-use-banner').classList.add('oculto'); toast('Assistente finalizado.'); } catch (error) { toast(error.message, true); }
+});
+
+$('#profile-photo-input').addEventListener('change',async(event)=>{
+  const file=event.target.files?.[0];if(!file)return;
+  const message=$('#profile-photo-message');message.textContent='Processando foto…';message.style.color='var(--muted)';
+  try{const payload=await prepareProfilePhoto(file);const photo=await api('/auth/foto-perfil',{method:'POST',body:JSON.stringify(payload)});renderProfilePhoto(photo);message.textContent='Foto atualizada e pronta para sincronização.';message.style.color='var(--green)';toast('Foto de perfil atualizada.');loadFirstUse();}
+  catch(error){message.textContent=error.message;message.style.color='var(--red)';}
+  finally{event.target.value='';}
+});
+$('#profile-photo-remove').addEventListener('click',async()=>{
+  if(!confirm('Remover sua foto de perfil? As iniciais voltarão a aparecer.'))return;
+  const message=$('#profile-photo-message');
+  try{await api('/auth/foto-perfil',{method:'DELETE'});renderProfilePhoto(null);message.textContent='Foto removida.';message.style.color='var(--green)';toast('Foto de perfil removida.');loadFirstUse();}
+  catch(error){message.textContent=error.message;message.style.color='var(--red)';}
 });
 
 let updatePolling = null;

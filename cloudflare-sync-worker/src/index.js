@@ -2,6 +2,7 @@ const PASSWORD_ITERATIONS = 10000;
 const ORG_ID = 'rcconstrutec.com.br';
 const SESSION_SECONDS = 8 * 3600;
 const MAX_NF_BYTES = 5 * 1024 * 1024;
+const MAX_PROFILE_PHOTO_BYTES = 512 * 1024;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -62,6 +63,22 @@ function bytesToBase64(bytes) {
 function base64ToBytes(value) {
   const binary = atob(value);
   return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+}
+
+function validateProfilePhoto(body) {
+  const mime = text(body?.mime).toLowerCase();
+  const contentBase64 = String(body?.contentBase64 || '').replace(/\s/g, '');
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) return { error:'Use uma foto JPG, PNG ou WEBP.', status:400 };
+  if (!contentBase64) return { error:'Selecione uma foto de perfil.', status:400 };
+  if (contentBase64.length > Math.ceil(MAX_PROFILE_PHOTO_BYTES * 4 / 3) + 4) return { error:'A foto de perfil deve ter no máximo 512 KB.', status:413 };
+  let bytes;
+  try { bytes = base64ToBytes(contentBase64); } catch { return { error:'O arquivo da foto de perfil é inválido.', status:400 }; }
+  if (!bytes.length || bytes.length > MAX_PROFILE_PHOTO_BYTES || bytesToBase64(bytes).replace(/=+$/, '') !== contentBase64.replace(/=+$/, '')) return { error:'O arquivo da foto de perfil é inválido.', status:400 };
+  const jpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const png = bytes.length >= 8 && [0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a].every((value, index) => bytes[index] === value);
+  const webp = bytes.length >= 12 && String.fromCharCode(...bytes.slice(0,4)) === 'RIFF' && String.fromCharCode(...bytes.slice(8,12)) === 'WEBP';
+  if ((mime === 'image/jpeg' && !jpeg) || (mime === 'image/png' && !png) || (mime === 'image/webp' && !webp)) return { error:'O conteúdo do arquivo não corresponde ao formato da foto.', status:400 };
+  return { mime, contentBase64:bytesToBase64(bytes) };
 }
 
 function timingSafeEqual(a, b) {
@@ -294,6 +311,26 @@ async function handleChangePassword(request, env) {
   const currentTokenHash = await sha256Text((request.headers.get('authorization') || '').slice(7).trim());
   await env.DB.prepare('DELETE FROM cloud_sessions WHERE user_id=? AND token_hash<>?').bind(auth.user.id, currentTokenHash).run();
   return json({ ok: true });
+}
+
+async function handleProfilePhoto(request, env) {
+  const auth = await requireSession(request, env);
+  if (auth.error) return json({ ok:false, error:auth.error }, auth.status);
+  if (request.method === 'GET') {
+    return json({ ok:true, mime:auth.user.profile_photo_mime || null, contentBase64:auth.user.profile_photo_base64 || null });
+  }
+  if (request.method === 'DELETE') {
+    await env.DB.prepare('UPDATE cloud_users SET profile_photo_base64=NULL,profile_photo_mime=NULL,updated_at=? WHERE id=?')
+      .bind(new Date().toISOString(), auth.user.id).run();
+    return json({ ok:true });
+  }
+  let body;
+  try { body = await request.json(); } catch { return json({ ok:false, error:'JSON inválido.' }, 400); }
+  const photo = validateProfilePhoto(body);
+  if (photo.error) return json({ ok:false, error:photo.error }, photo.status);
+  await env.DB.prepare('UPDATE cloud_users SET profile_photo_base64=?,profile_photo_mime=?,updated_at=? WHERE id=?')
+    .bind(photo.contentBase64, photo.mime, new Date().toISOString(), auth.user.id).run();
+  return json({ ok:true, mime:photo.mime, contentBase64:photo.contentBase64 });
 }
 
 function packageEntities(pack) {
@@ -692,6 +729,7 @@ export default {
     if (request.method === 'POST' && url.pathname === '/v1/auth/login') return handleLogin(request, env);
     if (request.method === 'POST' && url.pathname === '/v1/auth/bootstrap') return handleBootstrap(request, env);
     if (request.method === 'POST' && url.pathname === '/v1/auth/change-password') return handleChangePassword(request, env);
+    if (['GET','POST','DELETE'].includes(request.method) && url.pathname === '/v1/auth/profile-photo') return handleProfilePhoto(request, env);
     if (request.method === 'GET' && url.pathname === '/v1/users') return handleListUsers(request, env);
     if (request.method === 'POST' && url.pathname === '/v1/users') return handleCreateUser(request, env);
     if (request.method === 'POST' && url.pathname === '/v1/users/status') return handleUserStatus(request, env);
