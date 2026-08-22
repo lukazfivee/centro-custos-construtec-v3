@@ -21,7 +21,7 @@
   }
 
   function scan() {
-    document.querySelectorAll('#bugreport-form').forEach(addConsent);
+    document.querySelectorAll('#bugreport-form, #report-v2-form').forEach(addConsent);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan);
