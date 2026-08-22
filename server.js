@@ -83,6 +83,9 @@ function createApp() {
       if (!html.includes('v3-1-refinements.css')) {
         html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-refinements.css">\n</head>');
       }
+      if (!html.includes('v3-1-figma.css')) {
+        html = html.replace('</head>', '  <link rel="stylesheet" href="v3-1-figma.css">\n</head>');
+      }
       if (!html.includes('report-v2.js')) {
         html = html.replace('</body>', '  <script src="report-v2.js"></script>\n</body>');
       }
