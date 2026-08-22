@@ -153,6 +153,7 @@ html.dark tbody tr:hover{background:rgba(50,169,205,.075)}
 html.dark .profile-photo-actions label{color:var(--ink)}
 #profile-photo-message{margin-bottom:0}
 #check-foto .text-btn{flex:0 0 auto;white-space:nowrap}
+.update-notes{white-space:pre-line;line-height:1.6}
 
 /* Primeira utilizacao */
 .first-use-banner{border-radius:var(--ui-radius-lg);box-shadow:var(--ui-shadow-sm);border:1px solid var(--ui-border)}

@@ -473,7 +473,10 @@ function renderUpdateStatus(status) {
     msg.style.color = 'var(--green)'; msg.textContent = 'Você já está na versão mais recente.';
   } else if (status.status === 'available') {
     msg.style.color = 'var(--orange)';
-    msg.innerHTML = `Versão nova disponível: <strong>${esc(status.info?.version || '')}</strong>` + (status.info?.releaseNotes ? ` — ${esc(status.info.releaseNotes)}` : '');
+    const version=String(status.info?.version || '').trim();
+    const notes=String(status.info?.releaseNotes || '').trim();
+    msg.textContent=`Nova versão disponível: ${version}${notes?`\n\nO que mudou:\n${notes}`:''}\n\nRecomendamos atualizar para ter acesso às correções mais recentes.`;
+    msg.classList.add('update-notes');
     btnDownload.classList.remove('oculto');
   } else if (status.status === 'downloading') {
     progress.classList.remove('oculto');
