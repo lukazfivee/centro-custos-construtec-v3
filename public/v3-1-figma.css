@@ -177,7 +177,12 @@ html.dark .profile-photo-actions label{color:var(--ink)}
 
 /* Barra lateral compacta: os icones permanecem visiveis e o menu abre no hover */
 @media(min-width:901px){
-  .app-shell.v31-hover-sidebar{grid-template-columns:68px minmax(0,1fr)!important}
+  .app-shell.v31-hover-sidebar{
+    grid-template-columns:68px minmax(0,1fr)!important;
+    transition:grid-template-columns .2s ease!important;
+  }
+  .app-shell.v31-hover-sidebar:has(.sidebar:hover),
+  .app-shell.v31-hover-sidebar:has(.sidebar:focus-within){grid-template-columns:245px minmax(0,1fr)!important}
   .app-shell.v31-hover-sidebar .sidebar{
     width:68px!important;
     min-width:68px!important;

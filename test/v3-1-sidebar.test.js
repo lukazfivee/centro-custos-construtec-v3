@@ -21,6 +21,7 @@ test('sidebar compacta preserva icones e revela menu e rolagem no hover', () => 
   const css = read('public/v3-1-figma.css');
 
   assert.match(css, /grid-template-columns:68px/);
+  assert.match(css, /:has\(\.sidebar:hover\)[\s\S]*grid-template-columns:245px/);
   assert.match(css, /width:68px/);
   assert.match(css, /width:245px/);
   assert.match(css, /\.sidebar>\*\{opacity:1/);
