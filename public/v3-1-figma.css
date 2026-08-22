@@ -1,0 +1,315 @@
+/* V3.1 - refinamentos visuais inspirados no Figma Simple Design System */
+
+:root{
+  --ui-radius-xs:8px;
+  --ui-radius-sm:10px;
+  --ui-radius-md:12px;
+  --ui-radius-lg:16px;
+  --ui-gap-1:6px;
+  --ui-gap-2:10px;
+  --ui-gap-3:14px;
+  --ui-gap-4:18px;
+  --ui-gap-5:24px;
+  --ui-surface:#ffffff;
+  --ui-surface-soft:#f7f9fa;
+  --ui-border:#d8e1e5;
+  --ui-focus:0 0 0 3px rgba(50,169,205,.20);
+  --ui-shadow-sm:0 1px 2px rgba(2,29,38,.04),0 4px 14px rgba(2,29,38,.05);
+  --ui-shadow-md:0 10px 30px rgba(2,29,38,.10);
+}
+
+html.dark{
+  --ui-surface:#10232c;
+  --ui-surface-soft:#0d1d25;
+  --ui-border:#29434f;
+  --ui-shadow-sm:0 1px 2px rgba(0,0,0,.22),0 5px 16px rgba(0,0,0,.18);
+  --ui-shadow-md:0 12px 34px rgba(0,0,0,.30);
+}
+
+/* Tipografia e hierarquia */
+.page-head h1{font-size:clamp(26px,2.5vw,34px);line-height:1.15;letter-spacing:-.035em;font-weight:700}
+.page-head .muted{max-width:760px;line-height:1.55}
+.panel h2,.panel-head h2{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.eyebrow{font-size:10px;letter-spacing:.11em}
+
+/* Superficies e cards, baseados no padrao Card/Stats Card do SDS */
+.panel,.kpi,.table-card,.sync-card,.login-card{
+  border-radius:var(--ui-radius-md);
+  border:1px solid var(--ui-border);
+  box-shadow:var(--ui-shadow-sm);
+}
+.panel,.kpi,.table-card,.sync-card{background:var(--ui-surface)}
+.panel{padding:20px}
+.kpi{padding:18px 19px;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.kpi:hover{transform:translateY(-1px);box-shadow:var(--ui-shadow-md);border-color:rgba(50,169,205,.32)}
+
+/* Navegacao em estilo Navigation Pill */
+.sidebar .nav-item{
+  min-height:42px;
+  border-radius:999px;
+  padding:10px 13px;
+  transition:background .14s ease,color .14s ease,transform .14s ease;
+}
+.sidebar .nav-item:hover{transform:translateX(1px)}
+.sidebar .nav-item.ativo{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 5px 14px rgba(50,169,205,.18)}
+.sidebar .nav-item:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(50,169,205,.32)}
+
+/* Botoes e icon buttons */
+.btn{
+  min-height:40px;
+  border-radius:var(--ui-radius-sm);
+  padding:9px 15px;
+  font-weight:700;
+  transition:transform .12s ease,box-shadow .12s ease,background .12s ease,border-color .12s ease;
+}
+.btn:hover:not(:disabled){transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:translateY(0)}
+.btn:focus-visible,.icon-btn:focus-visible,.text-btn:focus-visible{outline:none;box-shadow:var(--ui-focus)}
+.btn.primary{box-shadow:0 5px 14px rgba(50,169,205,.17)}
+.btn.secondary{background:var(--ui-surface);border-color:var(--ui-border)}
+.icon-btn{border-radius:999px;min-width:36px;min-height:36px;display:inline-grid;place-items:center}
+
+/* Campos, seguindo Input/Select do SDS */
+input,select,textarea{
+  min-height:42px;
+  border-radius:var(--ui-radius-sm);
+  border-color:var(--ui-border);
+  background:var(--ui-surface);
+  transition:border-color .14s ease,box-shadow .14s ease,background .14s ease;
+}
+input:hover,select:hover,textarea:hover{border-color:#b6c8d0}
+input:focus,select:focus,textarea:focus{outline:none!important;border-color:var(--orange)!important;box-shadow:var(--ui-focus)!important}
+html.dark input,html.dark select,html.dark textarea{background:#0d1d25;color:#eef7fa;border-color:#29434f}
+html.dark input:hover,html.dark select:hover,html.dark textarea:hover{border-color:#42616f}
+
+/* Filtros como toolbar responsiva */
+.filter-bar{
+  background:var(--ui-surface);
+  border-color:var(--ui-border);
+  border-radius:var(--ui-radius-md);
+  box-shadow:var(--ui-shadow-sm);
+  gap:10px;
+}
+
+/* Tabelas com cabecalho mais limpo e leitura melhor */
+.table-card{overflow:hidden}
+.table-scroll{border-radius:inherit}
+thead th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:var(--ui-surface-soft);
+  color:#687a83;
+  font-size:9px;
+  letter-spacing:.08em;
+  padding:11px 13px;
+}
+tbody td{padding:12px 13px;border-top:1px solid color-mix(in srgb,var(--ui-border) 70%,transparent)}
+tbody tr{transition:background .12s ease}
+tbody tr:hover{background:rgba(50,169,205,.045)}
+html.dark thead th{background:#0b1920;color:#9fb4be}
+html.dark tbody tr:hover{background:rgba(50,169,205,.075)}
+
+/* Tags/chips mais proximas ao SDS */
+.pill{
+  min-height:22px;
+  align-items:center;
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.045em;
+  border:1px solid transparent;
+}
+
+/* Dialogs */
+.modal{
+  border-radius:var(--ui-radius-lg)!important;
+  border:1px solid var(--ui-border)!important;
+  box-shadow:0 24px 70px rgba(2,29,38,.25)!important;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--ui-border)}
+.modal-head h2{font-size:18px;letter-spacing:-.02em}
+#v31-refine-overlay{backdrop-filter:blur(4px)}
+
+/* Bloco de usuario/Avatar conforme SDS */
+.avatar{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  overflow:hidden;
+  flex:0 0 38px;
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 2px 8px rgba(0,0,0,.14);
+}
+.avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.user-block{gap:10px}
+.profile-photo-row{display:flex;align-items:center;gap:16px;margin-top:16px}
+.profile-photo-preview{width:72px;height:72px;flex-basis:72px;font-size:20px;background:var(--navy-2)}
+.profile-photo-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.profile-photo-actions label{margin:0;text-transform:none;letter-spacing:0;font-size:12px;color:var(--navy);cursor:pointer}
+html.dark .profile-photo-actions label{color:var(--ink)}
+#profile-photo-message{margin-bottom:0}
+#check-foto .text-btn{flex:0 0 auto;white-space:nowrap}
+.update-notes{white-space:pre-line;line-height:1.6}
+
+/* Primeira utilizacao */
+.first-use-banner{border-radius:var(--ui-radius-lg);box-shadow:var(--ui-shadow-sm);border:1px solid var(--ui-border)}
+.check-item{border-radius:var(--ui-radius-sm)}
+
+/* Acao flutuante: cockpit/report/tema com linguagem de Icon Button/FAB */
+.cc-cockpit-button,.report-fab,.bug-report-fab,[data-report-fab],.fab-theme{
+  border-radius:999px!important;
+  box-shadow:0 10px 26px rgba(2,29,38,.20)!important;
+}
+
+/* Formulario e configuracoes */
+.settings-grid{gap:16px}
+.settings-grid>.panel{transition:border-color .14s ease,box-shadow .14s ease}
+.settings-grid>.panel:hover{border-color:rgba(50,169,205,.25);box-shadow:var(--ui-shadow-md)}
+.v31-setting-row{padding:2px 0}
+.v31-security-icon{border:1px solid var(--ui-border)}
+
+/* Estados vazios mais leves */
+.empty{border-radius:var(--ui-radius-sm);background:var(--ui-surface-soft);margin:8px 0}
+
+/* Barra lateral compacta: os icones permanecem visiveis e o menu abre no hover */
+@media(min-width:901px){
+  .app-shell.v31-hover-sidebar{
+    grid-template-columns:68px minmax(0,1fr)!important;
+    transition:grid-template-columns .2s ease!important;
+  }
+  .app-shell.v31-hover-sidebar:has(.sidebar:hover),
+  .app-shell.v31-hover-sidebar:has(.sidebar:focus-within){grid-template-columns:245px minmax(0,1fr)!important}
+  .app-shell.v31-hover-sidebar .sidebar{
+    width:68px!important;
+    min-width:68px!important;
+    padding:18px 10px!important;
+    background:var(--navy)!important;
+    box-shadow:1px 0 0 rgba(255,255,255,.05)!important;
+    overflow:hidden!important;
+    transition:width .2s ease,padding .2s ease,box-shadow .2s ease!important;
+  }
+  .app-shell.v31-hover-sidebar .sidebar>*{opacity:1!important;pointer-events:auto!important}
+  .app-shell.v31-hover-sidebar .sidebar:hover,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within{
+    width:245px!important;
+    min-width:245px!important;
+    padding:18px 14px!important;
+    box-shadow:16px 0 34px rgba(2,29,38,.28)!important;
+  }
+
+  .app-shell.v31-hover-sidebar .brand{
+    min-height:60px!important;
+    padding:0!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    overflow:hidden!important;
+  }
+  .app-shell.v31-hover-sidebar .brand .sidebar-logo,
+  .app-shell.v31-hover-sidebar .brand>div{display:none!important}
+  .app-shell.v31-hover-sidebar .v31-rail-logo{
+    display:block!important;
+    width:34px!important;
+    height:34px!important;
+    object-fit:contain!important;
+    flex:0 0 34px!important;
+  }
+  .app-shell.v31-hover-sidebar .sidebar:hover .brand,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .brand{justify-content:flex-start!important;padding:0 5px!important}
+  .app-shell.v31-hover-sidebar .sidebar:hover .brand .sidebar-logo,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .brand .sidebar-logo,
+  .app-shell.v31-hover-sidebar .sidebar:hover .brand>div,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .brand>div{display:block!important}
+  .app-shell.v31-hover-sidebar .sidebar:hover .v31-rail-logo,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .v31-rail-logo{display:none!important}
+
+  .app-shell.v31-hover-sidebar .sidebar nav{
+    padding-right:0!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    scrollbar-width:none!important;
+  }
+  .app-shell.v31-hover-sidebar .sidebar nav::-webkit-scrollbar{width:0!important;height:0!important}
+  .app-shell.v31-hover-sidebar .sidebar:hover nav,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within nav{
+    padding-right:4px!important;
+    scrollbar-width:thin!important;
+    scrollbar-color:rgba(50,169,205,.72) transparent!important;
+  }
+  .app-shell.v31-hover-sidebar .sidebar:hover nav::-webkit-scrollbar,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within nav::-webkit-scrollbar{width:5px!important}
+  .app-shell.v31-hover-sidebar .sidebar:hover nav::-webkit-scrollbar-thumb,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within nav::-webkit-scrollbar-thumb{background:rgba(50,169,205,.68)!important;border-radius:999px!important}
+
+  .app-shell.v31-hover-sidebar .nav-item{
+    width:48px!important;
+    min-width:48px!important;
+    height:44px!important;
+    margin:3px 0!important;
+    padding:10px 12px!important;
+    justify-content:center!important;
+    gap:0!important;
+    font-size:0!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+  }
+  .app-shell.v31-hover-sidebar .nav-item span{
+    display:inline-grid!important;
+    place-items:center!important;
+    width:22px!important;
+    min-width:22px!important;
+    margin:0!important;
+    font-size:18px!important;
+  }
+  .app-shell.v31-hover-sidebar .sidebar:hover .nav-item,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .nav-item{
+    width:100%!important;
+    min-width:0!important;
+    justify-content:flex-start!important;
+    gap:11px!important;
+    padding:10px 13px!important;
+    font-size:14px!important;
+  }
+
+  .app-shell.v31-hover-sidebar .user-block{justify-content:center!important;padding:7px 0!important;gap:0!important}
+  .app-shell.v31-hover-sidebar .user-copy,
+  .app-shell.v31-hover-sidebar #btn-sair{display:none!important}
+  .app-shell.v31-hover-sidebar .sidebar:hover .user-block,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .user-block{justify-content:flex-start!important;gap:10px!important;padding:7px 4px!important}
+  .app-shell.v31-hover-sidebar .sidebar:hover .user-copy,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within .user-copy,
+  .app-shell.v31-hover-sidebar .sidebar:hover #btn-sair,
+  .app-shell.v31-hover-sidebar .sidebar:focus-within #btn-sair{display:block!important}
+}
+
+/* Responsividade refinada segundo layouts responsivos do SDS */
+@media(max-width:1200px){
+  .panel{padding:18px}
+  .kpi-grid{gap:11px}
+  .page-head{gap:16px}
+}
+
+@media(max-width:900px){
+  .mobile-header{border-radius:0 0 12px 12px;box-shadow:0 4px 16px rgba(2,29,38,.07)}
+  .page-head h1{font-size:28px}
+  .panel,.kpi,.table-card{border-radius:11px}
+  .table-scroll{overflow-x:auto}
+  .table-scroll table{min-width:720px}
+  .modal{border-radius:14px!important}
+}
+
+@media(max-width:640px){
+  .page-head h1{font-size:25px}
+  .eyebrow{font-size:9px}
+  .panel{padding:15px}
+  .kpi{padding:15px}
+  .kpi p{font-size:10px}
+  .kpi strong{font-size:21px}
+  .btn{min-height:44px}
+  .filter-bar{border-radius:11px}
+  .table-card{box-shadow:none}
+}

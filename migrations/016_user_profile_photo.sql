@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo BYTEA;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo_mime VARCHAR(40);

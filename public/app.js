@@ -18,6 +18,15 @@ const currentDate = () => new Intl.DateTimeFormat('en-CA').format(new Date());
 const currentMonth = () => currentDate().slice(0,7);
 const roleName = {admin:'Administrador',gestor:'Gestor',supervisor:'Supervisor'};
 const projectStatusName = {planejamento:'Planejamento',execucao:'Em execução',pausado:'Pausado',concluido:'Concluído'};
+function apiError(response,data,fallback='Não foi possível concluir a operação.') {
+  const message = data.erro || data.error || fallback;
+  const requestId = data.requestId || response.headers.get('X-Request-Id');
+  const error = new Error(requestId ? `${message} Código de suporte: ${requestId}.` : message);
+  error.status = response.status;
+  error.requestId = requestId || '';
+  return error;
+}
+window.apiError = apiError;
 function financialLabel(item) {
   if (item.situacao === 'vencido') return 'Vencido';
   if (item.status_financeiro === 'liquidado') return item.tipo === 'receita' ? 'Recebido' : 'Pago';
@@ -31,7 +40,7 @@ async function api(path,options={}) {
   const response = await fetch(API+path,{...options,headers});
   if (response.status === 401 && !path.includes('/login')) { logout(); throw new Error('Sua sessão expirou. Entre novamente.'); }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.erro || 'Não foi possível concluir a operação.');
+  if (!response.ok) throw apiError(response,data);
   return data;
 }
 
@@ -70,6 +79,35 @@ $('#form-login').addEventListener('submit',async (event) => {
 });
 $('#btn-sair').addEventListener('click',logout);
 
+function userInitials(){return usuario?.nome?.split(/\s+/).filter(Boolean).slice(0,2).map((part)=>part[0]).join('').toUpperCase() || '?';}
+function renderProfilePhoto(photo){
+  const targets=[$('#usuario-avatar'),$('#profile-photo-preview')].filter(Boolean);
+  const hasPhoto=Boolean(photo?.mime && photo?.contentBase64);
+  targets.forEach((target)=>{target.innerHTML=hasPhoto?`<img src="data:${esc(photo.mime)};base64,${photo.contentBase64}" alt="">`:userInitials();});
+  $('#profile-photo-remove')?.classList.toggle('oculto',!hasPhoto);
+}
+async function loadProfilePhoto(){
+  try{const photo=await api('/auth/foto-perfil');renderProfilePhoto(photo);}
+  catch{renderProfilePhoto(null);}
+}
+function readBlobBase64(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',').pop()||'');reader.onerror=()=>reject(new Error('Não foi possível ler a foto selecionada.'));reader.readAsDataURL(blob);});}
+function loadPhotoImage(file){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file);const image=new Image();image.onload=()=>{URL.revokeObjectURL(url);resolve(image);};image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Não foi possível abrir a foto selecionada.'));};image.src=url;});}
+async function prepareProfilePhoto(file){
+  if(!['image/jpeg','image/png','image/webp'].includes(file?.type))throw new Error('Use uma foto JPG, PNG ou WEBP.');
+  const image=await loadPhotoImage(file);
+  const scale=Math.min(1,512/Math.max(image.naturalWidth,image.naturalHeight));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+  canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+  let output=null;
+  for(const quality of [.86,.72,.58]){
+    output=await new Promise((resolve)=>canvas.toBlob(resolve,'image/jpeg',quality));
+    if(output&&output.size<=512*1024)break;
+  }
+  if(!output||output.size>512*1024)throw new Error('Não foi possível reduzir a foto para o limite de 512 KB.');
+  return {mime:'image/jpeg',contentBase64:await readBlobBase64(output)};
+}
+
 async function startApp() {
   try {
     const me=await api('/auth/me');
@@ -78,13 +116,13 @@ async function startApp() {
   } catch (error) { return; }
   $('#tela-login').classList.add('oculto'); $('#app').classList.remove('oculto');
   $('#usuario-nome').textContent=usuario.nome; $('#usuario-papel').textContent=roleName[usuario.role];
-  $('#usuario-avatar').textContent=usuario.nome.split(/\s+/).slice(0,2).map((part)=>part[0]).join('').toUpperCase();
+  renderProfilePhoto(null);
   $('#instancia-nome').textContent=instancia.name; $('#config-instancia').textContent=instancia.name;
   try { const v=await api('/version'); $('#config-versao').textContent=v.version; } catch {}
   $$('.admin-only').forEach((item)=>item.classList.toggle('oculto',usuario.role!=='admin'));
   $$('.manager-only').forEach((item)=>item.classList.toggle('oculto',!['admin','gestor'].includes(usuario.role)));
   $('#dash-mes').value=currentMonth();
-  await loadReferences(); showView('dashboard');
+  await Promise.all([loadReferences(),loadProfilePhoto()]); showView('dashboard');
   loadFirstUse();
 }
 
@@ -381,18 +419,35 @@ async function loadFirstUse() {
       { id: 'categorias', count: data.counts.categorias, min: 1 },
       { id: 'fornecedores', count: data.counts.fornecedores, min: 1 },
       { id: 'usuarios', count: data.counts.usuarios, min: 2 },
+      { id: 'foto', count: data.counts.foto, min: 1 },
     ];
     checks.forEach((item) => {
       $(`#count-${item.id}`).textContent = item.count;
       const done = item.count >= item.min;
       $(`#check-${item.id}`).classList.toggle('done', done);
       $(`#check-${item.id} .check-icon`).textContent = done ? '✓' : '○';
+      if(item.id==='foto')$('#first-use-photo').textContent=done?'Alterar':'Adicionar';
     });
   } catch {}
 }
 $('#first-use-dismiss').addEventListener('click', () => $('#first-use-banner').classList.add('oculto'));
+$('#first-use-photo').addEventListener('click',()=>{showView('config');$('#profile-photo-input').click();});
 $('#first-use-complete').addEventListener('click', async () => {
   try { await api('/first-use/complete', { method: 'POST' }); $('#first-use-banner').classList.add('oculto'); toast('Assistente finalizado.'); } catch (error) { toast(error.message, true); }
+});
+
+$('#profile-photo-input').addEventListener('change',async(event)=>{
+  const file=event.target.files?.[0];if(!file)return;
+  const message=$('#profile-photo-message');message.textContent='Processando foto…';message.style.color='var(--muted)';
+  try{const payload=await prepareProfilePhoto(file);const photo=await api('/auth/foto-perfil',{method:'POST',body:JSON.stringify(payload)});renderProfilePhoto(photo);message.textContent='Foto atualizada e pronta para sincronização.';message.style.color='var(--green)';toast('Foto de perfil atualizada.');loadFirstUse();}
+  catch(error){message.textContent=error.message;message.style.color='var(--red)';}
+  finally{event.target.value='';}
+});
+$('#profile-photo-remove').addEventListener('click',async()=>{
+  if(!confirm('Remover sua foto de perfil? As iniciais voltarão a aparecer.'))return;
+  const message=$('#profile-photo-message');
+  try{await api('/auth/foto-perfil',{method:'DELETE'});renderProfilePhoto(null);message.textContent='Foto removida.';message.style.color='var(--green)';toast('Foto de perfil removida.');loadFirstUse();}
+  catch(error){message.textContent=error.message;message.style.color='var(--red)';}
 });
 
 let updatePolling = null;
@@ -418,7 +473,10 @@ function renderUpdateStatus(status) {
     msg.style.color = 'var(--green)'; msg.textContent = 'Você já está na versão mais recente.';
   } else if (status.status === 'available') {
     msg.style.color = 'var(--orange)';
-    msg.innerHTML = `Versão nova disponível: <strong>${esc(status.info?.version || '')}</strong>` + (status.info?.releaseNotes ? ` — ${esc(status.info.releaseNotes)}` : '');
+    const version=String(status.info?.version || '').trim();
+    const notes=String(status.info?.releaseNotes || '').trim();
+    msg.textContent=`Nova versão disponível: ${version}${notes?`\n\nO que mudou:\n${notes}`:''}\n\nRecomendamos atualizar para ter acesso às correções mais recentes.`;
+    msg.classList.add('update-notes');
     btnDownload.classList.remove('oculto');
   } else if (status.status === 'downloading') {
     progress.classList.remove('oculto');
@@ -604,11 +662,25 @@ $('#btn-importar-bugreport').addEventListener('click',()=>{
 });
 
 // Modo noturno
-const toggleDark=$('#toggle-dark');
-function applyDarkMode(value){document.documentElement.classList.toggle('dark',value);toggleDark.checked=value;localStorage.setItem('cc_dark',value);}
-if(localStorage.getItem('cc_dark')==='true')applyDarkMode(true);
-try{if(window.electronAPI){const diskValue=window.electronAPI.getDarkMode();applyDarkMode(diskValue);}}catch{}
-toggleDark.addEventListener('change',()=>{applyDarkMode(toggleDark.checked);try{if(window.electronAPI)window.electronAPI.setDarkMode(toggleDark.checked);}catch{}});
+const themeButton=$('#fab-theme');
+function applyDarkMode(value){
+  const dark=value===true;
+  document.documentElement.classList.toggle('dark',dark);
+  themeButton.textContent=dark?'☀':'☾';
+  themeButton.title=dark?'Ativar modo claro':'Ativar modo noturno';
+  themeButton.setAttribute('aria-label',themeButton.title);
+  themeButton.setAttribute('aria-pressed',String(dark));
+  localStorage.setItem('cc_dark',String(dark));
+}
+async function persistDarkMode(value){
+  try{if(window.electronAPI)window.electronAPI.setDarkMode(value);}catch{}
+  try{await api('/appearance',{method:'POST',body:JSON.stringify({darkMode:value})});}catch{}
+}
+function changeDarkMode(value){applyDarkMode(value);persistDarkMode(value);}
+applyDarkMode(localStorage.getItem('cc_dark')==='true');
+try{if(window.electronAPI)applyDarkMode(window.electronAPI.getDarkMode());}catch{}
+api('/appearance').then((prefs)=>{if(prefs.configured)applyDarkMode(prefs.darkMode);}).catch(()=>{});
+themeButton.addEventListener('click',()=>changeDarkMode(!document.documentElement.classList.contains('dark')));
 
 if(token&&usuario) startApp();
 

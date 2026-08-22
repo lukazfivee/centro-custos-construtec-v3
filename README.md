@@ -1,6 +1,6 @@
 # Centro de Custos Construtec — local, offline e sem mensalidade
 
-Aplicação web para a operação financeira da Construtec. Ela abre no navegador, mas o servidor e o banco rodam no computador da empresa. Depois da instalação dos componentes, o uso diário não depende de internet.
+Aplicação web para a operação financeira da Construtec. Ela abre no navegador, mas o servidor e o banco rodam no computador da empresa. Depois da instalação dos componentes, o uso diário não depende de internet para os recursos locais.
 
 ## O que o sistema faz
 
@@ -18,15 +18,27 @@ Aplicação web para a operação financeira da Construtec. Ela abre no navegado
 
 ## Custo, privacidade e funcionamento offline
 
-O uso da aplicação tem custo zero:
+A maior parte da aplicação funciona localmente e sem mensalidade: o servidor Express e o banco PGlite ficam no computador da empresa, e os recursos locais continuam disponíveis sem internet.
 
-- não usa ChatGPT, OpenAI ou qualquer inteligência artificial;
-- não usa tokens, créditos, chave de API ou assinatura;
-- não envia dados para serviços online;
-- não precisa de internet durante a operação;
-- não depende de SQLite nem de módulos nativos frágeis no Windows.
+Alguns recursos opcionais usam serviços externos quando estão configurados. O principal deles é o **Report V2**. Quando `REPORT_API_URL` possui um endereço, cada report de bug criado no aplicativo entra em uma fila local e é enviado ao servidor central de reports para triagem. Esse envio contém:
 
-A internet é necessária apenas na primeira instalação para o `npm install` baixar os componentes gratuitos. Os arquivos visuais, o código e o banco ficam locais.
+- nome e e-mail do usuário autenticado que criou o report;
+- título, descrição, tipo e severidade do report;
+- data de criação;
+- identificação e nome da instalação;
+- versão do aplicativo e plataforma do computador.
+
+Antes do envio de um novo report pela interface, o aplicativo apresenta um aviso e exige confirmação explícita do usuário sobre esse compartilhamento. Se não houver internet, o report permanece na fila local e o sistema tenta entregá-lo novamente depois.
+
+Para **desativar o envio externo de reports**, defina a variável no `.env` sem valor:
+
+```env
+REPORT_API_URL=
+```
+
+Quando essa variável está vazia, os reports continuam registrados localmente, mas não são entregues ao servidor central.
+
+A sincronização corporativa em nuvem, quando configurada, também depende de internet. Fora esses recursos online configurados, os arquivos visuais, o código e o banco local permanecem no computador.
 
 ## Como iniciar no Windows
 
@@ -60,23 +72,36 @@ Cada pessoa deve usar seu próprio usuário. Senhas são armazenadas com hash bc
 
 O orçamento exibido é o orçamento mensal cadastrado para a obra. **Comprometido** inclui todas as despesas do mês, pagas ou pendentes. **Pago/recebido** considera apenas lançamentos liquidados.
 
-## Sincronização offline entre duas instalações
+## Sincronização entre instalações
+
+O sistema possui **dois mecanismos de sincronização**, mantidos por motivos de compatibilidade e evolução do produto:
+
+1. **Sincronização CSV legada — `/api/sincronizacao`:** troca lançamentos em arquivo CSV e continua disponível para bases simples que ainda não possuem estornos formais.
+2. **Sincronização inteligente — `/api/sincronizacao-inteligente`:** usa pacotes JSON com extensão `.ccsync` e transporta categorias, obras/centros de custo, fornecedores e lançamentos, incluindo metadados de revisão e conflitos.
+
+### Quando usar cada mecanismo
+
+O CSV legado pode ser usado enquanto a base não tiver estornos formais. Assim que existir um lançamento de estorno formal, a exportação CSV antiga é **bloqueada automaticamente** para evitar perda do vínculo contábil entre o lançamento original e seu estorno. A partir desse ponto, use a **sincronização inteligente com pacotes `.ccsync`**.
+
+A sincronização inteligente é o mecanismo recomendado para bases que precisam preservar a estrutura completa dos registros, revisões e resolução de conflitos.
+
+### Fluxo do CSV legado
 
 Use nomes diferentes para cada cópia, por exemplo `Financeiro - Lucas` e `Supervisão - Alberto`.
 
-Antes da primeira troca, cadastre nas duas cópias os mesmos códigos de obras/centros e os mesmos nomes de categorias. O nome do fornecedor viaja como texto no lançamento; o cadastro completo de fornecedores não é mesclado pelo CSV nesta versão.
+Antes da primeira troca por CSV, cadastre nas duas cópias os mesmos códigos de obras/centros e os mesmos nomes de categorias. O nome do fornecedor viaja como texto no lançamento; o cadastro completo de fornecedores não é mesclado pelo CSV.
 
 Fluxo seguro:
 
-1. Lucas abre **Trocar dados** e exporta todos os lançamentos.
-2. Leva o CSV por pendrive ou pasta de rede.
-3. Alberto escolhe o arquivo e clica em **Validar e importar**.
-4. Alberto confere o resumo e exporta a cópia dele.
-5. Lucas importa o arquivo de volta.
+1. Uma instalação abre **Trocar dados** e exporta os lançamentos.
+2. O arquivo CSV é levado por pendrive, pasta de rede ou outro meio controlado.
+3. A outra instalação escolhe o arquivo e clica em **Validar e importar**.
+4. Confere o resumo da importação e exporta a cópia dela.
+5. A primeira instalação importa o arquivo de volta.
 
 O arquivo usa ponto e vírgula e datas `AAAA-MM-DD`. Ele abre no Excel, mas não altere as colunas técnicas. Faça correções dentro do sistema e exporte novamente.
 
-A importação sempre informa:
+A importação informa:
 
 - **Incluídos:** lançamentos que ainda não existiam;
 - **Atualizados:** mesma linha de edição com revisão comprovadamente mais nova;
@@ -84,7 +109,7 @@ A importação sempre informa:
 - **Conflitos:** duas instalações editaram o mesmo lançamento; o registro local foi preservado;
 - **Erros:** linha inválida ou obra/categoria relacionada não encontrada.
 
-Cada lançamento possui UUID, origem, revisão, instalação da última alteração e horário. Exclusões também são sincronizadas. Nenhum conflito sobrescreve silenciosamente o dado local. Resolva o conflito comparando as duas versões e confirme a versão correta no sistema antes de uma nova troca.
+Cada lançamento possui UUID, origem, revisão, instalação da última alteração e horário. Exclusões também são sincronizadas. Nenhum conflito deve sobrescrever silenciosamente o dado local. Na sincronização inteligente, os conflitos ficam registrados para escolha explícita entre a versão local e a versão recebida.
 
 ## Backup e restauração
 
@@ -101,8 +126,8 @@ Nunca desligue a máquina durante a restauração.
 
 ## Limitações honestas da versão local
 
-- Cada instalação possui sua própria base; a consolidação depende da troca de CSV.
-- Duas edições divergentes exigem decisão humana.
+- Cada instalação possui sua própria base; a consolidação depende da sincronização entre as cópias.
+- Duas edições divergentes podem exigir decisão humana.
 - A máquina que hospeda uma cópia precisa estar ligada durante o uso daquela cópia.
 - Acesso externo seguro exigirá VPN ou futura hospedagem. Nunca exponha a porta 3333 diretamente à internet.
 - Backups precisam ser copiados para outro local; manter a única cópia no mesmo disco não protege contra falha da máquina.
@@ -129,4 +154,3 @@ npm start
 ```
 
 Variáveis principais estão documentadas em `.env.example`. Para desenvolvimento isolado, use `PGLITE_DATA_DIR` e `RESTORE_ROOT_DIR` apontando para pastas temporárias.
-

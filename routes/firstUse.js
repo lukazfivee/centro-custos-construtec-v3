@@ -21,10 +21,11 @@ router.get('/status', autenticar, asyncRoute(async (req, res) => {
     safeCount(db, 'users'),
   ]);
   const setting = await db.query("SELECT value FROM app_settings WHERE key = 'first_use_completed'");
+  const profile = await db.query('SELECT profile_photo IS NOT NULL AS configured FROM users WHERE id=$1',[req.usuario.id]);
   const completed = setting.rows[0]?.value === 'true';
   res.json({
     completed,
-    counts: { obras, categorias, fornecedores, usuarios },
+    counts: { obras, categorias, fornecedores, usuarios, foto:profile.rows[0]?.configured ? 1 : 0 },
   });
 }));
 

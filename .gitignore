@@ -5,6 +5,7 @@ dados/
 dist/
 *.log
 servidor-erro.log
+electron-stdout.txt
 *.tmp
 *.zip
 backups/
