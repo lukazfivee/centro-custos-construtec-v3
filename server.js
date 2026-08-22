@@ -184,6 +184,10 @@ async function start() {
   process.once('SIGINT', () => shutdown('SIGINT'));
   process.once('SIGTERM', () => shutdown('SIGTERM'));
   process.on('unhandledRejection', (error) => logger.error('unhandled_rejection', { error }));
+  process.on('uncaughtException', (error) => {
+    logger.error('uncaught_exception', { error });
+    void shutdown('uncaughtException');
+  });
   return server;
 }
 
