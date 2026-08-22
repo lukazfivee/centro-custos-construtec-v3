@@ -15,29 +15,8 @@ html.dark .center-card-client {
 html.dark .center-progress { background:#28404d; }
 html.dark .center-card-icon { background:#213946;color:#e9f4f8; }
 
-/* Sidebar recolhivel */
-.app-shell { transition:grid-template-columns .2s ease; }
-.app-shell.sidebar-mini { grid-template-columns:76px minmax(0,1fr); }
-.sidebar { transition:width .2s ease,padding .2s ease; }
+/* Estrutura compartilhada da aplicacao */
 .main { min-width:0; }
-.sidebar-toggle {
-  position:absolute;top:14px;right:-15px;z-index:50;width:30px;height:30px;border-radius:50%;
-  border:1px solid var(--line);background:var(--white);color:var(--navy);cursor:pointer;
-  box-shadow:0 3px 12px rgba(0,0,0,.14);display:grid;place-items:center;font-weight:800;
-}
-html.dark .sidebar-toggle { background:#152530;color:#eaf4f7;border-color:#2b4654; }
-.app-shell.sidebar-mini .sidebar { width:76px;padding-left:10px;padding-right:10px; }
-.app-shell.sidebar-mini .sidebar .brand img,
-.app-shell.sidebar-mini .sidebar .brand>div,
-.app-shell.sidebar-mini .sidebar .user-copy,
-.app-shell.sidebar-mini .sidebar #btn-sair { display:none !important; }
-.app-shell.sidebar-mini .sidebar .brand { justify-content:center;min-height:64px; }
-.app-shell.sidebar-mini .sidebar nav .nav-item {
-  width:52px;min-width:52px;justify-content:center;padding-left:0;padding-right:0;font-size:0;gap:0;margin-left:auto;margin-right:auto;
-}
-.app-shell.sidebar-mini .sidebar nav .nav-item span { font-size:18px;margin:0; }
-.app-shell.sidebar-mini .sidebar .user-block { justify-content:center;padding-left:0;padding-right:0; }
-.app-shell.sidebar-mini .sidebar-toggle { transform:rotate(180deg); }
 
 /* Configuracoes em lista */
 #view-config .settings-grid.v31-settings-list {
@@ -88,8 +67,6 @@ html.dark .v31-auth-badge { background:#3a321d;color:#ffd98a; }
 html.dark .v31-auth-badge.authorized { background:#17392c;color:#9fe0c2; }
 
 @media(max-width:900px){
-  .app-shell.sidebar-mini{grid-template-columns:1fr}
   .v31-collection-kpis{grid-template-columns:1fr 1fr}
   .v31-modal-grid{grid-template-columns:1fr}.v31-modal-grid .span-2{grid-column:auto}
-  .sidebar-toggle{display:none}
 }

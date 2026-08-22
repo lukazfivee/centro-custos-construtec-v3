@@ -12,28 +12,6 @@
     return data;
   };
 
-  function setupSidebar() {
-    const app = $('#app');
-    const sidebar = $('.sidebar');
-    if (!app || !sidebar || $('#v31-sidebar-toggle')) return;
-    sidebar.style.position = 'relative';
-    const button = document.createElement('button');
-    button.id = 'v31-sidebar-toggle';
-    button.className = 'sidebar-toggle';
-    button.type = 'button';
-    button.title = 'Minimizar / expandir menu';
-    button.setAttribute('aria-label','Minimizar ou expandir menu lateral');
-    button.textContent = '‹';
-    sidebar.appendChild(button);
-    const mini = localStorage.getItem('cc_sidebar_mini') === 'true';
-    app.classList.toggle('sidebar-mini', mini);
-    button.addEventListener('click', () => {
-      const next = !app.classList.contains('sidebar-mini');
-      app.classList.toggle('sidebar-mini', next);
-      localStorage.setItem('cc_sidebar_mini', String(next));
-    });
-  }
-
   function setupSettingsList() {
     const grid = $('#view-config .settings-grid');
     if (grid) grid.classList.add('v31-settings-list');
@@ -232,7 +210,6 @@
   }
 
   function init() {
-    setupSidebar();
     setupSettingsList();
     ensureCollectionView();
     setInterval(setupSettingsList, 2500);
