@@ -1,0 +1,195 @@
+/* V3.1 - refinamentos visuais inspirados no Figma Simple Design System */
+
+:root{
+  --ui-radius-xs:8px;
+  --ui-radius-sm:10px;
+  --ui-radius-md:12px;
+  --ui-radius-lg:16px;
+  --ui-gap-1:6px;
+  --ui-gap-2:10px;
+  --ui-gap-3:14px;
+  --ui-gap-4:18px;
+  --ui-gap-5:24px;
+  --ui-surface:#ffffff;
+  --ui-surface-soft:#f7f9fa;
+  --ui-border:#d8e1e5;
+  --ui-focus:0 0 0 3px rgba(50,169,205,.20);
+  --ui-shadow-sm:0 1px 2px rgba(2,29,38,.04),0 4px 14px rgba(2,29,38,.05);
+  --ui-shadow-md:0 10px 30px rgba(2,29,38,.10);
+}
+
+html.dark{
+  --ui-surface:#10232c;
+  --ui-surface-soft:#0d1d25;
+  --ui-border:#29434f;
+  --ui-shadow-sm:0 1px 2px rgba(0,0,0,.22),0 5px 16px rgba(0,0,0,.18);
+  --ui-shadow-md:0 12px 34px rgba(0,0,0,.30);
+}
+
+/* Tipografia e hierarquia */
+.page-head h1{font-size:clamp(26px,2.5vw,34px);line-height:1.15;letter-spacing:-.035em;font-weight:700}
+.page-head .muted{max-width:760px;line-height:1.55}
+.panel h2,.panel-head h2{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.eyebrow{font-size:10px;letter-spacing:.11em}
+
+/* Superficies e cards, baseados no padrao Card/Stats Card do SDS */
+.panel,.kpi,.table-card,.sync-card,.login-card{
+  border-radius:var(--ui-radius-md);
+  border:1px solid var(--ui-border);
+  box-shadow:var(--ui-shadow-sm);
+}
+.panel,.kpi,.table-card,.sync-card{background:var(--ui-surface)}
+.panel{padding:20px}
+.kpi{padding:18px 19px;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.kpi:hover{transform:translateY(-1px);box-shadow:var(--ui-shadow-md);border-color:rgba(50,169,205,.32)}
+
+/* Navegacao em estilo Navigation Pill */
+.sidebar .nav-item{
+  min-height:42px;
+  border-radius:999px;
+  padding:10px 13px;
+  transition:background .14s ease,color .14s ease,transform .14s ease;
+}
+.sidebar .nav-item:hover{transform:translateX(1px)}
+.sidebar .nav-item.ativo{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 5px 14px rgba(50,169,205,.18)}
+.sidebar .nav-item:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(50,169,205,.32)}
+
+/* Botoes e icon buttons */
+.btn{
+  min-height:40px;
+  border-radius:var(--ui-radius-sm);
+  padding:9px 15px;
+  font-weight:700;
+  transition:transform .12s ease,box-shadow .12s ease,background .12s ease,border-color .12s ease;
+}
+.btn:hover:not(:disabled){transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:translateY(0)}
+.btn:focus-visible,.icon-btn:focus-visible,.text-btn:focus-visible{outline:none;box-shadow:var(--ui-focus)}
+.btn.primary{box-shadow:0 5px 14px rgba(50,169,205,.17)}
+.btn.secondary{background:var(--ui-surface);border-color:var(--ui-border)}
+.icon-btn{border-radius:999px;min-width:36px;min-height:36px;display:inline-grid;place-items:center}
+
+/* Campos, seguindo Input/Select do SDS */
+input,select,textarea{
+  min-height:42px;
+  border-radius:var(--ui-radius-sm);
+  border-color:var(--ui-border);
+  background:var(--ui-surface);
+  transition:border-color .14s ease,box-shadow .14s ease,background .14s ease;
+}
+input:hover,select:hover,textarea:hover{border-color:#b6c8d0}
+input:focus,select:focus,textarea:focus{outline:none!important;border-color:var(--orange)!important;box-shadow:var(--ui-focus)!important}
+html.dark input,html.dark select,html.dark textarea{background:#0d1d25;color:#eef7fa;border-color:#29434f}
+html.dark input:hover,html.dark select:hover,html.dark textarea:hover{border-color:#42616f}
+
+/* Filtros como toolbar responsiva */
+.filter-bar{
+  background:var(--ui-surface);
+  border-color:var(--ui-border);
+  border-radius:var(--ui-radius-md);
+  box-shadow:var(--ui-shadow-sm);
+  gap:10px;
+}
+
+/* Tabelas com cabecalho mais limpo e leitura melhor */
+.table-card{overflow:hidden}
+.table-scroll{border-radius:inherit}
+thead th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:var(--ui-surface-soft);
+  color:#687a83;
+  font-size:9px;
+  letter-spacing:.08em;
+  padding:11px 13px;
+}
+tbody td{padding:12px 13px;border-top:1px solid color-mix(in srgb,var(--ui-border) 70%,transparent)}
+tbody tr{transition:background .12s ease}
+tbody tr:hover{background:rgba(50,169,205,.045)}
+html.dark thead th{background:#0b1920;color:#9fb4be}
+html.dark tbody tr:hover{background:rgba(50,169,205,.075)}
+
+/* Tags/chips mais proximas ao SDS */
+.pill{
+  min-height:22px;
+  align-items:center;
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.045em;
+  border:1px solid transparent;
+}
+
+/* Dialogs */
+.modal{
+  border-radius:var(--ui-radius-lg)!important;
+  border:1px solid var(--ui-border)!important;
+  box-shadow:0 24px 70px rgba(2,29,38,.25)!important;
+  overflow:hidden;
+}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--ui-border)}
+.modal-head h2{font-size:18px;letter-spacing:-.02em}
+#v31-refine-overlay{backdrop-filter:blur(4px)}
+
+/* Bloco de usuario/Avatar conforme SDS */
+.avatar{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  overflow:hidden;
+  flex:0 0 38px;
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 2px 8px rgba(0,0,0,.14);
+}
+.avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.user-block{gap:10px}
+
+/* Primeira utilizacao */
+.first-use-banner{border-radius:var(--ui-radius-lg);box-shadow:var(--ui-shadow-sm);border:1px solid var(--ui-border)}
+.check-item{border-radius:var(--ui-radius-sm)}
+
+/* Acao flutuante: cockpit/report/tema com linguagem de Icon Button/FAB */
+.cc-cockpit-button,.report-fab,.bug-report-fab,[data-report-fab]{
+  border-radius:999px!important;
+  box-shadow:0 10px 26px rgba(2,29,38,.20)!important;
+}
+
+/* Formulario e configuracoes */
+.settings-grid{gap:16px}
+.settings-grid>.panel{transition:border-color .14s ease,box-shadow .14s ease}
+.settings-grid>.panel:hover{border-color:rgba(50,169,205,.25);box-shadow:var(--ui-shadow-md)}
+.v31-setting-row{padding:2px 0}
+.v31-security-icon{border:1px solid var(--ui-border)}
+
+/* Estados vazios mais leves */
+.empty{border-radius:var(--ui-radius-sm);background:var(--ui-surface-soft);margin:8px 0}
+
+/* Responsividade refinada segundo layouts responsivos do SDS */
+@media(max-width:1200px){
+  .panel{padding:18px}
+  .kpi-grid{gap:11px}
+  .page-head{gap:16px}
+}
+
+@media(max-width:900px){
+  .mobile-header{border-radius:0 0 12px 12px;box-shadow:0 4px 16px rgba(2,29,38,.07)}
+  .page-head h1{font-size:28px}
+  .panel,.kpi,.table-card{border-radius:11px}
+  .table-scroll{overflow-x:auto}
+  .table-scroll table{min-width:720px}
+  .modal{border-radius:14px!important}
+}
+
+@media(max-width:640px){
+  .page-head h1{font-size:25px}
+  .eyebrow{font-size:9px}
+  .panel{padding:15px}
+  .kpi{padding:15px}
+  .kpi p{font-size:10px}
+  .kpi strong{font-size:21px}
+  .btn{min-height:44px}
+  .filter-bar{border-radius:11px}
+  .table-card{box-shadow:none}
+}
