@@ -46,11 +46,23 @@ async function request(path, options, user) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const error = new Error(data.error || `Cloud Sync HTTP ${response.status}`);
-      error.status = response.status;
+      error.statusCode = response.status >= 500 ? 502 : response.status;
+      error.publicMessage = response.status >= 500
+        ? 'O serviço corporativo não conseguiu concluir a operação. Tente novamente em instantes.'
+        : error.message;
       error.code = data.code || '';
       throw error;
     }
     return data;
+  } catch (error) {
+    if (error.statusCode) throw error;
+    const unavailable = new Error(error.name === 'AbortError'
+      ? 'Tempo limite ao acessar o serviço corporativo.'
+      : `Falha ao acessar o serviço corporativo: ${error.message}`);
+    unavailable.statusCode = 503;
+    unavailable.publicMessage = 'Não foi possível acessar o serviço corporativo agora. Verifique a internet e tente novamente.';
+    unavailable.code = error.name === 'AbortError' ? 'CLOUD_TIMEOUT' : 'CLOUD_UNAVAILABLE';
+    throw unavailable;
   } finally {
     clearTimeout(timer);
   }

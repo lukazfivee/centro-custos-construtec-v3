@@ -11,7 +11,7 @@
       headers:{ Authorization:`Bearer ${authToken()}`, 'Content-Type':'application/json', ...(options.headers || {}) },
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.erro || data.error || `Erro ${response.status}`);
+    if (!response.ok) throw window.apiError ? window.apiError(response,data,`Erro ${response.status}`) : new Error(data.erro || data.error || `Erro ${response.status}`);
     return data;
   }
 
@@ -225,7 +225,14 @@
     const emailInput = form.querySelector('#v31-f-emails');
     if (!clientInput || !emailInput) return;
     let clients = [];
-    try { clients = (await loadClients()).filter((c) => c.active); } catch { return; }
+    try { clients = (await loadClients()).filter((c) => c.active); }
+    catch (error) {
+      const notice = document.createElement('div');
+      notice.className = 'span-2 form-error';
+      notice.textContent = `O cadastro de clientes está indisponível, mas você ainda pode preencher os dados manualmente. ${error.message}`;
+      form.prepend(notice);
+      return;
+    }
     const wrapper = document.createElement('div');
     wrapper.className = 'span-2 v31-client-picker';
     wrapper.innerHTML = `<label for="v31-client-directory-picker">Cliente cadastrado</label><select id="v31-client-directory-picker"><option value="">Selecionar cliente...</option>${clients.map((c) => `<option value="${escHtml(c.id)}">${escHtml(c.company)} — ${escHtml(c.name)}</option>`).join('')}</select><small>Ao selecionar, o hospital/empresa e o e-mail são preenchidos automaticamente.</small>`;

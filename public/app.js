@@ -18,6 +18,15 @@ const currentDate = () => new Intl.DateTimeFormat('en-CA').format(new Date());
 const currentMonth = () => currentDate().slice(0,7);
 const roleName = {admin:'Administrador',gestor:'Gestor',supervisor:'Supervisor'};
 const projectStatusName = {planejamento:'Planejamento',execucao:'Em execução',pausado:'Pausado',concluido:'Concluído'};
+function apiError(response,data,fallback='Não foi possível concluir a operação.') {
+  const message = data.erro || data.error || fallback;
+  const requestId = data.requestId || response.headers.get('X-Request-Id');
+  const error = new Error(requestId ? `${message} Código de suporte: ${requestId}.` : message);
+  error.status = response.status;
+  error.requestId = requestId || '';
+  return error;
+}
+window.apiError = apiError;
 function financialLabel(item) {
   if (item.situacao === 'vencido') return 'Vencido';
   if (item.status_financeiro === 'liquidado') return item.tipo === 'receita' ? 'Recebido' : 'Pago';
@@ -31,7 +40,7 @@ async function api(path,options={}) {
   const response = await fetch(API+path,{...options,headers});
   if (response.status === 401 && !path.includes('/login')) { logout(); throw new Error('Sua sessão expirou. Entre novamente.'); }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.erro || 'Não foi possível concluir a operação.');
+  if (!response.ok) throw apiError(response,data);
   return data;
 }
 

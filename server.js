@@ -108,7 +108,10 @@ function createApp() {
     const payload = { requestId:req.requestId };
     if (error.type === 'entity.too.large') return res.status(413).json({ ...payload, erro:'O arquivo ou conteúdo enviado ultrapassa o limite permitido.' });
     if (error instanceof SyntaxError && error.status === 400 && 'body' in error) return res.status(400).json({ ...payload, erro:'O conteúdo JSON enviado é inválido.' });
-    if (error.statusCode) return res.status(error.statusCode).json({ ...payload, erro:error.message });
+    if (error.statusCode) {
+      if (error.statusCode >= 500) logger.error('request_failed', { requestId:req.requestId, method:req.method, path:req.originalUrl?.split('?')[0], error });
+      return res.status(error.statusCode).json({ ...payload, erro:error.publicMessage || error.message });
+    }
     if (error.code === '23505') return res.status(409).json({ ...payload, erro:'Já existe um cadastro com estes dados.' });
     if (error.code === '23503') return res.status(409).json({ ...payload, erro:'O registro está sendo usado e não pode ser removido.' });
     logger.error('unhandled_request_error', { requestId:req.requestId, method:req.method, path:req.originalUrl?.split('?')[0], error });

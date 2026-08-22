@@ -8,7 +8,7 @@
   const api = async (path, options={}) => {
     const response = await fetch(path, { ...options, headers:{ Authorization:`Bearer ${token()}`, 'Content-Type':'application/json', ...(options.headers||{}) } });
     const data = await response.json().catch(()=>({}));
-    if (!response.ok) throw new Error(data.erro || data.error || `Erro ${response.status}`);
+    if (!response.ok) throw window.apiError ? window.apiError(response,data,`Erro ${response.status}`) : new Error(data.erro || data.error || `Erro ${response.status}`);
     return data;
   };
 
