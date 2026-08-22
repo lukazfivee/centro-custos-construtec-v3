@@ -662,12 +662,10 @@ $('#btn-importar-bugreport').addEventListener('click',()=>{
 });
 
 // Modo noturno
-const toggleDark=$('#toggle-dark');
 const themeButton=$('#fab-theme');
 function applyDarkMode(value){
   const dark=value===true;
   document.documentElement.classList.toggle('dark',dark);
-  toggleDark.checked=dark;
   themeButton.textContent=dark?'☀':'☾';
   themeButton.title=dark?'Ativar modo claro':'Ativar modo noturno';
   themeButton.setAttribute('aria-label',themeButton.title);
@@ -682,7 +680,6 @@ function changeDarkMode(value){applyDarkMode(value);persistDarkMode(value);}
 applyDarkMode(localStorage.getItem('cc_dark')==='true');
 try{if(window.electronAPI)applyDarkMode(window.electronAPI.getDarkMode());}catch{}
 api('/appearance').then((prefs)=>{if(prefs.configured)applyDarkMode(prefs.darkMode);}).catch(()=>{});
-toggleDark.addEventListener('change',()=>changeDarkMode(toggleDark.checked));
 themeButton.addEventListener('click',()=>changeDarkMode(!document.documentElement.classList.contains('dark')));
 
 if(token&&usuario) startApp();

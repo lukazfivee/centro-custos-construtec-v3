@@ -23,87 +23,6 @@ html.dark .v31-security-icon{background:#203b48;color:#eef7fa}
 .v31-password-rules{padding:10px 12px;border-radius:8px;background:#f4f7f8;color:var(--muted);font-size:10px;line-height:1.5;margin:10px 0 14px}
 html.dark .v31-password-rules{background:#10232c;color:#9fb7c1}
 
-/* Controle de tema global: reutiliza o checkbox existente da tela de Configuracoes */
-#view-config.oculto{display:contents!important}
-#view-config.oculto>.page-head{display:none!important}
-#view-config.oculto>.settings-grid{display:contents!important}
-#view-config.oculto>.settings-grid>article{display:none!important}
-#view-config.oculto>.settings-grid>article:has(#toggle-dark){display:block!important}
-.settings-grid>article:has(#toggle-dark){
-  position:fixed!important;
-  right:82px;
-  bottom:22px;
-  z-index:9500;
-  width:auto!important;
-  min-width:0!important;
-  padding:0!important;
-  margin:0!important;
-  border:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-  overflow:visible!important;
-}
-.settings-grid>article:has(#toggle-dark)>h2,
-.settings-grid>article:has(#toggle-dark)>p{display:none!important}
-.settings-grid>article:has(#toggle-dark)>div{
-  margin:0!important;
-  display:block!important;
-}
-.settings-grid>article:has(#toggle-dark) label{
-  position:relative!important;
-  display:block!important;
-  width:88px;
-  height:42px;
-  margin:0!important;
-  padding:0!important;
-  border-radius:999px;
-  border:1px solid rgba(2,29,38,.14);
-  background:#e6ebef;
-  box-shadow:0 8px 24px rgba(2,29,38,.18);
-  color:transparent!important;
-  font-size:0!important;
-  cursor:pointer;
-  transition:background .2s ease,border-color .2s ease,box-shadow .2s ease,transform .15s ease;
-  user-select:none;
-}
-.settings-grid>article:has(#toggle-dark) label:hover{transform:translateY(-1px);box-shadow:0 10px 28px rgba(2,29,38,.24)}
-.settings-grid>article:has(#toggle-dark) label::before,
-.settings-grid>article:has(#toggle-dark) label::after{
-  position:absolute;
-  top:50%;
-  transform:translateY(-50%);
-  z-index:1;
-  font-size:17px;
-  line-height:1;
-  transition:opacity .18s ease,color .18s ease;
-}
-.settings-grid>article:has(#toggle-dark) label::before{content:'☀';left:12px;color:#d79622;opacity:1}
-.settings-grid>article:has(#toggle-dark) label::after{content:'☾';right:12px;color:#7c8796;opacity:.68}
-.settings-grid>article:has(#toggle-dark) #toggle-dark{
-  appearance:none!important;
-  -webkit-appearance:none!important;
-  position:absolute!important;
-  top:4px!important;
-  left:4px!important;
-  z-index:2!important;
-  width:34px!important;
-  height:34px!important;
-  min-height:34px!important;
-  margin:0!important;
-  padding:0!important;
-  border:0!important;
-  border-radius:50%!important;
-  background:#fff!important;
-  box-shadow:0 2px 8px rgba(2,29,38,.28)!important;
-  transform:translateX(0);
-  transition:transform .22s ease,background .22s ease,box-shadow .22s ease;
-  cursor:pointer;
-}
-.settings-grid>article:has(#toggle-dark) #toggle-dark:checked{transform:translateX(46px);background:#8c94a8!important}
-html.dark .settings-grid>article:has(#toggle-dark) label{background:#192536;border-color:#33465d;box-shadow:0 8px 24px rgba(0,0,0,.34)}
-html.dark .settings-grid>article:has(#toggle-dark) label::before{opacity:.55;color:#8b96a5}
-html.dark .settings-grid>article:has(#toggle-dark) label::after{opacity:1;color:#d5d9ff}
-
 /* Reports centralizados pertencem a aba Reports */
 #view-bugreports #report-v2-config{margin-bottom:16px}
 #view-bugreports #report-v2-config h2{margin-top:0}
@@ -206,12 +125,6 @@ html,body{max-width:100%;overflow-x:hidden}
   .v31-setting-action{width:100%}.v31-setting-action .btn{width:100%}
   .v31-clients-toolbar{width:100%}
   .v31-clients-toolbar .btn{flex:1 1 140px}
-  .settings-grid>article:has(#toggle-dark){right:74px;bottom:16px}
-  .settings-grid>article:has(#toggle-dark) label{width:78px;height:38px}
-  .settings-grid>article:has(#toggle-dark) #toggle-dark{width:30px!important;height:30px!important;min-height:30px!important}
-  .settings-grid>article:has(#toggle-dark) #toggle-dark:checked{transform:translateX(40px)}
-  .settings-grid>article:has(#toggle-dark) label::before{left:10px;font-size:15px}
-  .settings-grid>article:has(#toggle-dark) label::after{right:10px;font-size:15px}
 }
 
 @media(max-width:640px){
@@ -232,12 +145,10 @@ html,body{max-width:100%;overflow-x:hidden}
   .row-actions{flex-wrap:wrap;justify-content:flex-start}
   .btn{min-height:44px}
   input,select,textarea{font-size:16px}
-  .settings-grid>article:has(#toggle-dark){right:68px;bottom:14px}
 }
 
 @media(max-width:420px){
   .main{padding-left:10px!important;padding-right:10px!important}
   .page-head h1{font-size:24px}
   .panel,.table-card,.kpi{border-radius:10px}
-  .settings-grid>article:has(#toggle-dark){right:64px}
 }

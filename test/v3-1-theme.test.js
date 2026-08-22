@@ -10,6 +10,9 @@ test('tema possui atalho flutuante acessivel e persistencia local', () => {
   const script = read('public/app.js');
 
   assert.match(html, /id="fab-theme"[^>]+aria-pressed="false"/);
+  assert.doesNotMatch(html, /id="toggle-dark"/);
+  assert.doesNotMatch(read('public/v3-1-refinements.css'), /#toggle-dark/);
+  assert.doesNotMatch(script, /toggleDark/);
   assert.match(script, /api\('\/appearance',\{method:'POST'/);
   assert.match(script, /electronAPI\.setDarkMode/);
   assert.match(script, /themeButton\.setAttribute\('aria-pressed'/);
