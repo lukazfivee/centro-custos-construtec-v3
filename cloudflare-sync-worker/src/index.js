@@ -4,6 +4,52 @@ const SESSION_SECONDS = 8 * 3600;
 const MAX_NF_BYTES = 5 * 1024 * 1024;
 const MAX_PROFILE_PHOTO_BYTES = 512 * 1024;
 
+let commercialSchemaReady = null;
+
+async function ensureCommercialSchema(env) {
+  if (!commercialSchemaReady) {
+    const statements = [
+      `CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL, company TEXT NOT NULL, name TEXT NOT NULL,
+        email TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_by_email TEXT,
+        updated_by_email TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      )`,
+      'CREATE UNIQUE INDEX IF NOT EXISTS clients_org_email_unique ON clients(org_id, email)',
+      'CREATE INDEX IF NOT EXISTS clients_org_company_idx ON clients(org_id, company, name)',
+      `CREATE TABLE IF NOT EXISTS client_followups (
+        org_id TEXT NOT NULL, cost_center_public_id TEXT NOT NULL, client_name TEXT,
+        client_emails TEXT NOT NULL DEFAULT '[]', responsible TEXT,
+        operational_status TEXT NOT NULL DEFAULT 'em_execucao',
+        financial_status TEXT NOT NULL DEFAULT 'a_faturar', invoice_number TEXT,
+        contract_amount REAL NOT NULL DEFAULT 0, receivable_amount REAL NOT NULL DEFAULT 0,
+        completion_date TEXT, due_date TEXT, notes TEXT, updated_by_email TEXT,
+        updated_at TEXT NOT NULL, PRIMARY KEY (org_id, cost_center_public_id)
+      )`,
+      'CREATE INDEX IF NOT EXISTS client_followups_status_idx ON client_followups(org_id, operational_status, financial_status)',
+      `CREATE TABLE IF NOT EXISTS client_email_drafts (
+        org_id TEXT NOT NULL, cost_center_public_id TEXT NOT NULL,
+        to_json TEXT NOT NULL DEFAULT '[]', cc_json TEXT NOT NULL DEFAULT '[]',
+        subject TEXT NOT NULL, body_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft',
+        authorized_by_email TEXT, authorized_at TEXT, sent_by_email TEXT, sent_at TEXT,
+        resend_email_id TEXT, last_error TEXT, attachments_json TEXT NOT NULL DEFAULT '[]',
+        updated_at TEXT NOT NULL, PRIMARY KEY (org_id, cost_center_public_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS client_email_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, org_id TEXT NOT NULL,
+        cost_center_public_id TEXT NOT NULL, action TEXT NOT NULL, actor_email TEXT NOT NULL,
+        recipients_json TEXT, attachments_json TEXT, detail TEXT, created_at TEXT NOT NULL
+      )`,
+      'CREATE INDEX IF NOT EXISTS client_email_events_center_idx ON client_email_events(org_id, cost_center_public_id, id DESC)',
+    ];
+    commercialSchemaReady = env.DB.batch(statements.map((sql) => env.DB.prepare(sql)))
+      .catch((error) => {
+        commercialSchemaReady = null;
+        throw error;
+      });
+  }
+  return commercialSchemaReady;
+}
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -734,6 +780,7 @@ export default {
     if (request.method === 'POST' && url.pathname === '/v1/users') return handleCreateUser(request, env);
     if (request.method === 'POST' && url.pathname === '/v1/users/status') return handleUserStatus(request, env);
     if (request.method === 'GET' && url.pathname === '/v1/activity') return handleActivity(request, env);
+    if (/^\/v1\/(?:clients|client-followups|client-email-draft)(?:\/|$)/.test(url.pathname)) await ensureCommercialSchema(env);
     if (request.method === 'GET' && url.pathname === '/v1/clients') return handleListClients(request, env);
     if (request.method === 'POST' && url.pathname === '/v1/clients') return handleCreateClient(request, env);
     if (request.method === 'PUT' && /^\/v1\/clients\/[^/]+$/.test(url.pathname)) return handleUpdateClient(request, env, decodeURIComponent(url.pathname.split('/').pop()));

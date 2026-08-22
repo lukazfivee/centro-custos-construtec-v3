@@ -33,6 +33,21 @@ test('migration D1 de clientes contém os campos usados pelo Worker', () => {
   assert.match(migrations, /clients_org_email_unique/);
 });
 
+test('Worker recompõe tabelas comerciais ausentes antes de atender as rotas', async () => {
+  const source = read('cloudflare-sync-worker/src/index.js');
+  const worker = await import(`data:text/javascript;base64,${Buffer.from(`${source}\nexport { ensureCommercialSchema };`).toString('base64')}`);
+  const prepared = [];
+  const env = { DB:{
+    prepare(sql) { prepared.push(sql); return { sql }; },
+    async batch(statements) { return statements; },
+  } };
+
+  await worker.ensureCommercialSchema(env);
+  for (const table of Object.keys(D1_TABLES)) {
+    assert.ok(prepared.some((sql) => sql.includes(`CREATE TABLE IF NOT EXISTS ${table}`)), `tabela ${table} não foi protegida`);
+  }
+});
+
 test('Worker rejeita arquivo falso e aceita PDF real em base64', async () => {
   const source = read('cloudflare-sync-worker/src/index.js');
   const worker = await import(`data:text/javascript;base64,${Buffer.from(`${source}\nexport { validatePdfAttachments };`).toString('base64')}`);
