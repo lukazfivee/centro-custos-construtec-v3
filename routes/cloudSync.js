@@ -1,4 +1,5 @@
 const express = require('express');
+const { getDb } = require('../db');
 const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError } = require('../lib/http');
 const cloud = require('../services/cloudSync');
@@ -33,14 +34,32 @@ function validateInvoicePdfAttachments(value) {
   const file = attachments[0] || {};
   const filename = String(file.filename || '').trim();
   const contentType = String(file.contentType || '').trim().toLowerCase();
-  const contentBase64 = String(file.contentBase64 || '').trim();
+  const contentBase64 = String(file.contentBase64 || '').replace(/\s/g, '');
   if (!filename || !contentBase64) throw httpError(400,'O arquivo da nota fiscal é inválido.');
   if (!/\.pdf$/i.test(filename) || contentType !== 'application/pdf') {
     throw httpError(400,'A nota fiscal deve ser enviada em formato PDF.');
   }
-  const estimatedBytes = Math.ceil(contentBase64.length * 0.75);
-  if (estimatedBytes > 5 * 1024 * 1024) throw httpError(413,'A nota fiscal em PDF deve ter no máximo 5 MB.');
-  return attachments;
+  if (contentBase64.length > Math.ceil(5 * 1024 * 1024 * 4 / 3) + 4) throw httpError(413,'A nota fiscal em PDF deve ter no máximo 5 MB.');
+  const content = Buffer.from(contentBase64, 'base64');
+  if (!content.length || content.toString('base64').replace(/=+$/, '') !== contentBase64.replace(/=+$/, '')) throw httpError(400,'O arquivo da nota fiscal é inválido.');
+  if (content.length > 5 * 1024 * 1024) throw httpError(413,'A nota fiscal em PDF deve ter no máximo 5 MB.');
+  if (content.subarray(0, 5).toString('ascii') !== '%PDF-') throw httpError(400,'O arquivo selecionado não parece ser um PDF válido.');
+  return [{ filename, contentType:'application/pdf', contentBase64 }];
+}
+
+async function linkedInvoiceAttachments(publicId) {
+  const { rows } = await getDb().query(`
+    SELECT i.original_name,i.mime_type,i.content
+    FROM cost_center_invoices i
+    JOIN cost_centers c ON c.id=i.cost_center_id
+    WHERE c.public_id=$1
+  `, [String(publicId || '').trim()]);
+  if (!rows[0]) return [];
+  return validateInvoicePdfAttachments([{
+    filename:rows[0].original_name,
+    contentType:rows[0].mime_type,
+    contentBase64:Buffer.from(rows[0].content).toString('base64'),
+  }]);
 }
 
 router.get('/status', asyncRoute(async (req, res) => {
@@ -113,7 +132,8 @@ router.post('/cobrancas/:publicId/autorizar', exigirPapel('admin','gestor'), asy
 }));
 
 router.post('/cobrancas/:publicId/enviar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
-  const attachments = validateInvoicePdfAttachments(req.body?.attachments);
+  let attachments = validateInvoicePdfAttachments(req.body?.attachments);
+  if (!attachments.length) attachments = await linkedInvoiceAttachments(req.params.publicId);
   res.json(await cloud.sendClientDraft(req.usuario, req.params.publicId, attachments));
 }));
 

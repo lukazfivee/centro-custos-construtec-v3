@@ -633,8 +633,11 @@ function validatePdfAttachments(value) {
   const contentType = text(item.contentType).toLowerCase();
   if (!filename || !contentBase64) return { error: 'O arquivo da nota fiscal e invalido.', status: 400 };
   if (!/\.pdf$/i.test(filename) || contentType !== 'application/pdf') return { error: 'A nota fiscal deve ser enviada em formato PDF.', status: 400 };
-  const estimatedBytes = Math.ceil(contentBase64.length * 0.75);
-  if (estimatedBytes > MAX_NF_BYTES) return { error: 'A nota fiscal em PDF deve ter no maximo 5 MB.', status: 413 };
+  if (contentBase64.length > Math.ceil(MAX_NF_BYTES * 4 / 3) + 4) return { error: 'A nota fiscal em PDF deve ter no maximo 5 MB.', status: 413 };
+  let content;
+  try { content = base64ToBytes(contentBase64); } catch { return { error: 'O arquivo da nota fiscal e invalido.', status: 400 }; }
+  if (content.length > MAX_NF_BYTES) return { error: 'A nota fiscal em PDF deve ter no maximo 5 MB.', status: 413 };
+  if (new TextDecoder().decode(content.slice(0, 5)) !== '%PDF-') return { error: 'O arquivo selecionado nao parece ser um PDF valido.', status: 400 };
   return { attachments: [{ filename, contentBase64, contentType: 'application/pdf' }] };
 }
 
