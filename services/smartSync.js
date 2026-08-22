@@ -5,6 +5,7 @@ const { recordAudit } = require('./audit');
 
 const FORMAT_VERSION = 3;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const FINANCIAL_STATUSES = new Set(['pendente','liquidado']);
 
 function stableHash(value) {
   return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -20,6 +21,13 @@ function dateOnly(value) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   return String(value).slice(0, 10);
+}
+
+function financialStatusError(item, label) {
+  if (!Object.prototype.hasOwnProperty.call(item || {}, 'financialStatus')) return null;
+  const value = String(item.financialStatus || '');
+  if (FINANCIAL_STATUSES.has(value)) return null;
+  return `${label}: situação financeira inválida "${value || '(vazia)'}". Use "pendente" ou "liquidado".`;
 }
 
 async function buildPackage() {
@@ -115,6 +123,11 @@ function validRevision(item) {
 async function importSimpleEntity(tx, options) {
   const { type, table, item, packageImportId, result, selectFields, insertSql, insertValues, updateSql, updateValues, businessFields } = options;
   if (!UUID.test(String(item.publicId || ''))) throw httpError(400, `${type}: publicId inválido.`);
+  const domainError = financialStatusError(item, `${type} ${item.publicId}`);
+  if (domainError) {
+    await addConflict(tx, packageImportId, type, item.publicId, domainError, null, item, result);
+    return;
+  }
   const existing = (await tx.query(`SELECT ${selectFields} FROM ${table} WHERE public_id=$1`, [item.publicId])).rows[0];
   if (!existing) {
     await tx.query(insertSql, insertValues(item));
@@ -201,12 +214,22 @@ async function importPackage({ content, filename, user }) {
     const transactionItems = [...pack.payload.transactions].sort((a,b)=>Number(Boolean(a.reversalOf))-Number(Boolean(b.reversalOf)));
     for (const item of transactionItems) {
       if (!UUID.test(String(item.publicId||''))) throw httpError(400, 'Lançamento com publicId inválido.');
+      const domainError = financialStatusError(item, `Lançamento ${item.publicId}`);
+      if (domainError) {
+        await addConflict(tx, packageImportId, 'lancamento', item.publicId, domainError, null, item, result);
+        continue;
+      }
       const centerId = centerMap.get(String(item.costCenterPublicId));
       const categoryId = categoryMap.get(String(item.categoryPublicId));
       if (!centerId || !categoryId) throw httpError(400, `Lançamento ${item.publicId}: obra ou categoria de referência não encontrada.`);
       const existing = (await tx.query('SELECT * FROM transactions WHERE public_id=$1', [item.publicId])).rows[0];
       const incomingRevision = validRevision(item);
-      const clean = {...item,revision:incomingRevision,accountingSign:Number(item.accountingSign) === -1 ? -1 : 1};
+      const clean = {
+        ...item,
+        revision:incomingRevision,
+        accountingSign:Number(item.accountingSign) === -1 ? -1 : 1,
+        paymentMethod:String(item.paymentMethod || '').trim().slice(0,40) || null,
+      };
       if (clean.reversalOf && !UUID.test(String(clean.reversalOf))) throw httpError(400, `Lançamento ${clean.publicId}: vínculo de estorno inválido.`);
       const businessFields = ['type','description','counterparty','amount','accountingSign','reversalOf','reversalReason','transactionDate','dueDate','settlementDate','financialStatus','documentNumber','paymentMethod','notes','deletedAt'];
       const local = existing ? {
@@ -310,7 +333,15 @@ async function applyIncomingConflict(tx, conflict, user) {
     const centerId = (await tx.query('SELECT id FROM cost_centers WHERE public_id=$1',[item.costCenterPublicId])).rows[0]?.id;
     const categoryId = (await tx.query('SELECT id FROM categories WHERE public_id=$1',[item.categoryPublicId])).rows[0]?.id;
     if (!centerId || !categoryId) throw httpError(400, `Lançamento ${publicId}: obra ou categoria de referência não encontrada.`);
-    const clean = {...item,publicId,revision:validRevision(item),accountingSign:Number(item.accountingSign) === -1 ? -1 : 1};
+    const incomingFinancialError = financialStatusError(item, `Lançamento ${publicId}`);
+    if (incomingFinancialError) throw httpError(400, incomingFinancialError);
+    const clean = {
+      ...item,
+      publicId,
+      revision:validRevision(item),
+      accountingSign:Number(item.accountingSign) === -1 ? -1 : 1,
+      paymentMethod:String(item.paymentMethod || '').trim().slice(0,40) || null,
+    };
     if (clean.reversalOf && !UUID.test(String(clean.reversalOf))) throw httpError(400, `Lançamento ${publicId}: vínculo de estorno inválido.`);
     const values = [clean.publicId,clean.type,centerId,categoryId,String(clean.description||'').slice(0,240),clean.counterparty||null,Number(clean.amount),clean.accountingSign,clean.reversalOf||null,clean.reversalReason||null,clean.reversedAt||null,clean.transactionDate,clean.notes||null,clean.dueDate||clean.transactionDate,clean.settlementDate||null,clean.financialStatus,clean.documentNumber||null,clean.paymentMethod||null,clean.originInstanceId,clean.originInstanceName,clean.lastModifiedInstanceId,clean.lastModifiedInstanceName,clean.originUserName,clean.revision,clean.createdAt||new Date(),clean.updatedAt||new Date(),clean.deletedAt||null,user.id];
     const existing = (await tx.query('SELECT id FROM transactions WHERE public_id=$1',[publicId])).rows[0];
