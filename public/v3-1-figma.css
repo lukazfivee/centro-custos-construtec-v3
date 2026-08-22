@@ -127,7 +127,8 @@ html.dark tbody tr:hover{background:rgba(50,169,205,.075)}
   border-radius:var(--ui-radius-lg)!important;
   border:1px solid var(--ui-border)!important;
   box-shadow:0 24px 70px rgba(2,29,38,.25)!important;
-  overflow:hidden;
+  overflow:auto;
+  overscroll-behavior:contain;
 }
 .modal-head{padding:16px 20px;border-bottom:1px solid var(--ui-border)}
 .modal-head h2{font-size:18px;letter-spacing:-.02em}
@@ -151,7 +152,7 @@ html.dark tbody tr:hover{background:rgba(50,169,205,.075)}
 .check-item{border-radius:var(--ui-radius-sm)}
 
 /* Acao flutuante: cockpit/report/tema com linguagem de Icon Button/FAB */
-.cc-cockpit-button,.report-fab,.bug-report-fab,[data-report-fab]{
+.cc-cockpit-button,.report-fab,.bug-report-fab,[data-report-fab],.fab-theme{
   border-radius:999px!important;
   box-shadow:0 10px 26px rgba(2,29,38,.20)!important;
 }

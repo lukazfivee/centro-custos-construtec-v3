@@ -27,7 +27,7 @@ function savePrefs(prefs) {
 
 router.get('/', (req, res) => {
   const prefs = loadPrefs();
-  res.json({ darkMode: prefs.darkMode === true });
+  res.json({ darkMode: prefs.darkMode === true, configured:typeof prefs.darkMode === 'boolean' });
 });
 
 router.post('/', (req, res) => {

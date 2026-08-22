@@ -614,10 +614,27 @@ $('#btn-importar-bugreport').addEventListener('click',()=>{
 
 // Modo noturno
 const toggleDark=$('#toggle-dark');
-function applyDarkMode(value){document.documentElement.classList.toggle('dark',value);toggleDark.checked=value;localStorage.setItem('cc_dark',value);}
-if(localStorage.getItem('cc_dark')==='true')applyDarkMode(true);
-try{if(window.electronAPI){const diskValue=window.electronAPI.getDarkMode();applyDarkMode(diskValue);}}catch{}
-toggleDark.addEventListener('change',()=>{applyDarkMode(toggleDark.checked);try{if(window.electronAPI)window.electronAPI.setDarkMode(toggleDark.checked);}catch{}});
+const themeButton=$('#fab-theme');
+function applyDarkMode(value){
+  const dark=value===true;
+  document.documentElement.classList.toggle('dark',dark);
+  toggleDark.checked=dark;
+  themeButton.textContent=dark?'☀':'☾';
+  themeButton.title=dark?'Ativar modo claro':'Ativar modo noturno';
+  themeButton.setAttribute('aria-label',themeButton.title);
+  themeButton.setAttribute('aria-pressed',String(dark));
+  localStorage.setItem('cc_dark',String(dark));
+}
+async function persistDarkMode(value){
+  try{if(window.electronAPI)window.electronAPI.setDarkMode(value);}catch{}
+  try{await api('/appearance',{method:'POST',body:JSON.stringify({darkMode:value})});}catch{}
+}
+function changeDarkMode(value){applyDarkMode(value);persistDarkMode(value);}
+applyDarkMode(localStorage.getItem('cc_dark')==='true');
+try{if(window.electronAPI)applyDarkMode(window.electronAPI.getDarkMode());}catch{}
+api('/appearance').then((prefs)=>{if(prefs.configured)applyDarkMode(prefs.darkMode);}).catch(()=>{});
+toggleDark.addEventListener('change',()=>changeDarkMode(toggleDark.checked));
+themeButton.addEventListener('click',()=>changeDarkMode(!document.documentElement.classList.contains('dark')));
 
 if(token&&usuario) startApp();
 
