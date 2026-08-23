@@ -128,12 +128,23 @@ async function startApp() {
 
 $$('.nav-item').forEach((button)=>button.addEventListener('click',()=>{showView(button.dataset.view);$('.sidebar').classList.remove('open');}));
 $('#mobile-menu').addEventListener('click',()=>$('.sidebar').classList.toggle('open'));
+$$('[data-mobile-view]').forEach((button)=>button.addEventListener('click',()=>showView(button.dataset.mobileView)));
+$('#mobile-more').addEventListener('click',()=>$('.sidebar').classList.add('open'));
+$$('.settings-index a').forEach((link)=>link.addEventListener('click',(event)=>{
+  event.preventDefault();
+  document.querySelector(link.getAttribute('href'))?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
+}));
+
+function syncMobileNavigation(name){
+  $$('.mobile-nav-item').forEach((button)=>button.classList.toggle('ativo',button.dataset.mobileView===name || (button.id==='mobile-more'&&!button.dataset.mobileView&&!['dashboard','lancamentos','centros'].includes(name))));
+}
 
 function showView(name) {
   $$('.view').forEach((view)=>view.classList.add('oculto'));
   $(`#view-${name}`).classList.remove('oculto');
   $$('.nav-item').forEach((button)=>button.classList.toggle('ativo',button.dataset.view===name));
-  const loaders={dashboard:loadDashboard,lancamentos:loadTransactions,centros:loadCenters,categorias:loadCategories,fornecedores:loadSuppliers,historico:loadHistory,sincronizacao:loadSync,usuarios:loadUsers,recorrentes:loadRecurring,bugreports:loadBugReports,config:loadSmtpSettings};
+  syncMobileNavigation(name);
+  const loaders={dashboard:loadDashboard,lancamentos:loadTransactions,centros:loadCenters,categorias:loadCategories,fornecedores:loadSuppliers,historico:loadHistory,sincronizacao:loadSync,usuarios:loadUsers,recorrentes:loadRecurring,bugreports:loadBugReports,config:loadConfiguration};
   if (loaders[name]) loaders[name]().catch((error)=>toast(error.message,true));
 }
 
@@ -664,6 +675,7 @@ $('#btn-importar-bugreport').addEventListener('click',()=>{
 
 // Modo noturno
 const themeButton=$('#fab-theme');
+const mobileThemeButton=$('#mobile-theme');
 function applyDarkMode(value){
   const dark=value===true;
   document.documentElement.classList.toggle('dark',dark);
@@ -671,8 +683,38 @@ function applyDarkMode(value){
   themeButton.title=dark?'Ativar modo claro':'Ativar modo noturno';
   themeButton.setAttribute('aria-label',themeButton.title);
   themeButton.setAttribute('aria-pressed',String(dark));
+  if(mobileThemeButton){mobileThemeButton.querySelector('span').textContent=dark?'☀':'☾';mobileThemeButton.setAttribute('aria-label',dark?'Ativar modo claro':'Ativar modo noturno');}
   localStorage.setItem('cc_dark',String(dark));
 }
+mobileThemeButton?.addEventListener('click',()=>themeButton.click());
+
+async function loadMobileAccess(){
+  const toggle=$('#mobile-access-toggle');
+  const details=$('#mobile-access-details');
+  if(!toggle||!details)return;
+  const desktop=window.electronAPI;
+  toggle.disabled=!desktop?.setMobileAccess;
+  toggle.checked=desktop?.getMobileAccess?.()===true;
+  try{
+    const version=await api('/version');
+    const urls=Array.isArray(version.mobileUrls)?version.mobileUrls:[];
+    details.innerHTML=urls.length
+      ? `<strong>Endereço para informar no Android:</strong>${urls.map((url)=>`<a href="${esc(url)}">${esc(url)}</a>`).join('')}`
+      : toggle.checked?'Aguardando a reinicialização para mostrar o endereço desta máquina.':'Ative para liberar o acesso somente na rede local.';
+  }catch{details.textContent='Não foi possível verificar o endereço desta instalação.';}
+}
+
+async function loadConfiguration(){
+  await Promise.all([loadSmtpSettings(),loadMobileAccess()]);
+}
+
+$('#mobile-access-toggle').addEventListener('change',async(event)=>{
+  const toggle=event.currentTarget;
+  if(!window.electronAPI?.setMobileAccess){toggle.checked=!toggle.checked;toast('Esta opção está disponível no aplicativo instalado para Windows.',true);return;}
+  toggle.disabled=true;
+  try{await window.electronAPI.setMobileAccess(toggle.checked);}
+  catch(error){toggle.checked=!toggle.checked;toggle.disabled=false;toast(error.message||'Não foi possível alterar o acesso móvel.',true);}
+});
 async function persistDarkMode(value){
   try{if(window.electronAPI)window.electronAPI.setDarkMode(value);}catch{}
   try{await api('/appearance',{method:'POST',body:JSON.stringify({darkMode:value})});}catch{}

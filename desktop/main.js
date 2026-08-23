@@ -165,6 +165,8 @@ if (!gotLock) {
       changed = true;
     }
 
+    process.env.HOST = loadPrefs().mobileAccess === true ? '0.0.0.0' : '127.0.0.1';
+
     if (runtime.ADMIN_INITIAL_PASSWORD) {
       delete runtime.ADMIN_INITIAL_PASSWORD;
       changed = true;
@@ -237,6 +239,16 @@ if (!gotLock) {
       prefs.darkMode = value === true;
       savePrefs(prefs);
       event.returnValue = true;
+    });
+    ipcMain.on('get-mobile-access', (event) => {
+      event.returnValue = loadPrefs().mobileAccess === true;
+    });
+    ipcMain.handle('set-mobile-access', async (_event, value) => {
+      const prefs = loadPrefs();
+      prefs.mobileAccess = value === true;
+      savePrefs(prefs);
+      setTimeout(() => { app.relaunch(); app.exit(0); }, 200);
+      return true;
     });
   }
 

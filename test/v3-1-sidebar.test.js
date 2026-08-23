@@ -33,11 +33,12 @@ test('sidebar compacta preserva icones e revela menu e rolagem no hover', () => 
   assert.match(css, /\.main\{grid-column:2\}/);
 });
 
-test('configuracoes usam cards responsivos', () => {
+test('configuracoes usam superficie continua responsiva', () => {
   const css = read('public/v3-1-figma.css');
 
-  assert.match(css, /#view-config \.settings-grid\{[^}]*grid-template-columns:repeat\(2/);
-  assert.match(css, /@media\(max-width:1050px\)[^{]*\{[\s\S]*#view-config \.settings-grid\{grid-template-columns:1fr!important\}/);
+  assert.match(css, /\.settings-layout\{display:grid;grid-template-columns:190px/);
+  assert.match(css, /#view-config \.settings-grid>\.panel\{[^}]*border:0[^}]*border-bottom:1px/);
+  assert.match(css, /@media\(max-width:900px\)[\s\S]*\.settings-layout\{display:block\}/);
   assert.match(css, /@media\(max-width:900px\)[\s\S]*\.mobile-header\{background:var\(--navy\)!important;color:#fff!important/);
   assert.match(css, /\.fab-theme\{right:70px\}/);
 });

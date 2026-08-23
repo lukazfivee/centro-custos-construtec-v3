@@ -20,6 +20,7 @@
     qa('.nav-item').forEach((button) => button.classList.remove('ativo'));
     q(`#view-${name}`)?.classList.remove('oculto');
     q(`.nav-item[data-view="${name}"]`)?.classList.add('ativo');
+    window.syncMobileNavigation?.(name);
   }
 
   function setupHoverSidebar() {
@@ -53,6 +54,7 @@
   }
 
   function setupProfessionalPassword() {
+    if (q('.settings-layout')) return;
     const form = q('#form-senha');
     const panel = form?.closest('article');
     if (!panel || panel.dataset.v31Security === 'true') return;

@@ -1,0 +1,82 @@
+name: Publicar V3.1.0 RC10
+
+on:
+  push:
+    branches:
+      - chatgpt/v3-1-multiusuario-cloudflare
+    paths:
+      - .github/workflows/publish-v3-1-rc10.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    name: Gerar Windows e Android
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Definir versao do pre-lancamento
+        run: npm version 3.1.0-rc.10 --no-git-tag-version
+
+      - name: Validar aplicacao
+        run: npm run verify
+
+      - name: Gerar instalador Windows
+        run: npm run build
+
+      - name: Configurar Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Gerar APK Android
+        run: |
+          gradle -p android assembleDebug --no-daemon
+          Copy-Item android/app/build/outputs/apk/debug/app-debug.apk dist/Centro-de-Custos-Construtec-Android-3.1.0-rc.10.apk
+
+      - name: Publicar pre-lancamento no GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.1.0-rc.10
+          name: Centro de Custos Construtec V3.1.0 RC10
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          body: |
+            Pre-lancamento RC10 da V3.1 para validacao interna.
+
+            Melhorias desta versao:
+            - nova tela de Configuracoes continua, sem mosaico de cartoes;
+            - navegacao inferior e ajustes de toque para celular;
+            - acesso pela rede local ativado explicitamente no Windows;
+            - primeiro APK Android do Centro de Custos;
+            - inclui todas as correcoes e recursos da RC9.
+
+            No Android, abra Configuracoes > Acesso pelo celular no Windows e siga o endereco exibido.
+          files: |
+            dist/*.exe
+            dist/*.apk
+            dist/latest.yml
+            dist/*.blockmap
+          fail_on_unmatched_files: false

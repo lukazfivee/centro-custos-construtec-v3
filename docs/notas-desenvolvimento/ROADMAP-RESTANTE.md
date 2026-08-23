@@ -37,9 +37,9 @@ Este documento registra o lote final de evolução do Centro de Custos Construte
 - permissões por obra e limite de aprovação como base de expansão.
 
 ## P9 - acesso móvel
-- versão web responsiva para celular;
-- autenticação segura e dados centralizados;
-- acesso por HTTPS sem depender do computador da empresa ligado;
-- instalação opcional como aplicativo no celular (PWA).
+- concluído na RC10: interface responsiva, navegação inferior e aplicativo Android;
+- concluído na RC10: conexão na rede local com ativação explícita e autenticação normal do sistema;
+- concluído na RC10: cliente aceita endereço HTTPS protegido para acesso remoto;
+- futuro: hospedagem centralizada para funcionar sem depender do computador da empresa ligado.
 
 As entregas são mantidas em branches separadas da `main` e validadas pelo GitHub Actions antes de integração.

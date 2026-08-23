@@ -43,7 +43,9 @@ function createApp() {
   });
   app.get('/api/version', (req, res) => {
     const pkg = require('./package.json');
-    res.json({ version:pkg.version, updateUrl:process.env.UPDATE_URL || '', githubRepo:process.env.GITHUB_REPO || '' });
+    const port = Number(process.env.PORT || 3333);
+    const mobileUrls = process.env.HOST === '0.0.0.0' ? localIPv4s().map((ip) => `http://${ip}:${port}`) : [];
+    res.json({ version:pkg.version, updateUrl:process.env.UPDATE_URL || '', githubRepo:process.env.GITHUB_REPO || '', mobileUrls });
   });
 
   app.use('/api/auth', require('./routes/auth'));

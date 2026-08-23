@@ -87,6 +87,7 @@
     const nav = $(`.nav-item[data-view="${view}"]`);
     if (section) section.classList.remove('oculto');
     if (nav) nav.classList.add('ativo');
+    window.syncMobileNavigation?.(view);
   }
 
   async function openCollections() {
