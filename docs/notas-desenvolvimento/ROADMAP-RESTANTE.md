@@ -36,4 +36,10 @@ Este documento registra o lote final de evolução do Centro de Custos Construte
 - verificação de espaço livre;
 - permissões por obra e limite de aprovação como base de expansão.
 
+## P9 - acesso móvel
+- versão web responsiva para celular;
+- autenticação segura e dados centralizados;
+- acesso por HTTPS sem depender do computador da empresa ligado;
+- instalação opcional como aplicativo no celular (PWA).
+
 As entregas são mantidas em branches separadas da `main` e validadas pelo GitHub Actions antes de integração.
