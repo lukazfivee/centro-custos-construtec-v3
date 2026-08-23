@@ -18,19 +18,6 @@ html.dark .center-card-icon { background:#213946;color:#e9f4f8; }
 /* Estrutura compartilhada da aplicacao */
 .main { min-width:0; }
 
-/* Configuracoes em lista */
-#view-config .settings-grid.v31-settings-list {
-  display:flex !important;flex-direction:column;gap:0;background:var(--white);border:1px solid var(--line);
-  border-radius:14px;overflow:hidden;padding:0;
-}
-#view-config .settings-grid.v31-settings-list > * {
-  width:100%;max-width:none;margin:0;border:0 !important;border-radius:0 !important;
-  box-shadow:none !important;border-bottom:1px solid var(--line) !important;padding:20px 22px;
-}
-#view-config .settings-grid.v31-settings-list > *:last-child { border-bottom:0 !important; }
-html.dark #view-config .settings-grid.v31-settings-list { background:#152530;border-color:#28404d; }
-html.dark #view-config .settings-grid.v31-settings-list > * { border-bottom-color:#28404d !important; }
-
 /* Notificacoes de atividade */
 .v31-live-stack { position:fixed;right:22px;top:22px;z-index:9999;width:min(390px,calc(100vw - 32px));display:grid;gap:10px;pointer-events:none; }
 .v31-live-popup { pointer-events:auto;background:#fff;border:1px solid #dce7eb;border-left:5px solid var(--orange);border-radius:12px;padding:13px 15px;box-shadow:0 12px 35px rgba(0,0,0,.18);animation:v31in .2s ease; }

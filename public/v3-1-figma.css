@@ -166,9 +166,15 @@ html.dark .profile-photo-actions label{color:var(--ink)}
 }
 
 /* Formulario e configuracoes */
-.settings-grid{gap:16px}
-.settings-grid>.panel{transition:border-color .14s ease,box-shadow .14s ease}
-.settings-grid>.panel:hover{border-color:rgba(50,169,205,.25);box-shadow:var(--ui-shadow-md)}
+#view-config .settings-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important;align-items:start}
+#view-config .settings-grid>.panel{height:auto;padding:22px;border-radius:14px;transition:border-color .14s ease,box-shadow .14s ease}
+#view-config .settings-grid>.panel:hover{border-color:rgba(50,169,205,.25);box-shadow:var(--ui-shadow-md)}
+#view-config .settings-grid>.panel>h2{margin:0 0 8px;font-size:17px}
+#view-config .settings-grid dl{display:grid;grid-template-columns:minmax(105px,.45fr) minmax(0,1fr);margin:4px 0 0}
+#view-config .settings-grid dt,#view-config .settings-grid dd{margin:0;padding:9px 0;border-bottom:1px solid var(--ui-border)}
+#view-config .settings-grid dt{font-size:10px;color:var(--muted)}
+#view-config .settings-grid dd{font-size:12px;overflow-wrap:anywhere}
+#view-config .settings-grid dl>*:nth-last-child(-n+2){border-bottom:0}
 .v31-setting-row{padding:2px 0}
 .v31-security-icon{border:1px solid var(--ui-border)}
 
@@ -184,6 +190,10 @@ html.dark .profile-photo-actions label{color:var(--ink)}
   .app-shell.v31-hover-sidebar:has(.sidebar:hover),
   .app-shell.v31-hover-sidebar:has(.sidebar:focus-within){grid-template-columns:245px minmax(0,1fr)!important}
   .app-shell.v31-hover-sidebar .sidebar{
+    position:fixed!important;
+    inset:0 auto 0 0!important;
+    height:100dvh!important;
+    z-index:120!important;
     width:68px!important;
     min-width:68px!important;
     padding:18px 10px!important;
@@ -192,6 +202,7 @@ html.dark .profile-photo-actions label{color:var(--ink)}
     overflow:hidden!important;
     transition:width .2s ease,padding .2s ease,box-shadow .2s ease!important;
   }
+  .app-shell.v31-hover-sidebar .main{grid-column:2}
   .app-shell.v31-hover-sidebar .sidebar>*{opacity:1!important;pointer-events:auto!important}
   .app-shell.v31-hover-sidebar .sidebar:hover,
   .app-shell.v31-hover-sidebar .sidebar:focus-within{
@@ -291,6 +302,10 @@ html.dark .profile-photo-actions label{color:var(--ink)}
   .panel{padding:18px}
   .kpi-grid{gap:11px}
   .page-head{gap:16px}
+}
+
+@media(max-width:1050px) and (min-width:901px){
+  #view-config .settings-grid{grid-template-columns:1fr!important}
 }
 
 @media(max-width:900px){

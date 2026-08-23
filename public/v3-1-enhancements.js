@@ -12,11 +12,6 @@
     return data;
   };
 
-  function setupSettingsList() {
-    const grid = $('#view-config .settings-grid');
-    if (grid) grid.classList.add('v31-settings-list');
-  }
-
   function liveStack() {
     let stack = $('#v31-live-stack');
     if (!stack) {
@@ -210,9 +205,7 @@
   }
 
   function init() {
-    setupSettingsList();
     ensureCollectionView();
-    setInterval(setupSettingsList, 2500);
     setInterval(pollActivity, 5000);
     setTimeout(pollActivity, 2500);
   }
