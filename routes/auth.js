@@ -40,7 +40,7 @@ function profilePhotoPayload(row, synchronized = true) {
 
 function cloudProfileError(error) {
   if ([400,413].includes(error.status)) return httpError(error.status,error.message);
-  if (error.status === 401) return httpError(401,'Sua sessão corporativa expirou. Entre novamente.');
+  if (error.status === 401) return httpError(428,'Sua sessão corporativa expirou. Entre novamente para sincronizar a foto de perfil.');
   return httpError(503,'Não foi possível sincronizar a foto de perfil agora. Verifique a internet e tente novamente.');
 }
 
@@ -216,7 +216,7 @@ router.get('/foto-perfil', autenticar, asyncRoute(async (req, res) => {
 router.post('/foto-perfil', autenticar, asyncRoute(async (req, res) => {
   const photo = decodeProfilePhoto(req.body);
   if (req.usuario.cloud_managed && cloudAuth.corporateEmail(req.usuario.email)) {
-    if (!req.usuario.cloud_session_token) throw httpError(401,'Entre novamente para sincronizar a foto de perfil.');
+    if (!req.usuario.cloud_session_token) throw httpError(428,'Entre novamente para sincronizar a foto de perfil.');
     try { await cloudAuth.setProfilePhoto(req.usuario.cloud_session_token,{ mime:photo.mime, contentBase64:photo.contentBase64 }); }
     catch (error) { throw cloudProfileError(error); }
   }
@@ -226,7 +226,7 @@ router.post('/foto-perfil', autenticar, asyncRoute(async (req, res) => {
 
 router.delete('/foto-perfil', autenticar, asyncRoute(async (req, res) => {
   if (req.usuario.cloud_managed && cloudAuth.corporateEmail(req.usuario.email)) {
-    if (!req.usuario.cloud_session_token) throw httpError(401,'Entre novamente para sincronizar a foto de perfil.');
+    if (!req.usuario.cloud_session_token) throw httpError(428,'Entre novamente para sincronizar a foto de perfil.');
     try { await cloudAuth.removeProfilePhoto(req.usuario.cloud_session_token); }
     catch (error) { throw cloudProfileError(error); }
   }
