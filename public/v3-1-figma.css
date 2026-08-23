@@ -16,6 +16,7 @@
   --ui-focus:0 0 0 3px rgba(50,169,205,.20);
   --ui-shadow-sm:0 1px 2px rgba(2,29,38,.04),0 4px 14px rgba(2,29,38,.05);
   --ui-shadow-md:0 10px 30px rgba(2,29,38,.10);
+  --muted:#526871;
 }
 
 html.dark{
@@ -26,11 +27,26 @@ html.dark{
   --ui-shadow-md:0 12px 34px rgba(0,0,0,.30);
 }
 
+::selection{background:#bce8f5;color:var(--navy)}
+.btn.primary,.nav-item.ativo,.sync-icon,.first-use-icon,.fab-bug{color:var(--navy)}
+.text-btn,.row-actions button{color:#176f8e}
+.login-card{border-top:0}
+.login-about{background:radial-gradient(circle at 13% 18%,rgba(1,183,241,.17),transparent 31%),linear-gradient(135deg,rgba(2,29,38,.99),rgba(5,30,38,.94))}
+.login-about::before{display:none}
+.toast{border-left:0;border:1px solid color-mix(in srgb,var(--orange) 55%,var(--navy))}
+.kpi::before{left:auto;right:17px;top:18px;bottom:auto;width:8px;height:8px;border-radius:50%}
+.kpi span,.legend,.trend-month label,.trend-month .bar:hover::after,.activity span{font-size:11px}
+.row-actions button,.center-status-pill,.center-stat-label,.center-budget-header,.check-hint{font-size:11px}
+.conflict-col.local{border-left-width:1px;border-color:color-mix(in srgb,var(--orange) 45%,var(--ui-border))}
+.conflict-col.incoming{border-left-width:1px;border-color:color-mix(in srgb,var(--blue) 45%,var(--ui-border))}
+.check-item{transition:background .15s ease,border-color .15s ease}
+.center-progress-bar,#update-bar{transition:none!important}
+
 /* Tipografia e hierarquia */
 .page-head h1{font-size:clamp(26px,2.5vw,34px);line-height:1.15;letter-spacing:-.035em;font-weight:700}
 .page-head .muted{max-width:760px;line-height:1.55}
 .panel h2,.panel-head h2{font-size:15px;font-weight:700;letter-spacing:-.01em}
-.eyebrow{font-size:10px;letter-spacing:.11em}
+.eyebrow{font-size:11px;letter-spacing:.08em;color:#176f8e}
 
 /* Superficies e cards, baseados no padrao Card/Stats Card do SDS */
 .panel,.kpi,.table-card,.sync-card,.login-card{
@@ -100,7 +116,7 @@ thead th{
   z-index:2;
   background:var(--ui-surface-soft);
   color:#687a83;
-  font-size:9px;
+  font-size:11px;
   letter-spacing:.08em;
   padding:11px 13px;
 }
@@ -116,7 +132,7 @@ html.dark tbody tr:hover{background:rgba(50,169,205,.075)}
   align-items:center;
   border-radius:999px;
   padding:4px 9px;
-  font-size:8px;
+  font-size:11px;
   font-weight:800;
   letter-spacing:.045em;
   border:1px solid transparent;
@@ -151,6 +167,7 @@ html.dark tbody tr:hover{background:rgba(50,169,205,.075)}
 .profile-photo-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .profile-photo-actions label{margin:0;text-transform:none;letter-spacing:0;font-size:12px;color:var(--navy);cursor:pointer}
 html.dark .profile-photo-actions label{color:var(--ink)}
+html.dark .file-drop strong{color:var(--ink)}
 #profile-photo-message{margin-bottom:0}
 #check-foto .text-btn{flex:0 0 auto;white-space:nowrap}
 .update-notes{white-space:pre-line;line-height:1.6}
@@ -172,7 +189,7 @@ html.dark .profile-photo-actions label{color:var(--ink)}
 #view-config .settings-grid>.panel>h2{margin:0 0 8px;font-size:17px}
 #view-config .settings-grid dl{display:grid;grid-template-columns:minmax(105px,.45fr) minmax(0,1fr);margin:4px 0 0}
 #view-config .settings-grid dt,#view-config .settings-grid dd{margin:0;padding:9px 0;border-bottom:1px solid var(--ui-border)}
-#view-config .settings-grid dt{font-size:10px;color:var(--muted)}
+#view-config .settings-grid dt{font-size:11px;color:var(--muted)}
 #view-config .settings-grid dd{font-size:12px;overflow-wrap:anywhere}
 #view-config .settings-grid dl>*:nth-last-child(-n+2){border-bottom:0}
 .v31-setting-row{padding:2px 0}
@@ -185,7 +202,6 @@ html.dark .profile-photo-actions label{color:var(--ink)}
 @media(min-width:901px){
   .app-shell.v31-hover-sidebar{
     grid-template-columns:68px minmax(0,1fr)!important;
-    transition:grid-template-columns .2s ease!important;
   }
   .app-shell.v31-hover-sidebar:has(.sidebar:hover),
   .app-shell.v31-hover-sidebar:has(.sidebar:focus-within){grid-template-columns:245px minmax(0,1fr)!important}
@@ -200,7 +216,7 @@ html.dark .profile-photo-actions label{color:var(--ink)}
     background:var(--navy)!important;
     box-shadow:1px 0 0 rgba(255,255,255,.05)!important;
     overflow:hidden!important;
-    transition:width .2s ease,padding .2s ease,box-shadow .2s ease!important;
+    transition:box-shadow .2s ease!important;
   }
   .app-shell.v31-hover-sidebar .main{grid-column:2}
   .app-shell.v31-hover-sidebar .sidebar>*{opacity:1!important;pointer-events:auto!important}
@@ -304,12 +320,12 @@ html.dark .profile-photo-actions label{color:var(--ink)}
   .page-head{gap:16px}
 }
 
-@media(max-width:1050px) and (min-width:901px){
+@media(max-width:1050px){
   #view-config .settings-grid{grid-template-columns:1fr!important}
 }
 
 @media(max-width:900px){
-  .mobile-header{border-radius:0 0 12px 12px;box-shadow:0 4px 16px rgba(2,29,38,.07)}
+  .mobile-header{background:var(--navy)!important;color:#fff!important;border-radius:0 0 12px 12px;box-shadow:0 4px 16px rgba(2,29,38,.12)}
   .page-head h1{font-size:28px}
   .panel,.kpi,.table-card{border-radius:11px}
   .table-scroll{overflow-x:auto}
@@ -319,12 +335,15 @@ html.dark .profile-photo-actions label{color:var(--ink)}
 
 @media(max-width:640px){
   .page-head h1{font-size:25px}
-  .eyebrow{font-size:9px}
+  .eyebrow{font-size:11px}
   .panel{padding:15px}
   .kpi{padding:15px}
-  .kpi p{font-size:10px}
+  .kpi p{font-size:11px}
   .kpi strong{font-size:21px}
   .btn{min-height:44px}
   .filter-bar{border-radius:11px}
   .table-card{box-shadow:none}
+  .fab-theme,.fab-bug{bottom:14px;width:48px;height:48px}
+  .fab-theme{right:70px}
+  .fab-bug{right:14px}
 }

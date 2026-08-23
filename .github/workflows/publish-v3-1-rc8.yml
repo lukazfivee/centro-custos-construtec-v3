@@ -1,0 +1,64 @@
+name: Publicar V3.1.0 RC8
+
+on:
+  push:
+    branches:
+      - chatgpt/v3-1-multiusuario-cloudflare
+    paths:
+      - .github/workflows/publish-v3-1-rc8.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    name: Gerar e publicar Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Definir versao do pre-lancamento
+        run: npm version 3.1.0-rc.8 --no-git-tag-version
+
+      - name: Validar aplicacao
+        run: npm run verify
+
+      - name: Gerar instalador e portable
+        run: npm run build
+
+      - name: Publicar pre-lancamento no GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.1.0-rc.8
+          name: Centro de Custos Construtec V3.1.0 RC8
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          body: |
+            Pre-lancamento RC8 da V3.1 para validacao interna.
+
+            Melhorias desta versao:
+            - refina hierarquia, contraste e legibilidade da interface;
+            - corrige Configuracoes no celular para uma coluna;
+            - melhora cabecalho, botoes flutuantes e modo noturno no celular;
+            - atualiza a tela de carregamento com a identidade Construtec;
+            - inclui todas as correcoes e recursos da RC7.
+
+            Use o Setup x64 para instalacao normal. O Portable x64 funciona sem instalacao.
+          files: |
+            dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
+          fail_on_unmatched_files: false

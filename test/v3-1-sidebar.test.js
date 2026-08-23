@@ -38,4 +38,6 @@ test('configuracoes usam cards responsivos', () => {
 
   assert.match(css, /#view-config \.settings-grid\{[^}]*grid-template-columns:repeat\(2/);
   assert.match(css, /@media\(max-width:1050px\)[^{]*\{[\s\S]*#view-config \.settings-grid\{grid-template-columns:1fr!important\}/);
+  assert.match(css, /@media\(max-width:900px\)[\s\S]*\.mobile-header\{background:var\(--navy\)!important;color:#fff!important/);
+  assert.match(css, /\.fab-theme\{right:70px\}/);
 });
