@@ -1,0 +1,64 @@
+name: Publicar V3.1.0 RC9
+
+on:
+  push:
+    branches:
+      - chatgpt/v3-1-multiusuario-cloudflare
+    paths:
+      - .github/workflows/publish-v3-1-rc9.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    name: Gerar e publicar Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Definir versao do pre-lancamento
+        run: npm version 3.1.0-rc.9 --no-git-tag-version
+
+      - name: Validar aplicacao
+        run: npm run verify
+
+      - name: Gerar instalador e portable
+        run: npm run build
+
+      - name: Publicar pre-lancamento no GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.1.0-rc.9
+          name: Centro de Custos Construtec V3.1.0 RC9
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          body: |
+            Pre-lancamento RC9 da V3.1 para validacao interna.
+
+            Melhorias desta versao:
+            - melhora foco, toque e legibilidade dos formularios no celular;
+            - respeita a preferencia de movimento reduzido;
+            - evita animacoes durante a troca de tema;
+            - melhora o anuncio de mensagens de formulario por leitores de tela;
+            - inclui todas as correcoes e recursos da RC8.
+
+            Use o Setup x64 para instalacao normal. O Portable x64 funciona sem instalacao.
+          files: |
+            dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
+          fail_on_unmatched_files: false

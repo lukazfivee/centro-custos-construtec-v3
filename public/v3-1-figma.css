@@ -27,6 +27,11 @@ html.dark{
   --ui-shadow-md:0 12px 34px rgba(0,0,0,.30);
 }
 
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;-webkit-text-size-adjust:100%}
+button,.btn,.nav-item,.icon-btn,.text-btn{user-select:none;-webkit-tap-highlight-color:transparent}
+.money,.kpi strong,.center-card-stats strong,.center-budget-header strong,td{font-variant-numeric:tabular-nums}
+.theme-changing *,.theme-changing *::before,.theme-changing *::after{animation:none!important;transition:none!important}
+
 ::selection{background:#bce8f5;color:var(--navy)}
 .btn.primary,.nav-item.ativo,.sync-icon,.first-use-icon,.fab-bug{color:var(--navy)}
 .text-btn,.row-actions button{color:#176f8e}
@@ -327,6 +332,8 @@ html.dark .file-drop strong{color:var(--ink)}
 @media(max-width:900px){
   .mobile-header{background:var(--navy)!important;color:#fff!important;border-radius:0 0 12px 12px;box-shadow:0 4px 16px rgba(2,29,38,.12)}
   .page-head h1{font-size:28px}
+  input:not([type="checkbox"]):not([type="radio"]),select,textarea{font-size:16px}
+  .icon-btn,.text-btn,.row-actions button,.nav-item{min-width:44px;min-height:44px}
   .panel,.kpi,.table-card{border-radius:11px}
   .table-scroll{overflow-x:auto}
   .table-scroll table{min-width:720px}
@@ -346,4 +353,19 @@ html.dark .file-drop strong{color:var(--ink)}
   .fab-theme,.fab-bug{bottom:14px;width:48px;height:48px}
   .fab-theme{right:70px}
   .fab-bug{right:14px}
+}
+
+@media(hover:none){
+  .kpi:hover,.btn:hover:not(:disabled),.nav-item:hover,.fab-bug:hover,.fab-theme:hover{transform:none}
+  .kpi:hover{box-shadow:var(--ui-shadow-sm);border-color:var(--ui-border)}
+  .btn.primary:hover{background:var(--orange)}
+  .btn.secondary:hover,input:hover,select:hover,textarea:hover{border-color:var(--ui-border)}
+  .nav-item:hover:not(.ativo){background:transparent;color:#aebdc5}
+  tbody tr:hover{background:transparent}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html:focus-within{scroll-behavior:auto}
+  .view,.v31-live-popup{animation:none!important}
+  .kpi,.btn,.nav-item,input,select,textarea,.fab-bug,.fab-theme,.sidebar{transition:none!important}
 }
