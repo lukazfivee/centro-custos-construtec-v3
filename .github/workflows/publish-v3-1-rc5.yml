@@ -1,0 +1,65 @@
+name: Publicar V3.1.0 RC5
+
+on:
+  push:
+    branches:
+      - chatgpt/v3-1-multiusuario-cloudflare
+    paths:
+      - .github/workflows/publish-v3-1-rc5.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    name: Gerar e publicar Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Definir versao do pre-lancamento
+        run: npm version 3.1.0-rc.5 --no-git-tag-version
+
+      - name: Validar aplicacao
+        run: npm run verify
+
+      - name: Gerar instalador e portable
+        run: npm run build
+
+      - name: Publicar pre-lancamento no GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.1.0-rc.5
+          name: Centro de Custos Construtec V3.1.0 RC5
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          body: |
+            Pre-lancamento RC5 da V3.1 para validacao interna.
+
+            Principais atualizacoes desde a RC4:
+            - corrige sobreposicao da sidebar expandida e mantem o trilho de icones recolhido;
+            - remove o controle duplicado de tema e preserva a preferencia visual;
+            - recupera automaticamente o schema comercial ausente no Worker;
+            - melhora cobrancas, nota fiscal vinculada e diagnostico da sincronizacao;
+            - reforca backup, login, conflitos inteligentes e atividade ao vivo;
+            - adiciona foto de perfil sincronizavel.
+
+            Use o Setup x64 para instalacao normal. O Portable x64 funciona sem instalacao.
+          files: |
+            dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
+          fail_on_unmatched_files: false
