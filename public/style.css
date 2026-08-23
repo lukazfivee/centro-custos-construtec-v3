@@ -29,6 +29,7 @@ input,select,textarea{border:1px solid #cfd7da;background:white;color:var(--ink)
 .local-badge{color:#d4e3e7}.local-badge span{background:#51a6cb;box-shadow:0 0 0 5px rgba(81,166,203,.15)}
 .login-panel{background:linear-gradient(145deg,#edf4f5,#f7f9f9)}
 .login-card{border-top:4px solid var(--orange);box-shadow:0 28px 75px rgba(2,29,38,.15)}
+.password-field{position:relative}.password-field input{padding-right:84px}.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);min-height:34px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--blue);font:inherit;font-size:12px;font-weight:800;cursor:pointer}.password-toggle:hover{background:rgba(45,169,208,.1)}.password-toggle:focus-visible{outline:3px solid rgba(45,169,208,.35);outline-offset:1px}
 .mobile-brand{font-weight:600}.mobile-brand .brand-symbol{background:var(--navy);border-radius:9px;padding:5px}
 input:focus,select:focus,textarea:focus{outline-color:rgba(50,169,205,.16);border-color:var(--orange)}
 .btn.primary{background:linear-gradient(135deg,#32a9cd,#2188ad);box-shadow:0 7px 18px rgba(50,169,205,.18)}

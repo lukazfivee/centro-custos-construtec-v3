@@ -22,6 +22,29 @@ function validEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || ''));
 }
 
+function deliveryStatus(lastEvent) {
+  if (['delivered', 'opened', 'clicked'].includes(lastEvent)) return 'delivered';
+  if (['bounced', 'complained', 'failed'].includes(lastEvent)) return 'failed';
+  if (lastEvent === 'delivery_delayed') return 'delayed';
+  return 'sent';
+}
+
+async function refreshEmailStatus(env, report) {
+  if (!report?.email_id || !env.RESEND_API_KEY) return report?.email_status || 'pending';
+  const response = await fetch(`https://api.resend.com/emails/${encodeURIComponent(report.email_id)}`, {
+    headers: { authorization: `Bearer ${env.RESEND_API_KEY}` },
+  });
+  if (!response.ok) return report.email_status;
+  const data = await response.json().catch(() => ({}));
+  const status = deliveryStatus(text(data.last_event));
+  const error = status === 'failed' ? `Resend: ${text(data.last_event) || 'falha'}` : null;
+  await env.DB.prepare('UPDATE reports SET email_status=?,email_error=?,updated_at=? WHERE id=?')
+    .bind(status, error, new Date().toISOString(), report.id).run();
+  report.email_status = status;
+  report.email_error = error;
+  return status;
+}
+
 function makeReportId() {
   const now = new Date();
   const y = now.getUTCFullYear();
@@ -111,7 +134,7 @@ async function sendEmail(env, report) {
     body: JSON.stringify({
       from: env.REPORT_FROM,
       to: [to],
-      reply_to: report.user_email,
+      ...(report.user_email.endsWith('.local') ? {} : { reply_to: report.user_email }),
       subject,
       text: plain,
       html,
@@ -147,8 +170,9 @@ async function upsertAndSend(env, body, ip) {
     report = await env.DB.prepare('SELECT * FROM reports WHERE client_report_id = ?').bind(body.clientReportId).first();
   }
 
-  if (report.email_status === 'sent') {
-    return { reportId: report.report_id, emailStatus: 'sent', duplicate: true };
+  if (['sent', 'delayed', 'delivered'].includes(report.email_status)) {
+    const emailStatus = await refreshEmailStatus(env, report);
+    return { reportId: report.report_id, emailStatus, emailError: report.email_error || null, duplicate: true };
   }
 
   try {
@@ -167,7 +191,23 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health') {
-      return json({ ok: true, service: 'centro-custos-reports' });
+      return json({
+        ok: true,
+        service: 'centro-custos-reports',
+        emailConfigured: Boolean(env.RESEND_API_KEY && env.REPORT_FROM),
+        destination: env.REPORT_TO || 'pcm@rcconstrutec.com.br',
+      });
+    }
+
+    const statusMatch = url.pathname.match(/^\/v1\/reports\/([^/]+)\/status$/);
+    if (request.method === 'GET' && statusMatch) {
+      if (env.REPORT_INGEST_KEY && (request.headers.get('x-report-key') || '') !== env.REPORT_INGEST_KEY) {
+        return json({ ok: false, error: 'unauthorized' }, 401);
+      }
+      const report = await env.DB.prepare('SELECT * FROM reports WHERE client_report_id = ?').bind(decodeURIComponent(statusMatch[1])).first();
+      if (!report) return json({ ok: false, error: 'not_found' }, 404);
+      const emailStatus = await refreshEmailStatus(env, report);
+      return json({ ok: true, reportId: report.report_id, emailStatus, emailError: report.email_error || null });
     }
     if (request.method !== 'POST' || url.pathname !== '/v1/reports') {
       return json({ ok: false, error: 'not_found' }, 404);

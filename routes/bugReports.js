@@ -5,7 +5,7 @@ const { getDb } = require('../db');
 const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
-const { deliverReport, flushPendingReports, platformLabel } = require('../services/reportDelivery');
+const { deliverReport, flushPendingReports, refreshAcceptedReports, platformLabel } = require('../services/reportDelivery');
 
 router.use(autenticar);
 
@@ -46,6 +46,8 @@ router.get('/delivery/status', asyncRoute(async (req, res) => {
   const { rows } = await getDb().query(`
     SELECT
       COUNT(*) FILTER (WHERE delivery_status = 'delivered')::int AS delivered,
+      COUNT(*) FILTER (WHERE delivery_status = 'accepted')::int AS accepted,
+      COUNT(*) FILTER (WHERE delivery_status = 'failed')::int AS failed,
       COUNT(*) FILTER (WHERE delivery_status = 'pending')::int AS pending,
       COUNT(*) FILTER (WHERE delivery_status = 'sending')::int AS sending
     FROM bug_reports
@@ -59,8 +61,9 @@ router.get('/delivery/status', asyncRoute(async (req, res) => {
 }));
 
 router.post('/delivery/retry', asyncRoute(async (req, res) => {
-  const result = await flushPendingReports(30);
-  res.json({ ok: true, ...result });
+  const pending = await flushPendingReports(30);
+  const accepted = await refreshAcceptedReports(30);
+  res.json({ ok: true, pending, accepted, delivered: pending.delivered + accepted.delivered });
 }));
 
 router.get('/:id', asyncRoute(async (req, res) => {

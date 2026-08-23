@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-test('Report V2 grava local, enfileira offline, tenta novamente e entrega na central', async (context) => {
+test('Report V2 distingue aceite do provedor e entrega confirmada', async (context) => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(),'centro-custos-reports-'));
   process.env.PGLITE_DATA_DIR = path.join(tempRoot,'database');
   process.env.RESTORE_ROOT_DIR = path.join(tempRoot,'restore');
@@ -58,19 +58,33 @@ test('Report V2 grava local, enfileira offline, tenta novamente e entrega na cen
   assert.equal(offline.status,'pending');
 
   let centralPayload;
-  global.fetch = async (_url,options) => {
+  global.fetch = async (url,options = {}) => {
+    if (String(url).endsWith('/status')) {
+      return new Response(JSON.stringify({ok:true,reportId:'CENTRAL-TESTE-1',emailStatus:'delivered'}),{status:200,headers:{'content-type':'application/json'}});
+    }
     centralPayload = JSON.parse(options.body);
-    return new Response(JSON.stringify({ok:true,reportId:'CENTRAL-TESTE-1'}),{status:201,headers:{'content-type':'application/json'}});
+    return new Response(JSON.stringify({ok:true,reportId:'CENTRAL-TESTE-1',emailStatus:'sent'}),{status:201,headers:{'content-type':'application/json'}});
   };
   const sent = await delivery.deliverReport(report.id);
-  assert.equal(sent.status,'delivered');
+  assert.equal(sent.status,'accepted');
   assert.equal(centralPayload.user.email,'admin-reports@teste.local');
   assert.equal(centralPayload.title,'Falha offline de teste');
+
+  const confirmed = await delivery.refreshReportStatus(report.id);
+  assert.equal(confirmed.status,'delivered');
 
   const saved = (await getDb().query('SELECT delivery_status,delivery_attempts,central_report_id FROM bug_reports WHERE id=$1',[report.id])).rows[0];
   assert.equal(saved.delivery_status,'delivered');
   assert.equal(saved.delivery_attempts,2);
   assert.equal(saved.central_report_id,'CENTRAL-TESTE-1');
+});
+
+test('login oferece controle acessível para mostrar e ocultar senha', () => {
+  const html = fs.readFileSync(path.join(__dirname,'..','public','index.html'),'utf8');
+  const app = fs.readFileSync(path.join(__dirname,'..','public','app.js'),'utf8');
+  assert.match(html, /id="toggle-login-password"[^>]+aria-controls="login-senha"[^>]+aria-pressed="false"/);
+  assert.match(app, /input\.type=visible\?'text':'password'/);
+  assert.match(app, /visible\?'Ocultar':'Mostrar'/);
 });
 
 test('consentimento de privacidade também protege o formulário V2', () => {

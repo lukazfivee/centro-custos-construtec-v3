@@ -77,6 +77,15 @@ $('#form-login').addEventListener('submit',async (event) => {
     await startApp();
   } catch (error) { $('#login-erro').textContent=error.message; }
 });
+$('#toggle-login-password').addEventListener('click',(event)=>{
+  const input=$('#login-senha');
+  const visible=input.type==='password';
+  input.type=visible?'text':'password';
+  event.currentTarget.textContent=visible?'Ocultar':'Mostrar';
+  event.currentTarget.setAttribute('aria-pressed',String(visible));
+  event.currentTarget.setAttribute('aria-label',visible?'Ocultar senha':'Mostrar senha');
+  input.focus();
+});
 $('#btn-sair').addEventListener('click',logout);
 
 function userInitials(){return usuario?.nome?.split(/\s+/).filter(Boolean).slice(0,2).map((part)=>part[0]).join('').toUpperCase() || '?';}
@@ -623,56 +632,6 @@ function openBugReportModal(){
   });
 }
 
-// Config SMTP
-async function loadSmtpSettings(){
-  try{
-    const s=await api('/email-settings');
-    $('#smtp-host').value=s.smtp_host||'smtp.uol.com.br';$('#smtp-port').value=s.smtp_port||'465';
-    $('#smtp-user').value=s.smtp_user||'';$('#smtp-pass').value=s.smtp_pass||'';
-  }catch{}
-}
-$('#form-smtp').addEventListener('submit',async(e)=>{
-  e.preventDefault();$('#smtp-mensagem').textContent='';
-  try{
-    await api('/email-settings',{method:'POST',body:JSON.stringify({
-      smtp_host:$('#smtp-host').value,smtp_port:$('#smtp-port').value,
-      smtp_user:$('#smtp-user').value,smtp_pass:$('#smtp-pass').value,
-      smtp_from:$('#smtp-user').value,bug_report_email:'pcm@rcconstrutec.com.br'
-    })});
-    $('#smtp-mensagem').style.color='var(--green)';$('#smtp-mensagem').textContent='SMTP salvo com sucesso!';
-  }catch(error){$('#smtp-mensagem').textContent=error.message;}
-});
-$('#btn-testar-smtp').addEventListener('click',()=>{
-  modal('Enviar e-mail de teste',`
-    <label for="smtp-test-email">Para qual e-mail?</label>
-    <input id="smtp-test-email" type="email" placeholder="seuemail@gmail.com" required>
-    <div id="modal-error" class="form-error"></div>
-    <button class="btn primary wide" id="btn-confirmar-teste" style="margin-top:14px">Enviar teste</button>
-  `);
-  $('#btn-confirmar-teste').addEventListener('click',async()=>{
-    const email=$('#smtp-test-email').value;
-    if(!email||!email.includes('@')){$('#modal-error').textContent='E-mail invalido.';return;}
-    $('#modal-error').textContent='Enviando...';
-    try{await api('/email-settings/test',{method:'POST',body:JSON.stringify({email})});closeModal();toast('E-mail de teste enviado!');}catch(error){$('#modal-error').textContent=error.message;}
-  });
-});
-
-// Importar report de e-mail
-$('#btn-importar-bugreport').addEventListener('click',()=>{
-  modal('Importar report de e-mail',`
-    <p class="hint">Cole aqui o conteúdo do bloco ---BUG_REPORT--- que veio no e-mail.</p>
-    <textarea id="importar-bugreport-content" rows="8" placeholder="Cole o conteúdo aqui..."></textarea>
-    <div id="modal-error" class="form-error"></div>
-    <button class="btn primary wide" id="btn-confirmar-importar" style="margin-top:14px">Importar report</button>
-  `);
-  $('#btn-confirmar-importar').addEventListener('click',async()=>{
-    try{
-      await api('/email-settings/import',{method:'POST',body:JSON.stringify({content:$('#importar-bugreport-content').value})});
-      closeModal();toast('Report importado com sucesso!');loadBugReports();
-    }catch(error){$('#modal-error').textContent=error.message;}
-  });
-});
-
 // Modo noturno
 const themeButton=$('#fab-theme');
 const mobileThemeButton=$('#mobile-theme');
@@ -705,7 +664,7 @@ async function loadMobileAccess(){
 }
 
 async function loadConfiguration(){
-  await Promise.all([loadSmtpSettings(),loadMobileAccess()]);
+  await loadMobileAccess();
 }
 
 $('#mobile-access-toggle').addEventListener('change',async(event)=>{

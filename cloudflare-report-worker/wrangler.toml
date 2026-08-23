@@ -1,0 +1,20 @@
+name = "centro-custos-reports"
+main = "src/index.js"
+compatibility_date = "2026-08-21"
+workers_dev = true
+preview_urls = false
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "centro-custos-reports"
+database_id = "4d06c8c7-bfcf-4977-986e-6b717c2fd7db"
+
+[vars]
+REPORT_TO = "pcm@rcconstrutec.com.br"
+REPORT_FROM = "Centro de Custos <no-reply@reports.rcconstrutec.com.br>"
