@@ -11,13 +11,14 @@ let instanceIdentity;
 let restoreApplied = null;
 let localLockPath = null;
 
-function processStartedAt(pid) {
+function processExecutable(pid) {
   try {
+    if (pid === process.pid) return path.basename(process.execPath).toLowerCase();
     const output = process.platform === 'win32'
-      ? execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('O')`], { encoding:'utf8', windowsHide:true, timeout:2000 })
-      : execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], { encoding:'utf8', timeout:2000 });
-    const value = new Date(output.trim()).getTime();
-    return Number.isFinite(value) ? value : null;
+      ? execFileSync('tasklist.exe', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], { encoding:'utf8', windowsHide:true, timeout:2000 })
+      : execFileSync('ps', ['-o', 'comm=', '-p', String(pid)], { encoding:'utf8', timeout:2000 });
+    const value = process.platform === 'win32' ? output.match(/^"([^"]+)"/)?.[1] : output.trim();
+    return value ? path.basename(value).toLowerCase() : null;
   } catch {
     return null;
   }
@@ -26,12 +27,9 @@ function processStartedAt(pid) {
 function processIsAlive(pid, owner) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try { process.kill(pid, 0); } catch { return false; }
-  const expected = new Date(owner?.processStartedAt || owner?.startedAt || '').getTime();
-  if (!Number.isFinite(expected)) return true;
-  const actual = processStartedAt(pid);
-  if (!Number.isFinite(actual)) return true;
-  const toleranceMs = owner?.processStartedAt ? 5000 : 60000;
-  return Math.abs(actual - expected) <= toleranceMs;
+  const expected = path.basename(owner?.executable || process.execPath).toLowerCase();
+  const actual = processExecutable(pid);
+  return !actual || actual === expected;
 }
 
 function acquireLocalDatabaseLock(dataDir) {
@@ -46,6 +44,7 @@ function acquireLocalDatabaseLock(dataDir) {
   }
   fs.writeFileSync(lockPath, JSON.stringify({
     pid:process.pid,
+    executable:path.basename(process.execPath),
     processStartedAt:new Date(Date.now() - process.uptime() * 1000).toISOString(),
     startedAt:new Date().toISOString(),
   }), { flag:'wx' });

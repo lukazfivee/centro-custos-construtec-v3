@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawn } = require('child_process');
+const { once } = require('events');
 
 test('lock local distingue processo ativo de PID reutilizado', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'centro-custos-lock-'));
@@ -17,7 +19,12 @@ test('lock local distingue processo ativo de PID reutilizado', async (t) => {
   process.env.ADMIN_INITIAL_PASSWORD = 'SenhaSegura123!';
 
   const db = require('../db');
+  const unrelated = process.platform === 'win32'
+    ? spawn('cmd.exe', ['/d', '/q', '/c', 'pause >nul'], { stdio:['pipe', 'ignore', 'ignore'], windowsHide:true })
+    : spawn('sh', ['-c', 'read value'], { stdio:['pipe', 'ignore', 'ignore'] });
+  await once(unrelated, 'spawn');
   t.after(async () => {
+    unrelated.kill();
     await db.closeDatabase();
     for (const [name, value] of Object.entries(originalEnv)) {
       if (value === undefined) delete process.env[name];
@@ -26,13 +33,14 @@ test('lock local distingue processo ativo de PID reutilizado', async (t) => {
     fs.rmSync(root, { recursive:true, force:true });
   });
 
-  fs.writeFileSync(lockPath, JSON.stringify({ pid:process.pid, startedAt:'2000-01-01T00:00:00.000Z' }));
+  fs.writeFileSync(lockPath, JSON.stringify({ pid:unrelated.pid, startedAt:'2000-01-01T00:00:00.000Z' }));
   const info = await db.initializeDatabase();
   assert.equal(info.mode, 'pglite');
   await db.closeDatabase();
 
   fs.writeFileSync(lockPath, JSON.stringify({
     pid:process.pid,
+    executable:path.basename(process.execPath),
     processStartedAt:new Date(Date.now() - process.uptime() * 1000).toISOString(),
     startedAt:new Date().toISOString(),
   }));
