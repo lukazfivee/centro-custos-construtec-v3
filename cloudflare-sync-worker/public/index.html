@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#021d26">
+  <meta name="color-scheme" content="light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Centro de Custos">
+  <meta name="format-detection" content="telephone=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Centro de Custos Construtec</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="offline-banner" class="offline-banner hidden" role="status">Sem internet. Os dados abertos continuam visíveis, mas alterações exigem conexão.</div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <section id="login-screen" class="login-screen">
+    <div class="login-brand"><img src="/icon.svg" alt="Construtec" class="brand-logo"><p class="eyebrow">Centro de Custos na nuvem</p><h1>Acesse de qualquer lugar.</h1><p>Versão completa para iPhone, iPad, Android e navegador, conectada ao mesmo banco corporativo da Construtec.</p><div class="cloud-badge"><span></span> Cloudflare Workers + D1</div></div>
+    <form id="login-form" class="login-card"><div class="app-mark"><img src="/icon.svg" alt=""><strong>Centro de Custos</strong></div><h2>Entrar</h2><p class="muted">Use seu e-mail corporativo.</p><label for="login-email">E-mail</label><input id="login-email" type="email" autocomplete="username" inputmode="email" required placeholder="nome@rcconstrutec.com.br"><label for="login-password">Senha</label><div class="password-wrap"><input id="login-password" type="password" autocomplete="current-password" required><button id="toggle-password" type="button" class="text-button">Mostrar</button></div><div id="login-error" class="form-error" role="alert"></div><button class="button primary wide" type="submit">Entrar no sistema</button><button id="install-help-login" class="button ghost wide" type="button">Como instalar no iPhone</button></form>
+  </section>
+  <section id="app-screen" class="app-shell hidden"><header class="topbar"><div class="topbar-brand"><img src="/icon.svg" alt=""><div><strong id="page-title">Painel</strong><span id="sync-status">Dados corporativos</span></div></div><div class="topbar-actions"><button id="refresh-button" class="icon-button" aria-label="Atualizar dados">↻</button><button id="avatar-button" class="avatar-button" aria-label="Abrir perfil"><span>?</span></button></div></header><main id="content" class="content" tabindex="-1"></main><nav class="bottom-nav" aria-label="Navegação principal"><button data-view="dashboard" class="nav-button active"><span>◫</span><small>Painel</small></button><button data-view="transactions" class="nav-button"><span>↕</span><small>Lançamentos</small></button><button data-view="centers" class="nav-button"><span>◎</span><small>Centros</small></button><button data-view="contacts" class="nav-button"><span>▦</span><small>Cadastros</small></button><button data-view="more" class="nav-button"><span>•••</span><small>Mais</small></button></nav></section>
+  <div id="sheet-backdrop" class="sheet-backdrop hidden" aria-hidden="true"><section id="sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><header><div><p class="eyebrow">Centro de Custos</p><h2 id="sheet-title"></h2></div><button id="sheet-close" class="icon-button" type="button" aria-label="Fechar">×</button></header><div id="sheet-body" class="sheet-body"></div></section></div>
+  <noscript>Ative o JavaScript para usar o Centro de Custos.</noscript>
+  <script src="/app-v2.js" defer></script>
+</body>
+</html>
