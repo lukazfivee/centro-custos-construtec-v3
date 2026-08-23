@@ -16,6 +16,30 @@ function unavailableError(cause) {
   return error;
 }
 
+function decodeEntities(value) {
+  const named = { amp:'&', lt:'<', gt:'>', quot:'"', apos:"'", nbsp:' ' };
+  return String(value).replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (match, entity) => {
+    if (entity[0] !== '#') return named[entity.toLowerCase()] ?? match;
+    const hexadecimal = entity[1].toLowerCase() === 'x';
+    const code = Number.parseInt(entity.slice(hexadecimal ? 2 : 1), hexadecimal ? 16 : 10);
+    return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+  });
+}
+
+function formatReleaseNotes(input) {
+  const raw = (Array.isArray(input) ? input.map((item) => typeof item === 'string' ? item : item?.note || item?.releaseNotes || '').join('\n') : String(input || ''))
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<li\b[^>]*>/gi, '\n• ')
+    .replace(/<\/(?:li|p|div|h[1-6])>|<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '');
+  return decodeEntities(raw)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+    .slice(0,2000);
+}
+
 function configure(updater) {
   if (configured) return;
   configured = true;
@@ -31,7 +55,7 @@ function configure(updater) {
     state = {
       ...state,
       status: 'available',
-      info: { version: info.version, releaseNotes: info.releaseNotes || '' },
+      info: { version: info.version, releaseNotes:formatReleaseNotes(info.releaseNotes) },
       error: null,
     };
   });
@@ -83,6 +107,7 @@ function getState() {
 module.exports = {
   get autoUpdater() { return getAutoUpdater(); },
   getState,
+  formatReleaseNotes,
   check: () => getAutoUpdater().checkForUpdates(),
   download: () => getAutoUpdater().downloadUpdate(),
   install: () => getAutoUpdater().quitAndInstall(false, true),

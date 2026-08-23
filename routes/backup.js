@@ -19,6 +19,8 @@ function markerPath() {
 }
 
 router.get('/status', asyncRoute(async (req, res) => {
+  const db = getDb();
+  const settings = (await db.query('SELECT enabled FROM backup_settings WHERE id=1')).rows[0];
   const pending = readPendingMarker();
   const restoreDirectory = path.join(restoreRootDir(), 'restauracoes');
   let storedArchives = 0;
@@ -36,8 +38,8 @@ router.get('/status', asyncRoute(async (req, res) => {
   }
   if (latestArchive) delete latestArchive.mtimeMs;
   res.json({
-    mode:getDb().dump ? 'local' : 'postgres',
-    automaticBackupConfigured:false,
+    mode:db.dump ? 'local' : 'postgres',
+    automaticBackupConfigured:Boolean(settings?.enabled),
     pendingRestore:pending,
     storedRestoreArchives:storedArchives,
     latestRestoreArchive:latestArchive,

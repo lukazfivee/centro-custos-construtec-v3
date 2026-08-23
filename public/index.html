@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#021D26">
   <title>Centro de Custos | Construtec</title>
@@ -16,7 +16,6 @@
   <section id="tela-login" class="login-shell">
     <div class="login-about">
       <img class="brand-logo login-logo" src="assets/construtec-logo.png" alt="Construtec Engenharia e Instalações">
-      <p class="eyebrow">Gestão financeira Construtec</p>
       <h1>Gestão eficiente.<br>Controle em cada projeto.</h1>
       <p>Receitas, despesas e centros de custo organizados em uma solução local, segura e alinhada à operação da Construtec.</p>
       <div class="local-badge"><span></span> Dados mantidos nesta instalação</div>
@@ -24,13 +23,15 @@
     <div class="login-panel">
       <form id="form-login" class="login-card">
         <div class="mobile-brand"><img class="brand-symbol" src="assets/construtec-favicon.png" alt=""> Centro de Custos</div>
-        <p class="eyebrow">Acesso ao sistema</p>
         <h2>Bem-vindo</h2>
         <p class="muted">Entre com seu usuário para continuar.</p>
         <label for="login-email">E-mail</label>
         <input id="login-email" type="email" autocomplete="username" required autofocus>
         <label for="login-senha">Senha</label>
-        <input id="login-senha" type="password" autocomplete="current-password" required>
+        <div class="password-field">
+          <input id="login-senha" type="password" autocomplete="current-password" required>
+          <button id="toggle-login-password" class="password-toggle" type="button" aria-controls="login-senha" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button>
+        </div>
         <div id="login-erro" class="form-error" role="alert"></div>
         <button class="btn primary wide" type="submit">Entrar</button>
         <p class="login-foot">Aplicação local • sem IA, tokens ou serviço online</p>
@@ -64,7 +65,7 @@
     <main class="main">
       <header class="mobile-header">
         <img class="brand-symbol" src="assets/construtec-favicon.png" alt=""><strong>Centro de Custos</strong>
-        <button id="mobile-menu" class="icon-btn">☰</button>
+        <button id="mobile-menu" class="icon-btn" aria-label="Abrir menu">☰</button>
       </header>
 
       <section id="view-dashboard" class="view">
@@ -75,12 +76,13 @@
             <div class="check-item" id="check-categorias"><span class="check-icon"></span><div><strong>Cadastrar categorias</strong><span class="check-hint">Classificação de receitas e despesas</span></div><span class="check-count" id="count-categorias">0</span></div>
             <div class="check-item" id="check-fornecedores"><span class="check-icon"></span><div><strong>Cadastrar fornecedor</strong><span class="check-hint">Base para lançamentos rápidos</span></div><span class="check-count" id="count-fornecedores">0</span></div>
             <div class="check-item" id="check-usuarios"><span class="check-icon"></span><div><strong>Criar usuário adicional</strong><span class="check-hint">Cada pessoa deve ter seu próprio acesso</span></div><span class="check-count" id="count-usuarios">0</span></div>
+            <div class="check-item" id="check-foto"><span class="check-icon"></span><div><strong>Adicionar foto de perfil</strong><span class="check-hint">A foto acompanha seu usuário nas instalações sincronizadas</span></div><button id="first-use-photo" class="text-btn" type="button">Adicionar</button><span class="check-count oculto" id="count-foto">0</span></div>
           </div>
           <div class="first-use-footer"><button id="first-use-complete" class="btn primary">Marcar como concluído</button></div>
         </div>
 
         <div class="page-head">
-          <div><p class="eyebrow">Visão mensal</p><h1>Painel financeiro</h1></div>
+          <div><h1>Painel financeiro</h1></div>
           <div class="dashboard-actions"><button id="btn-lancamento-rapido" class="btn secondary">+ Lançamento rápido</button><div class="head-filters"><select id="dash-centro" aria-label="Centro de custo"><option value="">Todas as obras / centros</option></select><input id="dash-mes" type="month" aria-label="Mês"></div></div>
         </div>
         <div class="kpi-grid">
@@ -92,15 +94,15 @@
           <article class="kpi overdue"><p>Vencidos</p><strong id="kpi-vencidos">R$ 0,00</strong><span id="kpi-vencidos-count">nenhuma pendência</span></article>
         </div>
         <div class="dashboard-grid">
-          <article class="panel span-2"><div class="panel-head"><div><p class="eyebrow">Últimos 6 meses</p><h2>Evolução financeira</h2></div><div class="legend"><i class="rev"></i>Receita <i class="desp"></i>Despesa</div></div><div id="trend-chart" class="trend-chart"></div></article>
-          <article class="panel"><div class="panel-head"><div><p class="eyebrow">No mês</p><h2>Últimos lançamentos</h2></div></div><div id="lista-ultimos" class="activity-list"></div></article>
-          <article class="panel span-2"><div class="panel-head"><div><p class="eyebrow">Orçamento versus realizado</p><h2>Comprometimento por obra</h2></div></div><div id="lista-centros-resumo"></div></article>
-          <article class="panel"><div class="panel-head"><div><p class="eyebrow">Distribuição</p><h2>Por categoria</h2></div></div><div id="lista-categorias-resumo"></div></article>
+          <article class="panel span-2"><div class="panel-head"><div><h2>Evolução financeira</h2></div><div class="legend"><i class="rev"></i>Receita <i class="desp"></i>Despesa</div></div><div id="trend-chart" class="trend-chart"></div></article>
+          <article class="panel"><div class="panel-head"><div><h2>Últimos lançamentos</h2></div></div><div id="lista-ultimos" class="activity-list"></div></article>
+          <article class="panel span-2"><div class="panel-head"><div><h2>Comprometimento por obra</h2></div></div><div id="lista-centros-resumo"></div></article>
+          <article class="panel"><div class="panel-head"><div><h2>Por categoria</h2></div></div><div id="lista-categorias-resumo"></div></article>
         </div>
       </section>
 
       <section id="view-lancamentos" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Movimentação</p><h1>Lançamentos</h1></div><button id="btn-novo-lancamento" class="btn primary">+ Novo lançamento</button></div>
+        <div class="page-head"><div><h1>Lançamentos</h1></div><button id="btn-novo-lancamento" class="btn primary">+ Novo lançamento</button></div>
         <div class="filter-bar">
           <input id="filtro-busca" type="search" placeholder="Buscar descrição ou cliente/fornecedor">
           <select id="filtro-tipo"><option value="">Receitas e despesas</option><option value="receita">Somente receitas</option><option value="despesa">Somente despesas</option></select>
@@ -115,27 +117,27 @@
       </section>
 
       <section id="view-centros" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Organização por serviço</p><h1>Centros de custo</h1><p class="muted">Crie, edite, altere o status e consulte as compras de cada centro.</p></div><div class="page-head-actions"><button id="btn-exportar-centros" class="btn secondary">Exportar CSV</button><button id="btn-novo-centro" class="btn primary manager-only">+ Novo centro</button></div></div>
+        <div class="page-head"><div><h1>Centros de custo</h1><p class="muted">Crie, edite, altere o status e consulte as compras de cada centro.</p></div><div class="page-head-actions"><button id="btn-exportar-centros" class="btn secondary">Exportar CSV</button><button id="btn-novo-centro" class="btn primary manager-only">+ Novo centro</button></div></div>
         <div id="lista-centros-cards" class="centers-grid"></div>
       </section>
 
       <section id="view-categorias" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Classificação</p><h1>Categorias</h1></div><button id="btn-nova-categoria" class="btn primary manager-only">+ Nova categoria</button></div>
+        <div class="page-head"><div><h1>Categorias</h1></div><button id="btn-nova-categoria" class="btn primary manager-only">+ Nova categoria</button></div>
         <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Nome</th><th>Aplicação</th><th>Lançamentos</th><th>Status</th><th></th></tr></thead><tbody id="tabela-categorias"></tbody></table></div></div>
       </section>
 
       <section id="view-fornecedores" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Cadastro operacional</p><h1>Fornecedores</h1></div><button id="btn-novo-fornecedor" class="btn primary manager-only">+ Novo fornecedor</button></div>
+        <div class="page-head"><div><h1>Fornecedores</h1></div><button id="btn-novo-fornecedor" class="btn primary manager-only">+ Novo fornecedor</button></div>
         <div class="table-card"><div class="table-meta"><span>Base de fornecedores para lançamentos rápidos</span><button id="btn-exportar-fornecedores" class="text-btn">Exportar CSV</button></div><div class="table-scroll"><table><thead><tr><th>Fornecedor</th><th>Documento</th><th>Contato</th><th>E-mail / telefone</th><th>Status</th><th></th></tr></thead><tbody id="tabela-fornecedores"></tbody></table></div></div>
       </section>
 
       <section id="view-historico" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Rastreabilidade</p><h1>Histórico de alterações</h1></div><select id="historico-tipo" aria-label="Filtrar histórico"><option value="">Todas as ações</option><option value="lancamento">Lançamentos</option><option value="obra">Obras / centros</option><option value="fornecedor">Fornecedores</option><option value="sincronizacao">Sincronização</option><option value="backup">Backups</option></select></div>
+        <div class="page-head"><div><h1>Histórico de alterações</h1></div><select id="historico-tipo" aria-label="Filtrar histórico"><option value="">Todas as ações</option><option value="lancamento">Lançamentos</option><option value="obra">Obras / centros</option><option value="fornecedor">Fornecedores</option><option value="sincronizacao">Sincronização</option><option value="backup">Backups</option></select></div>
         <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Quando</th><th>Ação</th><th>Resumo</th><th>Usuário</th><th>Instalação</th></tr></thead><tbody id="tabela-historico"></tbody></table></div></div>
       </section>
 
       <section id="view-sincronizacao" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Integração offline</p><h1>Trocar dados por planilha</h1></div></div>
+        <div class="page-head"><div><h1>Trocar dados por planilha</h1></div></div>
         <div class="sync-intro"><div class="sync-icon">⇄</div><div><strong>Compartilhe lançamentos sem internet</strong><p>Exporte nesta máquina e importe na outra. O identificador único evita duplicatas; conflitos nunca substituem o dado local automaticamente.</p></div></div>
         <div class="sync-grid">
           <article class="panel sync-card"><span class="step">1</span><h2>Exportar dados</h2><p>Gere o arquivo padronizado para enviar ao outro usuário por pendrive, pasta de rede ou e-mail.</p><div class="stack"><button id="sync-exportar-todos" class="btn primary wide">Exportar todos os lançamentos</button><button id="sync-exportar-mes" class="btn secondary wide">Exportar somente o mês do painel</button></div><small>O arquivo CSV abre normalmente no Excel. Não altere as colunas técnicas.</small></article>
@@ -143,50 +145,54 @@
         </div>
         <div id="sync-resultado" class="panel sync-result oculto"></div>
         <div class="sync-cadastros">
-          <article class="panel"><div class="panel-head"><div><p class="eyebrow">Cadastros</p><h2>Sincronizar fornecedores, categorias e obras</h2></div></div>
+          <article class="panel"><div class="panel-head"><div><h2>Sincronizar fornecedores, categorias e obras</h2></div></div>
             <p class="muted">Exporte e importe cadastros entre instalações. Cada registro possui identificador único e revisão; conflitos de edição exigem decisão manual.</p>
             <div class="sync-cadastros-actions"><button id="sync-exportar-cadastros" class="btn secondary">Exportar cadastros</button><label class="file-drop compact" for="sync-cadastro-arquivo"><strong id="sync-cadastro-label">Escolher CSV de cadastros</strong><span>até 8 MB</span></label><input id="sync-cadastro-arquivo" class="oculto" type="file" accept=".csv,text/csv"><button id="sync-importar-cadastros" class="btn primary" disabled>Importar cadastros</button></div>
             <div id="sync-cadastro-resultado" class="form-error" style="margin-top:10px"></div>
           </article>
         </div>
         <div class="dashboard-grid sync-lists">
-          <article class="panel span-2"><div class="panel-head"><div><p class="eyebrow">Auditoria</p><h2>Últimas importações</h2></div></div><div class="table-scroll"><table><thead><tr><th>Quando</th><th>Arquivo / origem</th><th>Incluídos</th><th>Atualizados</th><th>Ignorados</th><th>Conflitos</th><th>Erros</th></tr></thead><tbody id="sync-historico"></tbody></table></div></article>
-          <article class="panel span-2"><div class="panel-head"><div><p class="eyebrow">Proteção</p><h2>Conflitos pendentes</h2></div></div><div id="sync-conflitos" class="conflict-list"></div></article>
+          <article class="panel span-2"><div class="panel-head"><div><h2>Últimas importações</h2></div></div><div class="table-scroll"><table><thead><tr><th>Quando</th><th>Arquivo / origem</th><th>Incluídos</th><th>Atualizados</th><th>Ignorados</th><th>Conflitos</th><th>Erros</th></tr></thead><tbody id="sync-historico"></tbody></table></div></article>
+          <article class="panel span-2"><div class="panel-head"><div><h2>Conflitos pendentes</h2></div></div><div id="sync-conflitos" class="conflict-list"></div></article>
         </div>
       </section>
 
       <section id="view-usuarios" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Acessos</p><h1>Usuários</h1></div><button id="btn-novo-usuario" class="btn primary">+ Novo usuário</button></div>
+        <div class="page-head"><div><h1>Usuários</h1></div><button id="btn-novo-usuario" class="btn primary">+ Novo usuário</button></div>
         <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th></th></tr></thead><tbody id="tabela-usuarios"></tbody></table></div></div>
       </section>
 
       <section id="view-config" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Sistema</p><h1>Configurações</h1></div></div>
-        <div class="settings-grid">
-          <article class="panel"><h2>Alterar senha</h2><form id="form-senha"><label for="senha-atual">Senha atual</label><input id="senha-atual" type="password" required><label for="senha-nova">Nova senha</label><input id="senha-nova" type="password" minlength="10" required><p class="hint">Use ao menos 10 caracteres.</p><div id="senha-mensagem" class="form-error"></div><button class="btn primary" type="submit">Salvar nova senha</button></form></article>
-          <article class="panel admin-only"><h2>Backup e restauração</h2><p>Baixe uma cópia completa ou restaure um backup gerado pelo próprio sistema.</p><button id="btn-backup" class="btn secondary wide">Baixar backup agora</button><label class="file-drop compact" for="restore-arquivo"><strong id="restore-arquivo-label">Escolher backup .tar.gz</strong><span>A restauração preserva uma cópia da base atual</span></label><input id="restore-arquivo" class="oculto" type="file" accept=".gz,.tar.gz,application/gzip"><button id="btn-restaurar" class="btn danger wide" disabled>Validar e restaurar</button><div id="restore-mensagem" class="form-error"></div><p class="hint">Somente administradores. Nunca feche o computador durante a restauração.</p></article>
-          <article class="panel admin-only"><h2>Fechamento mensal</h2><p>Bloqueie competências encerradas para impedir edição de lançamentos.</p><div class="closing-form"><div class="form-grid"><div><label for="fechamento-ano">Ano</label><input id="fechamento-ano" type="number" min="2000" max="2100"></div><div><label for="fechamento-mes">Mês</label><select id="fechamento-mes"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div></div><button id="btn-fechar-mes" class="btn primary wide">Fechar competência</button></div><div id="fechamento-mensagem" class="form-error"></div><div id="fechamentos-ativos" class="closing-list"></div></article>
-          <article class="panel"><h2>Aparência</h2><p>Ative o modo noturno para uma visualização mais confortável em ambientes com pouca luz.</p><div style="margin-top:14px;display:flex;align-items:center;gap:12px"><label style="margin:0;text-transform:none;font-weight:700;font-size:13px;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:10px"><input type="checkbox" id="toggle-dark" style="width:18px;height:18px;min-height:auto;accent-color:var(--orange)"> Modo noturno</label></div></article>
-          <article class="panel"><h2>Sobre esta instalação</h2><dl><dt>Nome</dt><dd id="config-instancia"></dd><dt>Versão</dt><dd id="config-versao">—</dd><dt>Operação</dt><dd>Local e offline</dd><dt>Serviços externos</dt><dd>Nenhum</dd><dt>IA / tokens</dt><dd>Não utiliza</dd></dl></article>
-          <article class="panel admin-only"><h2>Notificações por e-mail</h2><p>Reports de bug são enviados automaticamente para <strong>pcm@rcconstrutec.com.br</strong>. Preencha apenas o e-mail e senha do UOL para ativar.</p><form id="form-smtp"><div class="form-grid"><div><label for="smtp-host">Servidor SMTP</label><input id="smtp-host" type="text" value="smtp.uol.com.br"></div><div><label for="smtp-port">Porta</label><input id="smtp-port" type="number" value="465"></div><div><label for="smtp-user">E-mail UOL</label><input id="smtp-user" type="text" placeholder="seuemail@uol.com.br"></div><div><label for="smtp-pass">Senha do e-mail</label><input id="smtp-pass" type="password"></div><div style="grid-column:1/-1"><label for="bug-report-email">E-mail que recebe os reports (fixo)</label><input id="bug-report-email" type="email" value="pcm@rcconstrutec.com.br" readonly style="background:#f0f0f0"></div></div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn primary" type="submit">Salvar e ativar</button><button class="btn secondary" type="button" id="btn-testar-smtp">Enviar teste</button></div><div id="smtp-mensagem" class="form-error" style="margin-top:8px"></div></form></article>
-          <article class="panel"><h2>Atualizações</h2><p>Verifique e instale versões mais recentes do sistema.</p><button id="btn-verificar-update" class="btn secondary wide">Verificar atualizações</button><div id="update-mensagem" class="form-error" style="margin-top:12px"></div><div id="update-progress" class="oculto" style="margin-top:14px"><div style="background:#edf0f1;border-radius:8px;height:8px;overflow:hidden"><div id="update-bar" style="height:100%;background:var(--orange);width:0%;transition:width .3s"></div></div><p id="update-progress-text" class="hint" style="margin-top:6px;margin-bottom:0"></p></div><button id="btn-download-update" class="btn primary wide oculto" style="margin-top:12px">Baixar atualização</button><button id="btn-install-update" class="btn primary wide oculto" style="margin-top:12px">Reiniciar e instalar</button></article>
+        <div class="page-head"><div><h1>Configurações</h1><p class="muted">Conta, operação e acesso organizados em um só lugar.</p></div></div>
+        <div class="settings-layout">
+          <nav class="settings-index" aria-label="Seções das configurações">
+            <a href="#config-conta">Conta</a><a class="admin-only" href="#config-operacao">Operação</a><a class="admin-only" href="#config-celular">Acesso pelo celular</a><a href="#config-sistema">Sistema</a>
+          </nav>
+          <div class="settings-sheet settings-grid">
+            <article class="panel settings-section" id="config-conta"><div class="settings-section-head"><h2>Conta e segurança</h2><p>Gerencie sua senha e identificação pessoal.</p></div><form id="form-senha"><label for="senha-atual">Senha atual</label><input id="senha-atual" type="password" autocomplete="current-password" required><label for="senha-nova">Nova senha</label><input id="senha-nova" type="password" autocomplete="new-password" minlength="10" required><p class="hint">Use ao menos 10 caracteres.</p><div id="senha-mensagem" class="form-error"></div><button class="btn primary" type="submit">Salvar nova senha</button></form><div class="settings-subsection" id="profile-photo-panel"><h3>Foto de perfil</h3><p>Use uma imagem JPG, PNG ou WEBP.</p><div class="profile-photo-row"><div id="profile-photo-preview" class="avatar profile-photo-preview" aria-hidden="true"></div><div class="profile-photo-actions"><label for="profile-photo-input" class="btn secondary">Escolher foto</label><input id="profile-photo-input" class="oculto" type="file" accept="image/jpeg,image/png,image/webp"><button id="profile-photo-remove" class="text-btn oculto" type="button">Remover foto</button></div></div><div id="profile-photo-message" class="form-error" role="status"></div></div></article>
+            <article class="panel settings-section admin-only" id="config-operacao"><div class="settings-section-head"><h2>Operação financeira</h2><p>Proteja competências encerradas e mantenha cópias dos dados.</p></div><div class="settings-subsection"><h3>Fechamento mensal</h3><p>Bloqueie competências encerradas para impedir edição de lançamentos.</p><div class="closing-form"><div class="form-grid"><div><label for="fechamento-ano">Ano</label><input id="fechamento-ano" type="number" min="2000" max="2100"></div><div><label for="fechamento-mes">Mês</label><select id="fechamento-mes"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div></div><button id="btn-fechar-mes" class="btn primary">Fechar competência</button></div><div id="fechamento-mensagem" class="form-error"></div><div id="fechamentos-ativos" class="closing-list"></div></div><div class="settings-subsection"><h3>Backup e restauração</h3><p>Baixe uma cópia completa ou restaure um backup gerado pelo sistema.</p><div class="settings-actions"><button id="btn-backup" class="btn secondary">Baixar backup</button><label class="file-drop compact" for="restore-arquivo"><strong id="restore-arquivo-label">Escolher backup .tar.gz</strong><span>A base atual será preservada</span></label><input id="restore-arquivo" class="oculto" type="file" accept=".gz,.tar.gz,application/gzip"><button id="btn-restaurar" class="btn danger" disabled>Validar e restaurar</button></div><div id="restore-mensagem" class="form-error"></div><p class="hint">Nunca feche o computador durante a restauração.</p></div></article>
+            <article class="panel settings-section admin-only" id="config-celular"><div class="settings-section-head"><h2>Acesso pelo celular</h2><p>Conecte o celular à mesma rede Wi-Fi deste computador e escaneie o QR Code.</p></div><div class="mobile-access-control"><div><strong>Permitir acesso na rede local</strong><span>Ao ativar, aceite a permissão do Firewall do Windows. O aplicativo reiniciará.</span></div><label class="switch"><input id="mobile-access-toggle" type="checkbox"><span aria-hidden="true"></span></label></div><div id="mobile-access-details" class="mobile-access-details" role="status"></div><p class="settings-warning">O computador precisa permanecer ligado. Use somente em uma rede confiável.</p></article>
+            <article class="panel settings-section" id="config-sistema"><div class="settings-section-head"><h2>Sistema</h2><p>Informações da instalação e atualizações disponíveis.</p></div><dl><dt>Nome</dt><dd id="config-instancia"></dd><dt>Versão</dt><dd id="config-versao">—</dd><dt>Operação</dt><dd>Local e offline</dd><dt>IA / tokens</dt><dd>Não utiliza</dd></dl><div class="settings-subsection"><h3>Atualizações</h3><button id="btn-verificar-update" class="btn secondary">Verificar atualizações</button><div id="update-mensagem" class="form-error"></div><div id="update-progress" class="oculto"><div class="update-track"><div id="update-bar"></div></div><p id="update-progress-text" class="hint"></p></div><button id="btn-download-update" class="btn primary oculto">Baixar atualização</button><button id="btn-install-update" class="btn primary oculto">Reiniciar e instalar</button></div></article>
+          </div>
         </div>
       </section>
 
       <section id="view-recorrentes" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Automação</p><h1>Contas recorrentes</h1><p class="muted">Crie modelos de lançamentos que se repetem automaticamente.</p></div><div class="page-head-actions"><button id="btn-gerar-recorrentes" class="btn secondary">Gerar lançamentos do mês</button><button id="btn-novo-recorrente" class="btn primary manager-only">+ Novo modelo</button></div></div>
+        <div class="page-head"><div><h1>Contas recorrentes</h1><p class="muted">Crie modelos de lançamentos que se repetem automaticamente.</p></div><div class="page-head-actions"><button id="btn-gerar-recorrentes" class="btn secondary">Gerar lançamentos do mês</button><button id="btn-novo-recorrente" class="btn primary manager-only">+ Novo modelo</button></div></div>
         <div id="lista-recorrentes" class="centers-grid"></div>
       </section>
 
       <section id="view-bugreports" class="view oculto">
-        <div class="page-head"><div><p class="eyebrow">Suporte</p><h1>Reports de Bugs</h1></div><div class="page-head-actions"><button id="btn-importar-bugreport" class="btn secondary">Importar de e-mail</button><button id="btn-novo-bugreport" class="btn primary">+ Reportar bug</button></div></div>
+        <div class="page-head"><div><h1>Reports de Bugs</h1></div><div class="page-head-actions"><button id="btn-novo-bugreport" class="btn primary">+ Reportar bug</button></div></div>
         <div id="lista-bugreports" class="table-card"></div>
       </section>
     </main>
-    <button id="fab-bugreport" class="fab-bug" title="Reportar bug ou falha">⚑</button>
+    <nav class="mobile-bottom-nav" aria-label="Navegação principal"><button class="mobile-nav-item ativo" data-mobile-view="dashboard"><span>◫</span>Painel</button><button class="mobile-nav-item" data-mobile-view="lancamentos"><span>↕</span>Lançar</button><button class="mobile-nav-item" data-mobile-view="centros"><span>◎</span>Obras</button><button class="mobile-nav-item" id="mobile-theme"><span>☾</span>Tema</button><button class="mobile-nav-item" id="mobile-more"><span>☰</span>Menu</button></nav>
+    <button id="fab-theme" class="fab-theme" type="button" title="Ativar modo noturno" aria-label="Ativar modo noturno" aria-pressed="false">☾</button>
+    <button id="fab-bugreport" class="fab-bug" type="button" title="Reportar bug ou falha" aria-label="Reportar bug ou falha">⚑</button>
   </div>
 
-  <div id="modal-fundo" class="modal-backdrop oculto" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><div><p class="eyebrow">Cadastro</p><h2 id="modal-titulo"></h2></div><button id="modal-fechar" class="icon-btn" aria-label="Fechar">×</button></div><div id="modal-corpo"></div></div></div>
+  <div id="modal-fundo" class="modal-backdrop oculto" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><div><h2 id="modal-titulo"></h2></div><button id="modal-fechar" class="icon-btn" aria-label="Fechar">×</button></div><div id="modal-corpo"></div></div></div>
   <script src="app.js"></script>
 </body>
 </html>

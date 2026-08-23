@@ -5,6 +5,7 @@ const { recordAudit } = require('./audit');
 
 const FORMAT_VERSION = 3;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const FINANCIAL_STATUSES = new Set(['pendente','liquidado']);
 
 function stableHash(value) {
   return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -20,6 +21,13 @@ function dateOnly(value) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   return String(value).slice(0, 10);
+}
+
+function financialStatusError(item, label) {
+  if (!Object.prototype.hasOwnProperty.call(item || {}, 'financialStatus')) return null;
+  const value = String(item.financialStatus || '');
+  if (FINANCIAL_STATUSES.has(value)) return null;
+  return `${label}: situação financeira inválida "${value || '(vazia)'}". Use "pendente" ou "liquidado".`;
 }
 
 async function buildPackage() {
@@ -115,6 +123,11 @@ function validRevision(item) {
 async function importSimpleEntity(tx, options) {
   const { type, table, item, packageImportId, result, selectFields, insertSql, insertValues, updateSql, updateValues, businessFields } = options;
   if (!UUID.test(String(item.publicId || ''))) throw httpError(400, `${type}: publicId inválido.`);
+  const domainError = financialStatusError(item, `${type} ${item.publicId}`);
+  if (domainError) {
+    await addConflict(tx, packageImportId, type, item.publicId, domainError, null, item, result);
+    return;
+  }
   const existing = (await tx.query(`SELECT ${selectFields} FROM ${table} WHERE public_id=$1`, [item.publicId])).rows[0];
   if (!existing) {
     await tx.query(insertSql, insertValues(item));
@@ -201,12 +214,22 @@ async function importPackage({ content, filename, user }) {
     const transactionItems = [...pack.payload.transactions].sort((a,b)=>Number(Boolean(a.reversalOf))-Number(Boolean(b.reversalOf)));
     for (const item of transactionItems) {
       if (!UUID.test(String(item.publicId||''))) throw httpError(400, 'Lançamento com publicId inválido.');
+      const domainError = financialStatusError(item, `Lançamento ${item.publicId}`);
+      if (domainError) {
+        await addConflict(tx, packageImportId, 'lancamento', item.publicId, domainError, null, item, result);
+        continue;
+      }
       const centerId = centerMap.get(String(item.costCenterPublicId));
       const categoryId = categoryMap.get(String(item.categoryPublicId));
       if (!centerId || !categoryId) throw httpError(400, `Lançamento ${item.publicId}: obra ou categoria de referência não encontrada.`);
       const existing = (await tx.query('SELECT * FROM transactions WHERE public_id=$1', [item.publicId])).rows[0];
       const incomingRevision = validRevision(item);
-      const clean = {...item,revision:incomingRevision,accountingSign:Number(item.accountingSign) === -1 ? -1 : 1};
+      const clean = {
+        ...item,
+        revision:incomingRevision,
+        accountingSign:Number(item.accountingSign) === -1 ? -1 : 1,
+        paymentMethod:String(item.paymentMethod || '').trim().slice(0,40) || null,
+      };
       if (clean.reversalOf && !UUID.test(String(clean.reversalOf))) throw httpError(400, `Lançamento ${clean.publicId}: vínculo de estorno inválido.`);
       const businessFields = ['type','description','counterparty','amount','accountingSign','reversalOf','reversalReason','transactionDate','dueDate','settlementDate','financialStatus','documentNumber','paymentMethod','notes','deletedAt'];
       const local = existing ? {
@@ -267,19 +290,107 @@ async function listConflicts() {
   return rows;
 }
 
+async function applyIncomingConflict(tx, conflict, user) {
+  const item = conflict.incoming_data;
+  if (!item || typeof item !== 'object') throw httpError(400, 'A versão recebida deste conflito não está disponível.');
+  if (!UUID.test(String(item.publicId || conflict.entity_public_id || ''))) throw httpError(400, 'A versão recebida possui identificador inválido.');
+  const publicId = String(item.publicId || conflict.entity_public_id);
+
+  if (conflict.entity_type === 'categoria') {
+    const values = [publicId,String(item.name||'').slice(0,100),['receita','despesa','ambos'].includes(item.type)?item.type:'ambos',item.active !== false,validRevision(item),item.createdAt||new Date(),item.updatedAt||new Date()];
+    const existing = (await tx.query('SELECT id FROM categories WHERE public_id=$1',[publicId])).rows[0];
+    if (existing) {
+      await tx.query('UPDATE categories SET name=$2,type=$3,active=$4,revision=$5,updated_at=$7 WHERE public_id=$1',values);
+    } else {
+      await tx.query('INSERT INTO categories (public_id,name,type,active,revision,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7)',values);
+    }
+    return;
+  }
+
+  if (conflict.entity_type === 'obra') {
+    const values = [publicId,String(item.code||'').slice(0,40),String(item.name||'').slice(0,140),item.responsible||null,Number(item.monthlyBudget||0),item.active !== false,item.client||null,item.contractNumber||null,item.startDate||null,item.endDate||null,Number(item.contractAmount||0),['planejamento','execucao','pausado','concluido'].includes(item.projectStatus)?item.projectStatus:'planejamento',item.description||null,validRevision(item),item.createdAt||new Date(),item.updatedAt||new Date()];
+    const existing = (await tx.query('SELECT id FROM cost_centers WHERE public_id=$1',[publicId])).rows[0];
+    if (existing) {
+      await tx.query(`UPDATE cost_centers SET code=$2,name=$3,responsible=$4,monthly_budget=$5,active=$6,client=$7,contract_number=$8,start_date=$9,end_date=$10,contract_amount=$11,project_status=$12,description=$13,revision=$14,updated_at=$16 WHERE public_id=$1`,values);
+    } else {
+      await tx.query(`INSERT INTO cost_centers (public_id,code,name,responsible,monthly_budget,active,client,contract_number,start_date,end_date,contract_amount,project_status,description,revision,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,values);
+    }
+    return;
+  }
+
+  if (conflict.entity_type === 'fornecedor') {
+    const values = [publicId,String(item.name||'').slice(0,160),item.document||null,item.contactName||null,item.email||null,item.phone||null,item.notes||null,item.active !== false,validRevision(item),item.createdAt||new Date(),item.updatedAt||new Date()];
+    const existing = (await tx.query('SELECT id FROM suppliers WHERE public_id=$1',[publicId])).rows[0];
+    if (existing) {
+      await tx.query('UPDATE suppliers SET name=$2,document=$3,contact_name=$4,email=$5,phone=$6,notes=$7,active=$8,revision=$9,updated_at=$11 WHERE public_id=$1',values);
+    } else {
+      await tx.query('INSERT INTO suppliers (public_id,name,document,contact_name,email,phone,notes,active,revision,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',values);
+    }
+    return;
+  }
+
+  if (conflict.entity_type === 'lancamento') {
+    const centerId = (await tx.query('SELECT id FROM cost_centers WHERE public_id=$1',[item.costCenterPublicId])).rows[0]?.id;
+    const categoryId = (await tx.query('SELECT id FROM categories WHERE public_id=$1',[item.categoryPublicId])).rows[0]?.id;
+    if (!centerId || !categoryId) throw httpError(400, `Lançamento ${publicId}: obra ou categoria de referência não encontrada.`);
+    const incomingFinancialError = financialStatusError(item, `Lançamento ${publicId}`);
+    if (incomingFinancialError) throw httpError(400, incomingFinancialError);
+    const clean = {
+      ...item,
+      publicId,
+      revision:validRevision(item),
+      accountingSign:Number(item.accountingSign) === -1 ? -1 : 1,
+      paymentMethod:String(item.paymentMethod || '').trim().slice(0,40) || null,
+    };
+    if (clean.reversalOf && !UUID.test(String(clean.reversalOf))) throw httpError(400, `Lançamento ${publicId}: vínculo de estorno inválido.`);
+    const values = [clean.publicId,clean.type,centerId,categoryId,String(clean.description||'').slice(0,240),clean.counterparty||null,Number(clean.amount),clean.accountingSign,clean.reversalOf||null,clean.reversalReason||null,clean.reversedAt||null,clean.transactionDate,clean.notes||null,clean.dueDate||clean.transactionDate,clean.settlementDate||null,clean.financialStatus,clean.documentNumber||null,clean.paymentMethod||null,clean.originInstanceId,clean.originInstanceName,clean.lastModifiedInstanceId,clean.lastModifiedInstanceName,clean.originUserName,clean.revision,clean.createdAt||new Date(),clean.updatedAt||new Date(),clean.deletedAt||null,user.id];
+    const existing = (await tx.query('SELECT id FROM transactions WHERE public_id=$1',[publicId])).rows[0];
+    if (existing) {
+      await tx.query(`UPDATE transactions SET type=$2,cost_center_id=$3,category_id=$4,description=$5,counterparty=$6,amount=$7,
+        accounting_sign=$8,reversal_of=$9,reversal_reason=$10,reversed_at=$11,transaction_date=$12,notes=$13,due_date=$14,
+        settlement_date=$15,financial_status=$16,document_number=$17,payment_method=$18,origin_instance_id=$19,origin_instance_name=$20,
+        last_modified_instance_id=$21,last_modified_instance_name=$22,origin_user_name=$23,revision=$24,updated_at=$26,deleted_at=$27,updated_by=$28
+        WHERE public_id=$1`,values);
+    } else {
+      await tx.query(`INSERT INTO transactions
+        (public_id,type,cost_center_id,category_id,description,counterparty,amount,accounting_sign,reversal_of,reversal_reason,reversed_at,
+         transaction_date,notes,due_date,settlement_date,financial_status,document_number,payment_method,origin_instance_id,origin_instance_name,
+         last_modified_instance_id,last_modified_instance_name,origin_user_name,revision,created_at,updated_at,deleted_at,created_by,updated_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$28)`,values);
+    }
+    return;
+  }
+
+  throw httpError(400, `Tipo de conflito não suportado: ${conflict.entity_type}.`);
+}
+
 async function resolveConflict({ id, choice, user }) {
   if (!Number.isInteger(id) || id <= 0) throw httpError(400, 'Conflito inválido.');
   if (!['local','recebido'].includes(choice)) throw httpError(400, 'Escolha local ou recebido.');
   const db = getDb();
-  const conflict = (await db.query('SELECT * FROM sync_package_conflicts WHERE id=$1', [id])).rows[0];
-  if (!conflict) throw httpError(404, 'Conflito não encontrado.');
-  if (conflict.status !== 'pending') throw httpError(409, 'Este conflito já foi resolvido.');
-  if (choice === 'recebido') {
-    throw httpError(409, 'Aplicação automática da versão recebida ficará disponível no próximo lote. Nesta versão, revise o registro e use “manter local” ou ajuste manualmente.');
-  }
-  await db.query(`UPDATE sync_package_conflicts SET status='resolved',resolved_choice='local',resolved_by=$1,resolved_at=NOW() WHERE id=$2`, [user.id,id]);
-  await recordAudit({entityType:'sincronizacao',entityId:id,action:'conflito_resolvido',summary:'Conflito de sincronização resolvido mantendo a versão local.',data:{choice},user});
-  return { ok:true,mensagem:'Conflito resolvido mantendo a versão local.' };
+  let message = '';
+
+  await db.transaction(async (tx) => {
+    const conflict = (await tx.query('SELECT * FROM sync_package_conflicts WHERE id=$1', [id])).rows[0];
+    if (!conflict) throw httpError(404, 'Conflito não encontrado.');
+    if (conflict.status !== 'pending') throw httpError(409, 'Este conflito já foi resolvido.');
+
+    if (choice === 'recebido') {
+      await applyIncomingConflict(tx, conflict, user);
+      await tx.query(`UPDATE sync_package_conflicts SET status='resolved',resolved_choice='recebido',resolved_by=$1,resolved_at=NOW() WHERE id=$2`, [user.id,id]);
+      message = 'Conflito resolvido aplicando a versão recebida.';
+    } else {
+      await tx.query(`UPDATE sync_package_conflicts SET status='resolved',resolved_choice='local',resolved_by=$1,resolved_at=NOW() WHERE id=$2`, [user.id,id]);
+      message = 'Conflito resolvido mantendo a versão local.';
+    }
+
+    await recordAudit({
+      entityType:'sincronizacao',entityId:id,action:'conflito_resolvido',summary:message,
+      data:{choice,entityType:conflict.entity_type,entityPublicId:conflict.entity_public_id},user,client:tx,
+    });
+  });
+
+  return { ok:true,mensagem:message };
 }
 
 module.exports = { FORMAT_VERSION, buildPackage, importPackage, listImports, listConflicts, resolveConflict, stableHash };

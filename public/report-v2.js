@@ -1,6 +1,8 @@
 (() => {
   const deliveryLabel = {
-    delivered: 'Enviado',
+    delivered: 'Entregue',
+    accepted: 'Aceito pelo provedor',
+    failed: 'Falhou',
     pending: 'Na fila',
     sending: 'Enviando',
     legacy: 'Local antigo',
@@ -8,21 +10,14 @@
 
   const deliveryClass = {
     delivered: 'pill ativo',
+    accepted: 'pill projeto-execucao',
+    failed: 'pill vencido',
     pending: 'pill pendente',
     sending: 'pill projeto-execucao',
     legacy: 'pill inativo',
   };
 
   function removeOldReportUi() {
-    const smtpForm = document.querySelector('#form-smtp');
-    if (smtpForm) {
-      const panel = smtpForm.closest('article');
-      if (panel) panel.style.display = 'none';
-    }
-
-    const importButton = document.querySelector('#btn-importar-bugreport');
-    if (importButton) importButton.style.display = 'none';
-
     const settingsGrid = document.querySelector('#view-config .settings-grid');
     if (settingsGrid && !document.querySelector('#report-v2-config')) {
       const panel = document.createElement('article');
@@ -30,10 +25,10 @@
       panel.id = 'report-v2-config';
       panel.innerHTML = `
         <h2>Reports centralizados</h2>
-        <p>Problemas, melhorias e sugestões são enviados para a central da Construtec e encaminhados para <strong>pcm@rcconstrutec.com.br</strong>.</p>
-        <p class="hint">Nenhuma senha de e-mail fica salva neste computador. Se a internet cair, o report fica na fila e é reenviado automaticamente.</p>
+        <p>Problemas, melhorias e sugestões são enviados para a central da Construtec e entregues em <strong>pcm@rcconstrutec.com.br</strong>.</p>
+        <p class="hint">O sistema agora confirma a entrega com o provedor. Se a internet cair, o report fica na fila e é reenviado automaticamente.</p>
         <div id="report-v2-status" class="form-error" style="margin-top:10px"></div>
-        <button class="btn secondary wide" type="button" id="report-v2-retry">Tentar enviar pendentes agora</button>
+        <button class="btn secondary wide" type="button" id="report-v2-retry">Atualizar status e tentar pendentes</button>
       `;
       settingsGrid.appendChild(panel);
       panel.querySelector('#report-v2-retry').addEventListener('click', retryAllReports);
@@ -61,7 +56,7 @@
       const data = await api('/bug-reports/delivery/status');
       el.style.color = data.configured ? 'var(--green)' : 'var(--orange)';
       el.textContent = data.configured
-        ? `Central conectada. ${data.delivered || 0} enviado(s), ${data.pending || 0} pendente(s).`
+        ? `Central conectada. ${data.delivered || 0} entregue(s), ${data.accepted || 0} aguardando confirmação, ${data.pending || 0} pendente(s), ${data.failed || 0} falha(s).`
         : `Central ainda não ativada nesta versão. ${data.pending || 0} report(s) ficará(ão) salvo(s) na fila.`;
     } catch (error) {
       el.style.color = 'var(--red)';
@@ -74,7 +69,7 @@
     if (button) button.disabled = true;
     try {
       const result = await api('/bug-reports/delivery/retry', { method: 'POST' });
-      toast(`Reenvio concluído: ${result.delivered || 0} report(s) enviado(s).`);
+      toast(`Atualização concluída: ${result.delivered || 0} report(s) entregue(s).`);
       await loadReportDeliveryStatus();
       await loadBugReportsV2();
     } catch (error) {
@@ -104,11 +99,11 @@
             <td>${esc(r.titulo)}</td>
             <td><span class="pill">${bugTipoLabel[r.tipo] || esc(r.tipo)}</span></td>
             <td><span class="${bugSeveridadeClass[r.severidade] || 'pill'}">${bugSeveridadeLabel[r.severidade] || esc(r.severidade)}</span></td>
-            <td><span class="${deliveryClass[r.delivery_status] || 'pill'}">${deliveryLabel[r.delivery_status] || esc(r.delivery_status || 'local')}</span>${r.last_delivery_error && r.delivery_status === 'pending' ? '<br><small class="muted">aguardando conexão</small>' : ''}</td>
+            <td><span class="${deliveryClass[r.delivery_status] || 'pill'}">${deliveryLabel[r.delivery_status] || esc(r.delivery_status || 'local')}</span>${r.last_delivery_error ? `<br><small class="muted">${esc(r.last_delivery_error)}</small>` : ''}</td>
             <td>${esc(r.author_name)}</td>
             <td>${dateTimeBr(r.created_at)}</td>
             <td><div class="row-actions">
-              ${r.delivery_status !== 'delivered' ? `<button data-retry-report="${r.id}">Reenviar</button>` : ''}
+              ${['pending','failed'].includes(r.delivery_status) ? `<button data-retry-report="${r.id}">Reenviar</button>` : ''}
               ${isAdminOrGestor ? `<button data-manage-report="${r.id}">Gerenciar</button>` : ''}
             </div></td>
           </tr>`).join('')}</tbody>
@@ -171,6 +166,8 @@
         closeModal();
         if (result.delivery?.status === 'delivered') {
           toast(`Report enviado com sucesso${result.delivery.centralReportId ? ` — ${result.delivery.centralReportId}` : ''}.`);
+        } else if (result.delivery?.status === 'accepted') {
+          toast('Report recebido pela central. A entrega ao e-mail será confirmada em seguida.');
         } else {
           toast('Report salvo. Sem conexão com a central agora; o sistema tentará novamente automaticamente.');
         }

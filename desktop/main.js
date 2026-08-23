@@ -2,6 +2,7 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, ipcMain, clipboard,
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { execFile } = require('child_process');
 
 let mainWindow = null;
 let tray = null;
@@ -10,9 +11,11 @@ let isQuitting = false;
 let firstAccessCredentials = null;
 let runtimeEnvPath = null;
 let bootstrapCredentialsPath = null;
+let firstAccessFilePath = null;
 let shouldPersistBootstrap = false;
 
 const PORT = 3333;
+const FIREWALL_RULE = 'Centro de Custos Construtec - Rede Local';
 const SERVER_URL = `http://127.0.0.1:${PORT}`;
 const TRAY_ICON = path.join(__dirname, 'icon.png');
 const PRELOAD = path.join(__dirname, 'preload.js');
@@ -113,14 +116,14 @@ if (!gotLock) {
     if (!process.env.RESTORE_ROOT_DIR) process.env.RESTORE_ROOT_DIR = path.join(dataRoot, 'dados');
 
     bootstrapCredentialsPath = path.join(dataRoot, 'bootstrap-credentials.dat');
+    firstAccessFilePath = path.join(app.getPath('desktop'), 'PRIMEIRO-ACESSO-CENTRO-CUSTOS.txt');
     process.env.BOOTSTRAP_CREDENTIAL_PATH = bootstrapCredentialsPath;
+    process.env.FIRST_ACCESS_FILE_PATH = firstAccessFilePath;
     const existingBootstrap = readBootstrapCredentials();
     const databaseAlreadyExists = localDatabaseAlreadyExists(process.env.PGLITE_DATA_DIR);
 
-    // Configuração opcional para ambiente de desenvolvimento. O .env não é empacotado no instalador.
     readEnvFile(path.join(getAppDir(), '.env'));
 
-    // Configuração persistente exclusiva desta instalação V3.
     runtimeEnvPath = path.join(dataRoot, 'desktop.env');
     const runtime = readEnvFile(runtimeEnvPath);
     let changed = false;
@@ -164,6 +167,8 @@ if (!gotLock) {
       changed = true;
     }
 
+    process.env.HOST = loadPrefs().mobileAccess === true ? '0.0.0.0' : '127.0.0.1';
+
     if (runtime.ADMIN_INITIAL_PASSWORD) {
       delete runtime.ADMIN_INITIAL_PASSWORD;
       changed = true;
@@ -172,14 +177,30 @@ if (!gotLock) {
     if (changed || !fs.existsSync(runtimeEnvPath)) writeRuntimeEnv(runtime);
   }
 
+  function writeFirstAccessDesktopFile() {
+    if (!firstAccessCredentials || !firstAccessFilePath) return;
+    const content = [
+      'CENTRO DE CUSTOS CONSTRUTEC - PRIMEIRO ACESSO',
+      '',
+      `Login: ${firstAccessCredentials.email}`,
+      `Senha temporária: ${firstAccessCredentials.password}`,
+      '',
+      'Altere esta senha depois de entrar no sistema.',
+      'Após a troca da senha, este arquivo será removido automaticamente.',
+      '',
+    ].join('\r\n');
+    try { fs.writeFileSync(firstAccessFilePath, content, 'utf8'); } catch {}
+  }
+
   async function showFirstAccessInfo() {
     if (!firstAccessCredentials) return;
+    writeFirstAccessDesktopFile();
     clipboard.writeText(`Usuário: ${firstAccessCredentials.email}\nSenha: ${firstAccessCredentials.password}`);
     await dialog.showMessageBox({
       type: 'info',
       title: 'Primeiro acesso',
       message: 'Credenciais de primeiro acesso do Centro de Custos V3.',
-      detail: `Usuário: ${firstAccessCredentials.email}\nSenha temporária: ${firstAccessCredentials.password}\n\nAs credenciais foram copiadas para a área de transferência. Enquanto a senha não for alterada, elas ficam protegidas pelo armazenamento seguro do Windows para poderem ser exibidas novamente.`,
+      detail: `Usuário: ${firstAccessCredentials.email}\nSenha temporária: ${firstAccessCredentials.password}\n\nAs credenciais foram copiadas para a área de transferência e também salvas na Área de Trabalho em:\n${firstAccessFilePath}\n\nO arquivo será removido quando a senha for alterada.`,
       buttons: ['Entendi'],
       defaultId: 0,
       noLink: true,
@@ -210,6 +231,23 @@ if (!gotLock) {
     fs.writeFileSync(getPrefsPath(), JSON.stringify(prefs, null, 2), 'utf8');
   }
 
+  function configureLocalFirewall(enabled) {
+    if (process.platform !== 'win32') return Promise.resolve();
+    const script = [
+      "$ErrorActionPreference='Stop'",
+      `Get-NetFirewallRule -DisplayName '${FIREWALL_RULE}' -ErrorAction SilentlyContinue | Remove-NetFirewallRule`,
+      enabled ? `New-NetFirewallRule -DisplayName '${FIREWALL_RULE}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${PORT} -Profile Any -RemoteAddress LocalSubnet | Out-Null` : '',
+    ].filter(Boolean).join(';');
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    const elevate = `$p=Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ${encoded}' -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode`;
+    return new Promise((resolve, reject) => {
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', elevate], (error) => {
+        if (error) reject(new Error('A permissão do Firewall do Windows não foi concedida. Tente novamente e aceite a confirmação do sistema.'));
+        else resolve();
+      });
+    });
+  }
+
   function initIPC() {
     ipcMain.on('get-dark-mode', (event) => {
       const prefs = loadPrefs();
@@ -220,6 +258,18 @@ if (!gotLock) {
       prefs.darkMode = value === true;
       savePrefs(prefs);
       event.returnValue = true;
+    });
+    ipcMain.on('get-mobile-access', (event) => {
+      event.returnValue = loadPrefs().mobileAccess === true;
+    });
+    ipcMain.handle('set-mobile-access', async (_event, value) => {
+      const enabled = value === true;
+      await configureLocalFirewall(enabled);
+      const prefs = loadPrefs();
+      prefs.mobileAccess = enabled;
+      savePrefs(prefs);
+      setTimeout(() => { app.relaunch(); app.exit(0); }, 200);
+      return true;
     });
   }
 
@@ -241,9 +291,7 @@ if (!gotLock) {
     mainWindow.webContents.on('did-finish-load', () => {
       try {
         const prefs = loadPrefs();
-        if (prefs.darkMode) {
-          mainWindow.webContents.executeJavaScript('document.documentElement.classList.add("dark")');
-        }
+        if (prefs.darkMode) mainWindow.webContents.executeJavaScript('document.documentElement.classList.add("dark")');
       } catch {}
     });
 
@@ -274,9 +322,7 @@ if (!gotLock) {
       const repo = process.env.GITHUB_REPO || '';
       if (repo) {
         const [owner, repoName] = repo.split('/');
-        if (owner && repoName) {
-          updater.autoUpdater.setFeedURL({ provider: 'github', owner, repo: repoName });
-        }
+        if (owner && repoName) updater.autoUpdater.setFeedURL({ provider:'github', owner, repo:repoName });
       }
     } catch {}
   }

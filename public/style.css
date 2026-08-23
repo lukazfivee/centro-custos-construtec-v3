@@ -29,6 +29,7 @@ input,select,textarea{border:1px solid #cfd7da;background:white;color:var(--ink)
 .local-badge{color:#d4e3e7}.local-badge span{background:#51a6cb;box-shadow:0 0 0 5px rgba(81,166,203,.15)}
 .login-panel{background:linear-gradient(145deg,#edf4f5,#f7f9f9)}
 .login-card{border-top:4px solid var(--orange);box-shadow:0 28px 75px rgba(2,29,38,.15)}
+.password-field{position:relative}.password-field input{padding-right:84px}.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);min-height:34px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--blue);font:inherit;font-size:12px;font-weight:800;cursor:pointer}.password-toggle:hover{background:rgba(45,169,208,.1)}.password-toggle:focus-visible{outline:3px solid rgba(45,169,208,.35);outline-offset:1px}
 .mobile-brand{font-weight:600}.mobile-brand .brand-symbol{background:var(--navy);border-radius:9px;padding:5px}
 input:focus,select:focus,textarea:focus{outline-color:rgba(50,169,205,.16);border-color:var(--orange)}
 .btn.primary{background:linear-gradient(135deg,#32a9cd,#2188ad);box-shadow:0 7px 18px rgba(50,169,205,.18)}
@@ -53,9 +54,9 @@ input:focus,select:focus,textarea:focus{outline-color:rgba(50,169,205,.16);borde
 .first-use-banner{background:white;border:1px solid var(--orange);border-radius:var(--radius);padding:20px;margin-bottom:18px;box-shadow:0 2px 12px rgba(50,169,205,.08)}.first-use-header{display:flex;gap:12px;align-items:start;margin-bottom:16px}.first-use-header strong{font-size:15px;color:var(--navy)}.first-use-header p{margin:3px 0 0;font-size:12px;color:var(--muted)}.first-use-header .icon-btn{margin-left:auto;flex:0 0 auto;font-size:18px;color:var(--muted)}.first-use-icon{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#32a9cd,#2188ad);color:white;display:grid;place-items:center;font-size:16px;flex:0 0 auto}.first-use-checklist{display:grid;gap:8px}.check-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;background:#f7f9f9;border:1px solid #edf0f1;transition:all .15s}.check-item.done{background:#e8f6f0;border-color:#b8e4d0}.check-icon{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--muted);border:2px solid #d0d8db;flex:0 0 auto}.check-item.done .check-icon{background:var(--green);border-color:var(--green);color:white}.check-item div{flex:1;min-width:0}.check-item strong{display:block;font-size:12px;color:var(--navy)}.check-hint{display:block;font-size:10px;color:var(--muted);margin-top:2px}.check-count{font-size:11px;font-weight:700;color:var(--muted);flex:0 0 auto;min-width:24px;text-align:center}.check-item.done .check-count{color:var(--green)}.first-use-footer{margin-top:14px;display:flex;justify-content:flex-end}
 @media(max-width:800px){.dashboard-actions{align-items:stretch;flex-direction:column}.dashboard-actions .head-filters{display:grid}.page-head>select{width:100%;margin-top:12px}}
 
-/* Botao flutuante report */
-.fab-bug{position:fixed;bottom:24px;right:24px;z-index:40;width:50px;height:50px;border-radius:50%;border:0;background:var(--orange);color:white;font-size:20px;cursor:pointer;box-shadow:0 6px 20px rgba(50,169,205,.3);display:grid;place-items:center;transition:transform .15s,box-shadow .15s}.fab-bug:hover{transform:scale(1.1);box-shadow:0 8px 28px rgba(50,169,205,.4)}
-html.dark .fab-bug{box-shadow:0 6px 20px rgba(0,0,0,.4)}
+/* Acoes flutuantes de suporte e aparencia */
+.fab-bug,.fab-theme{position:fixed;right:24px;z-index:40;width:50px;height:50px;border-radius:50%;border:0;color:white;font-size:20px;cursor:pointer;box-shadow:0 6px 20px rgba(50,169,205,.3);display:grid;place-items:center;transition:transform .15s,box-shadow .15s,background .15s}.fab-bug{bottom:24px;background:var(--orange)}.fab-theme{bottom:84px;background:var(--navy)}.fab-bug:hover,.fab-theme:hover{transform:scale(1.08);box-shadow:0 8px 28px rgba(50,169,205,.4)}
+html.dark .fab-bug,html.dark .fab-theme{box-shadow:0 6px 20px rgba(0,0,0,.4)}
 
 /* ===== MODO NOTURNO - Fundos e variáveis ===== */
 html.dark{--canvas:#0d1b21;--white:#152530;--ink:#d4dde2;--muted:#7a9aa8;--line:#1e3340;--navy:#021d26;--navy-2:#073541}
@@ -133,7 +134,7 @@ html.dark .closing-list{color:var(--ink)}
 html.dark .conflict-card{background:var(--white);border-color:var(--line);color:var(--ink)}
 
 /* ===== MODO NOTURNO - Progress bar / FAB ===== */
-html.dark .fab-bug{box-shadow:0 6px 20px rgba(0,0,0,.5)}
+html.dark .fab-bug,html.dark .fab-theme{box-shadow:0 6px 20px rgba(0,0,0,.5)}
 
 /* ===== MODO NOTURNO - Scrollbar ===== */
 html.dark ::-webkit-scrollbar{width:8px;height:8px}

@@ -18,6 +18,15 @@ const currentDate = () => new Intl.DateTimeFormat('en-CA').format(new Date());
 const currentMonth = () => currentDate().slice(0,7);
 const roleName = {admin:'Administrador',gestor:'Gestor',supervisor:'Supervisor'};
 const projectStatusName = {planejamento:'Planejamento',execucao:'Em execução',pausado:'Pausado',concluido:'Concluído'};
+function apiError(response,data,fallback='Não foi possível concluir a operação.') {
+  const message = data.erro || data.error || fallback;
+  const requestId = data.requestId || response.headers.get('X-Request-Id');
+  const error = new Error(requestId ? `${message} Código de suporte: ${requestId}.` : message);
+  error.status = response.status;
+  error.requestId = requestId || '';
+  return error;
+}
+window.apiError = apiError;
 function financialLabel(item) {
   if (item.situacao === 'vencido') return 'Vencido';
   if (item.status_financeiro === 'liquidado') return item.tipo === 'receita' ? 'Recebido' : 'Pago';
@@ -31,7 +40,7 @@ async function api(path,options={}) {
   const response = await fetch(API+path,{...options,headers});
   if (response.status === 401 && !path.includes('/login')) { logout(); throw new Error('Sua sessão expirou. Entre novamente.'); }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.erro || 'Não foi possível concluir a operação.');
+  if (!response.ok) throw apiError(response,data);
   return data;
 }
 
@@ -68,7 +77,45 @@ $('#form-login').addEventListener('submit',async (event) => {
     await startApp();
   } catch (error) { $('#login-erro').textContent=error.message; }
 });
+$('#toggle-login-password').addEventListener('click',(event)=>{
+  const input=$('#login-senha');
+  const visible=input.type==='password';
+  input.type=visible?'text':'password';
+  event.currentTarget.textContent=visible?'Ocultar':'Mostrar';
+  event.currentTarget.setAttribute('aria-pressed',String(visible));
+  event.currentTarget.setAttribute('aria-label',visible?'Ocultar senha':'Mostrar senha');
+  input.focus();
+});
 $('#btn-sair').addEventListener('click',logout);
+
+function userInitials(){return usuario?.nome?.split(/\s+/).filter(Boolean).slice(0,2).map((part)=>part[0]).join('').toUpperCase() || '?';}
+function renderProfilePhoto(photo){
+  const targets=[$('#usuario-avatar'),$('#profile-photo-preview')].filter(Boolean);
+  const hasPhoto=Boolean(photo?.mime && photo?.contentBase64);
+  targets.forEach((target)=>{target.innerHTML=hasPhoto?`<img src="data:${esc(photo.mime)};base64,${photo.contentBase64}" alt="">`:userInitials();});
+  $('#profile-photo-remove')?.classList.toggle('oculto',!hasPhoto);
+}
+async function loadProfilePhoto(){
+  try{const photo=await api('/auth/foto-perfil');renderProfilePhoto(photo);}
+  catch{renderProfilePhoto(null);}
+}
+function readBlobBase64(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',').pop()||'');reader.onerror=()=>reject(new Error('Não foi possível ler a foto selecionada.'));reader.readAsDataURL(blob);});}
+function loadPhotoImage(file){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file);const image=new Image();image.onload=()=>{URL.revokeObjectURL(url);resolve(image);};image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Não foi possível abrir a foto selecionada.'));};image.src=url;});}
+async function prepareProfilePhoto(file){
+  if(!['image/jpeg','image/png','image/webp'].includes(file?.type))throw new Error('Use uma foto JPG, PNG ou WEBP.');
+  const image=await loadPhotoImage(file);
+  const scale=Math.min(1,512/Math.max(image.naturalWidth,image.naturalHeight));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+  canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+  let output=null;
+  for(const quality of [.86,.72,.58]){
+    output=await new Promise((resolve)=>canvas.toBlob(resolve,'image/jpeg',quality));
+    if(output&&output.size<=512*1024)break;
+  }
+  if(!output||output.size>512*1024)throw new Error('Não foi possível reduzir a foto para o limite de 512 KB.');
+  return {mime:'image/jpeg',contentBase64:await readBlobBase64(output)};
+}
 
 async function startApp() {
   try {
@@ -78,24 +125,35 @@ async function startApp() {
   } catch (error) { return; }
   $('#tela-login').classList.add('oculto'); $('#app').classList.remove('oculto');
   $('#usuario-nome').textContent=usuario.nome; $('#usuario-papel').textContent=roleName[usuario.role];
-  $('#usuario-avatar').textContent=usuario.nome.split(/\s+/).slice(0,2).map((part)=>part[0]).join('').toUpperCase();
+  renderProfilePhoto(null);
   $('#instancia-nome').textContent=instancia.name; $('#config-instancia').textContent=instancia.name;
   try { const v=await api('/version'); $('#config-versao').textContent=v.version; } catch {}
   $$('.admin-only').forEach((item)=>item.classList.toggle('oculto',usuario.role!=='admin'));
   $$('.manager-only').forEach((item)=>item.classList.toggle('oculto',!['admin','gestor'].includes(usuario.role)));
   $('#dash-mes').value=currentMonth();
-  await loadReferences(); showView('dashboard');
+  await Promise.all([loadReferences(),loadProfilePhoto()]); showView('dashboard');
   loadFirstUse();
 }
 
 $$('.nav-item').forEach((button)=>button.addEventListener('click',()=>{showView(button.dataset.view);$('.sidebar').classList.remove('open');}));
 $('#mobile-menu').addEventListener('click',()=>$('.sidebar').classList.toggle('open'));
+$$('[data-mobile-view]').forEach((button)=>button.addEventListener('click',()=>showView(button.dataset.mobileView)));
+$('#mobile-more').addEventListener('click',()=>$('.sidebar').classList.add('open'));
+$$('.settings-index a').forEach((link)=>link.addEventListener('click',(event)=>{
+  event.preventDefault();
+  document.querySelector(link.getAttribute('href'))?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
+}));
+
+function syncMobileNavigation(name){
+  $$('.mobile-nav-item').forEach((button)=>button.classList.toggle('ativo',button.dataset.mobileView===name || (button.id==='mobile-more'&&!button.dataset.mobileView&&!['dashboard','lancamentos','centros'].includes(name))));
+}
 
 function showView(name) {
   $$('.view').forEach((view)=>view.classList.add('oculto'));
   $(`#view-${name}`).classList.remove('oculto');
   $$('.nav-item').forEach((button)=>button.classList.toggle('ativo',button.dataset.view===name));
-  const loaders={dashboard:loadDashboard,lancamentos:loadTransactions,centros:loadCenters,categorias:loadCategories,fornecedores:loadSuppliers,historico:loadHistory,sincronizacao:loadSync,usuarios:loadUsers,recorrentes:loadRecurring,bugreports:loadBugReports,config:loadSmtpSettings};
+  syncMobileNavigation(name);
+  const loaders={dashboard:loadDashboard,lancamentos:loadTransactions,centros:loadCenters,categorias:loadCategories,fornecedores:loadSuppliers,historico:loadHistory,sincronizacao:loadSync,usuarios:loadUsers,recorrentes:loadRecurring,bugreports:loadBugReports,config:loadConfiguration};
   if (loaders[name]) loaders[name]().catch((error)=>toast(error.message,true));
 }
 
@@ -366,7 +424,8 @@ $('#btn-gerar-recorrentes').addEventListener('click',async()=>{try{const r=await
 $('#btn-novo-recorrente').addEventListener('click',()=>openRecurring(null));
 function openRecurring(item){modal(item?'Editar modelo recorrente':'Novo modelo recorrente',`<form id="recurring-form"><label for="rec-nome">Nome (ex: Aluguel)</label><input id="rec-nome" required maxlength="140" value="${esc(item?.nome||'')}"><div class="form-grid"><div><label for="rec-tipo">Tipo</label><select id="rec-tipo"><option value="despesa" ${item?.tipo==='despesa'?'selected':''}>Despesa</option><option value="receita" ${item?.tipo==='receita'?'selected':''}>Receita</option></select></div><div><label for="rec-valor">Valor (R$)</label><input id="rec-valor" type="number" min="0.01" step="0.01" required value="${esc(item?.valor||'')}"></div></div><label for="rec-centro">Centro de custo</label><select id="rec-centro" required>${centros.filter(c=>c.ativo).map(c=>`<option value="${c.id}" ${c.id===item?.cost_center_id?'selected':''}>${esc(c.codigo)} — ${esc(c.nome)}</option>`).join('')}</select><label for="rec-categoria">Categoria</label><select id="rec-categoria" required></select><label for="rec-favorecido">Cliente / fornecedor</label><input id="rec-favorecido" maxlength="160" value="${esc(item?.favorecido||'')}"><div class="form-grid"><div><label for="rec-frequencia">Frequência</label><select id="rec-frequencia"><option value="mensal" ${item?.frequencia==='mensal'?'selected':''}>Mensal</option><option value="bimestral" ${item?.frequencia==='bimestral'?'selected':''}>Bimestral</option><option value="trimestral" ${item?.frequencia==='trimestral'?'selected':''}>Trimestral</option><option value="semestral" ${item?.frequencia==='semestral'?'selected':''}>Semestral</option><option value="anual" ${item?.frequencia==='anual'?'selected':''}>Anual</option></select></div><div><label for="rec-dia">Dia do mês</label><input id="rec-dia" type="number" min="1" max="31" value="${esc(item?.dia_mes||1)}"></div></div><div class="form-grid"><div><label for="rec-parcelas">Total de parcelas (0 = sem limite)</label><input id="rec-parcelas" type="number" min="0" value="${esc(item?.total_parcelas||0)}"></div><div><label for="rec-forma">Forma de pagamento</label><select id="rec-forma"><option value="">Não informada</option>${['Pix','Boleto','Transferência','Cartão','Dinheiro','Outro'].map(v=>`<option value="${v}" ${item?.forma_pagamento===v?'selected':''}>${v}</option>`).join('')}</select></div></div><div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Salvar modelo</button></form>`);const fill=()=>{const type=$('#rec-tipo').value;$('#rec-categoria').innerHTML=categorias.filter(c=>c.ativo&&(c.tipo==='ambos'||c.tipo===type)).map(c=>`<option value="${c.id}" ${c.id===item?.category_id?'selected':''}>${esc(c.nome)}</option>`).join('');};$('#rec-tipo').addEventListener('change',fill);fill();$('#recurring-form').addEventListener('submit',async(event)=>{event.preventDefault();try{const body={nome:$('#rec-nome').value,tipo:$('#rec-tipo').value,valor:Number($('#rec-valor').value),cost_center_id:Number($('#rec-centro').value),category_id:Number($('#rec-categoria').value),favorecido:$('#rec-favorecido').value,frequencia:$('#rec-frequencia').value,dia_mes:Number($('#rec-dia').value),total_parcelas:Number($('#rec-parcelas').value),forma_pagamento:$('#rec-forma').value};await api(item?`/recorrentes/${item.id}`:'/recorrentes',{method:item?'PUT':'POST',body:JSON.stringify(body)});closeModal();toast('Modelo salvo.');await loadRecurring();}catch(error){$('#modal-error').textContent=error.message;}});}
 
-function modal(title,content){$('#modal-titulo').textContent=title;$('#modal-corpo').innerHTML=content;$('#modal-fundo').classList.remove('oculto');setTimeout(()=>$('#modal-corpo input, #modal-corpo select')?.focus(),0);}
+function markStatusMessages(root=document){root.querySelectorAll('.form-error').forEach((element)=>element.setAttribute('role','status'));}
+function modal(title,content){$('#modal-titulo').textContent=title;$('#modal-corpo').innerHTML=content;markStatusMessages($('#modal-corpo'));$('#modal-fundo').classList.remove('oculto');if(matchMedia('(hover:hover) and (pointer:fine)').matches)setTimeout(()=>$('#modal-corpo input, #modal-corpo select')?.focus(),0);}
 function closeModal(){$('#modal-fundo').classList.add('oculto');}
 $('#modal-fechar').addEventListener('click',closeModal);$('#modal-fundo').addEventListener('click',(event)=>{if(event.target===$('#modal-fundo'))closeModal();});document.addEventListener('keydown',(event)=>{if(event.key==='Escape')closeModal();});
 function empty(message){return `<div class="empty">${esc(message)}</div>`;}
@@ -381,18 +440,35 @@ async function loadFirstUse() {
       { id: 'categorias', count: data.counts.categorias, min: 1 },
       { id: 'fornecedores', count: data.counts.fornecedores, min: 1 },
       { id: 'usuarios', count: data.counts.usuarios, min: 2 },
+      { id: 'foto', count: data.counts.foto, min: 1 },
     ];
     checks.forEach((item) => {
       $(`#count-${item.id}`).textContent = item.count;
       const done = item.count >= item.min;
       $(`#check-${item.id}`).classList.toggle('done', done);
       $(`#check-${item.id} .check-icon`).textContent = done ? '✓' : '○';
+      if(item.id==='foto')$('#first-use-photo').textContent=done?'Alterar':'Adicionar';
     });
   } catch {}
 }
 $('#first-use-dismiss').addEventListener('click', () => $('#first-use-banner').classList.add('oculto'));
+$('#first-use-photo').addEventListener('click',()=>{showView('config');$('#profile-photo-input').click();});
 $('#first-use-complete').addEventListener('click', async () => {
   try { await api('/first-use/complete', { method: 'POST' }); $('#first-use-banner').classList.add('oculto'); toast('Assistente finalizado.'); } catch (error) { toast(error.message, true); }
+});
+
+$('#profile-photo-input').addEventListener('change',async(event)=>{
+  const file=event.target.files?.[0];if(!file)return;
+  const message=$('#profile-photo-message');message.textContent='Processando foto…';message.style.color='var(--muted)';
+  try{const payload=await prepareProfilePhoto(file);const photo=await api('/auth/foto-perfil',{method:'POST',body:JSON.stringify(payload)});renderProfilePhoto(photo);message.textContent='Foto atualizada e pronta para sincronização.';message.style.color='var(--green)';toast('Foto de perfil atualizada.');loadFirstUse();}
+  catch(error){message.textContent=error.message;message.style.color='var(--red)';}
+  finally{event.target.value='';}
+});
+$('#profile-photo-remove').addEventListener('click',async()=>{
+  if(!confirm('Remover sua foto de perfil? As iniciais voltarão a aparecer.'))return;
+  const message=$('#profile-photo-message');
+  try{await api('/auth/foto-perfil',{method:'DELETE'});renderProfilePhoto(null);message.textContent='Foto removida.';message.style.color='var(--green)';toast('Foto de perfil removida.');loadFirstUse();}
+  catch(error){message.textContent=error.message;message.style.color='var(--red)';}
 });
 
 let updatePolling = null;
@@ -418,7 +494,10 @@ function renderUpdateStatus(status) {
     msg.style.color = 'var(--green)'; msg.textContent = 'Você já está na versão mais recente.';
   } else if (status.status === 'available') {
     msg.style.color = 'var(--orange)';
-    msg.innerHTML = `Versão nova disponível: <strong>${esc(status.info?.version || '')}</strong>` + (status.info?.releaseNotes ? ` — ${esc(status.info.releaseNotes)}` : '');
+    const version=String(status.info?.version || '').trim();
+    const notes=String(status.info?.releaseNotes || '').trim();
+    msg.textContent=`Nova versão disponível: ${version}${notes?`\n\nO que mudou:\n${notes}`:''}\n\nRecomendamos atualizar para ter acesso às correções mais recentes.`;
+    msg.classList.add('update-notes');
     btnDownload.classList.remove('oculto');
   } else if (status.status === 'downloading') {
     progress.classList.remove('oculto');
@@ -553,62 +632,63 @@ function openBugReportModal(){
   });
 }
 
-// Config SMTP
-async function loadSmtpSettings(){
-  try{
-    const s=await api('/email-settings');
-    $('#smtp-host').value=s.smtp_host||'smtp.uol.com.br';$('#smtp-port').value=s.smtp_port||'465';
-    $('#smtp-user').value=s.smtp_user||'';$('#smtp-pass').value=s.smtp_pass||'';
-  }catch{}
-}
-$('#form-smtp').addEventListener('submit',async(e)=>{
-  e.preventDefault();$('#smtp-mensagem').textContent='';
-  try{
-    await api('/email-settings',{method:'POST',body:JSON.stringify({
-      smtp_host:$('#smtp-host').value,smtp_port:$('#smtp-port').value,
-      smtp_user:$('#smtp-user').value,smtp_pass:$('#smtp-pass').value,
-      smtp_from:$('#smtp-user').value,bug_report_email:'pcm@rcconstrutec.com.br'
-    })});
-    $('#smtp-mensagem').style.color='var(--green)';$('#smtp-mensagem').textContent='SMTP salvo com sucesso!';
-  }catch(error){$('#smtp-mensagem').textContent=error.message;}
-});
-$('#btn-testar-smtp').addEventListener('click',()=>{
-  modal('Enviar e-mail de teste',`
-    <label for="smtp-test-email">Para qual e-mail?</label>
-    <input id="smtp-test-email" type="email" placeholder="seuemail@gmail.com" required>
-    <div id="modal-error" class="form-error"></div>
-    <button class="btn primary wide" id="btn-confirmar-teste" style="margin-top:14px">Enviar teste</button>
-  `);
-  $('#btn-confirmar-teste').addEventListener('click',async()=>{
-    const email=$('#smtp-test-email').value;
-    if(!email||!email.includes('@')){$('#modal-error').textContent='E-mail invalido.';return;}
-    $('#modal-error').textContent='Enviando...';
-    try{await api('/email-settings/test',{method:'POST',body:JSON.stringify({email})});closeModal();toast('E-mail de teste enviado!');}catch(error){$('#modal-error').textContent=error.message;}
-  });
-});
-
-// Importar report de e-mail
-$('#btn-importar-bugreport').addEventListener('click',()=>{
-  modal('Importar report de e-mail',`
-    <p class="hint">Cole aqui o conteúdo do bloco ---BUG_REPORT--- que veio no e-mail.</p>
-    <textarea id="importar-bugreport-content" rows="8" placeholder="Cole o conteúdo aqui..."></textarea>
-    <div id="modal-error" class="form-error"></div>
-    <button class="btn primary wide" id="btn-confirmar-importar" style="margin-top:14px">Importar report</button>
-  `);
-  $('#btn-confirmar-importar').addEventListener('click',async()=>{
-    try{
-      await api('/email-settings/import',{method:'POST',body:JSON.stringify({content:$('#importar-bugreport-content').value})});
-      closeModal();toast('Report importado com sucesso!');loadBugReports();
-    }catch(error){$('#modal-error').textContent=error.message;}
-  });
-});
-
 // Modo noturno
-const toggleDark=$('#toggle-dark');
-function applyDarkMode(value){document.documentElement.classList.toggle('dark',value);toggleDark.checked=value;localStorage.setItem('cc_dark',value);}
-if(localStorage.getItem('cc_dark')==='true')applyDarkMode(true);
-try{if(window.electronAPI){const diskValue=window.electronAPI.getDarkMode();applyDarkMode(diskValue);}}catch{}
-toggleDark.addEventListener('change',()=>{applyDarkMode(toggleDark.checked);try{if(window.electronAPI)window.electronAPI.setDarkMode(toggleDark.checked);}catch{}});
+const themeButton=$('#fab-theme');
+const mobileThemeButton=$('#mobile-theme');
+function applyDarkMode(value){
+  const dark=value===true;
+  document.documentElement.classList.toggle('dark',dark);
+  themeButton.textContent=dark?'☀':'☾';
+  themeButton.title=dark?'Ativar modo claro':'Ativar modo noturno';
+  themeButton.setAttribute('aria-label',themeButton.title);
+  themeButton.setAttribute('aria-pressed',String(dark));
+  if(mobileThemeButton){mobileThemeButton.querySelector('span').textContent=dark?'☀':'☾';mobileThemeButton.setAttribute('aria-label',dark?'Ativar modo claro':'Ativar modo noturno');}
+  localStorage.setItem('cc_dark',String(dark));
+}
+mobileThemeButton?.addEventListener('click',()=>themeButton.click());
+
+async function loadMobileAccess(){
+  const toggle=$('#mobile-access-toggle');
+  const details=$('#mobile-access-details');
+  if(!toggle||!details)return;
+  const desktop=window.electronAPI;
+  toggle.disabled=!desktop?.setMobileAccess;
+  toggle.checked=desktop?.getMobileAccess?.()===true;
+  try{
+    const version=await api('/version');
+    const urls=Array.isArray(version.mobileUrls)?version.mobileUrls:[];
+    details.innerHTML=urls.length
+      ? `<div class="mobile-access-qr"><img src="${API}/mobile-qr" alt="QR Code para abrir o Centro de Custos no celular" width="240" height="240"><div><strong>Escaneie com a câmera do celular</strong><p>O navegador abrirá a tela de login.</p><a href="${esc(urls[0])}" target="_blank" rel="noopener">${esc(urls[0])}</a></div></div>`
+      : toggle.checked?'Aguardando a reinicialização para mostrar o endereço desta máquina.':'Ative para liberar o acesso somente na rede local.';
+  }catch{details.textContent='Não foi possível verificar o endereço desta instalação.';}
+}
+
+async function loadConfiguration(){
+  await loadMobileAccess();
+}
+
+$('#mobile-access-toggle').addEventListener('change',async(event)=>{
+  const toggle=event.currentTarget;
+  if(!window.electronAPI?.setMobileAccess){toggle.checked=!toggle.checked;toast('Esta opção está disponível no aplicativo instalado para Windows.',true);return;}
+  toggle.disabled=true;
+  try{await window.electronAPI.setMobileAccess(toggle.checked);}
+  catch(error){toggle.checked=!toggle.checked;toggle.disabled=false;toast(error.message||'Não foi possível alterar o acesso móvel.',true);}
+});
+async function persistDarkMode(value){
+  try{if(window.electronAPI)window.electronAPI.setDarkMode(value);}catch{}
+  try{await api('/appearance',{method:'POST',body:JSON.stringify({darkMode:value})});}catch{}
+}
+function changeDarkMode(value){
+  document.documentElement.classList.add('theme-changing');
+  applyDarkMode(value);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>document.documentElement.classList.remove('theme-changing')));
+  persistDarkMode(value);
+}
+applyDarkMode(localStorage.getItem('cc_dark')==='true');
+markStatusMessages();
+try{if(window.electronAPI)applyDarkMode(window.electronAPI.getDarkMode());}catch{}
+api('/appearance').then((prefs)=>{if(prefs.configured)applyDarkMode(prefs.darkMode);}).catch(()=>{});
+themeButton.addEventListener('click',()=>changeDarkMode(!document.documentElement.classList.contains('dark')));
 
 if(token&&usuario) startApp();
 

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { execFileSync } = require('child_process');
 const bcrypt = require('bcryptjs');
 const logger = require('./lib/logger');
 const { recordQuery } = require('./lib/metrics');
@@ -10,9 +11,25 @@ let instanceIdentity;
 let restoreApplied = null;
 let localLockPath = null;
 
-function processIsAlive(pid) {
+function processExecutable(pid) {
+  try {
+    if (pid === process.pid) return path.basename(process.execPath).toLowerCase();
+    const output = process.platform === 'win32'
+      ? execFileSync('tasklist.exe', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], { encoding:'utf8', windowsHide:true, timeout:2000 })
+      : execFileSync('ps', ['-o', 'comm=', '-p', String(pid)], { encoding:'utf8', timeout:2000 });
+    const value = process.platform === 'win32' ? output.match(/^"([^"]+)"/)?.[1] : output.trim();
+    return value ? path.basename(value).toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+function processIsAlive(pid, owner) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
-  try { process.kill(pid, 0); return true; } catch { return false; }
+  try { process.kill(pid, 0); } catch { return false; }
+  const expected = path.basename(owner?.executable || process.execPath).toLowerCase();
+  const actual = processExecutable(pid);
+  return !actual || actual === expected;
 }
 
 function acquireLocalDatabaseLock(dataDir) {
@@ -20,12 +37,17 @@ function acquireLocalDatabaseLock(dataDir) {
   if (fs.existsSync(lockPath)) {
     let owner = null;
     try { owner = JSON.parse(fs.readFileSync(lockPath, 'utf8')); } catch {}
-    if (processIsAlive(Number(owner?.pid))) {
+    if (processIsAlive(Number(owner?.pid), owner)) {
       throw new Error('O banco local já está em uso por outro processo do Centro de Custos.');
     }
     fs.unlinkSync(lockPath);
   }
-  fs.writeFileSync(lockPath, JSON.stringify({ pid:process.pid, startedAt:new Date().toISOString() }), { flag:'wx' });
+  fs.writeFileSync(lockPath, JSON.stringify({
+    pid:process.pid,
+    executable:path.basename(process.execPath),
+    processStartedAt:new Date(Date.now() - process.uptime() * 1000).toISOString(),
+    startedAt:new Date().toISOString(),
+  }), { flag:'wx' });
   localLockPath = lockPath;
   const internalLock = path.join(dataDir, 'postmaster.pid');
   if (fs.existsSync(internalLock)) fs.unlinkSync(internalLock);
