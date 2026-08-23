@@ -2,9 +2,17 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+
+test('JavaScript da PWA possui sintaxe valida', () => {
+  for (const file of ['cloudflare-sync-worker/public/app-v2.js', 'cloudflare-sync-worker/public/sw.js']) {
+    const result = spawnSync(process.execPath, ['--check', file], { cwd: root, encoding: 'utf8' });
+    assert.equal(result.status, 0, `${file}: ${result.stderr || result.stdout}`);
+  }
+});
 
 test('manifesto da PWA usa modo standalone', () => {
   const manifest = JSON.parse(read('cloudflare-sync-worker/public/manifest.webmanifest'));
