@@ -699,7 +699,7 @@ async function loadMobileAccess(){
     const version=await api('/version');
     const urls=Array.isArray(version.mobileUrls)?version.mobileUrls:[];
     details.innerHTML=urls.length
-      ? `<strong>Endereço para informar no Android:</strong>${urls.map((url)=>`<a href="${esc(url)}">${esc(url)}</a>`).join('')}`
+      ? `<div class="mobile-access-qr"><img src="${API}/mobile-qr" alt="QR Code para abrir o Centro de Custos no celular" width="240" height="240"><div><strong>Escaneie com a câmera do celular</strong><p>O navegador abrirá a tela de login.</p><a href="${esc(urls[0])}" target="_blank" rel="noopener">${esc(urls[0])}</a></div></div>`
       : toggle.checked?'Aguardando a reinicialização para mostrar o endereço desta máquina.':'Ative para liberar o acesso somente na rede local.';
   }catch{details.textContent='Não foi possível verificar o endereço desta instalação.';}
 }

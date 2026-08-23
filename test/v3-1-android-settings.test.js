@@ -25,14 +25,17 @@ test('acesso Android exige ativacao no Windows e restringe HTTP a rede privada',
   assert.match(desktop, /mobileAccess === true \? '0\.0\.0\.0' : '127\.0\.0\.1'/);
   assert.match(preload, /setMobileAccess/);
   assert.match(server, /mobileUrls/);
+  assert.match(server, /QRCode\.toString/);
+  assert.match(desktop, /New-NetFirewallRule/);
+  assert.match(desktop, /-Profile Any -RemoteAddress LocalSubnet/);
   assert.match(android, /scheme\.equals\("https"\)/);
   assert.match(android, /isPrivateHost\(host\)/);
   assert.match(android, /setMixedContentMode\(WebSettings\.MIXED_CONTENT_NEVER_ALLOW\)/);
 });
 
-test('workflow RC10 publica instalador Windows e APK Android', () => {
-  const workflow = read('.github/workflows/publish-v3-1-rc10.yml');
+test('workflow RC11 publica instalador Windows e APK Android', () => {
+  const workflow = read('.github/workflows/publish-v3-1-rc11.yml');
   assert.match(workflow, /assembleDebug/);
-  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc\.10\.apk/);
+  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc\.11\.apk/);
   assert.match(workflow, /dist\/\*\.apk/);
 });

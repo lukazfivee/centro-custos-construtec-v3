@@ -2,6 +2,7 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, ipcMain, clipboard,
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { execFile } = require('child_process');
 
 let mainWindow = null;
 let tray = null;
@@ -14,6 +15,7 @@ let firstAccessFilePath = null;
 let shouldPersistBootstrap = false;
 
 const PORT = 3333;
+const FIREWALL_RULE = 'Centro de Custos Construtec - Rede Local';
 const SERVER_URL = `http://127.0.0.1:${PORT}`;
 const TRAY_ICON = path.join(__dirname, 'icon.png');
 const PRELOAD = path.join(__dirname, 'preload.js');
@@ -229,6 +231,23 @@ if (!gotLock) {
     fs.writeFileSync(getPrefsPath(), JSON.stringify(prefs, null, 2), 'utf8');
   }
 
+  function configureLocalFirewall(enabled) {
+    if (process.platform !== 'win32') return Promise.resolve();
+    const script = [
+      "$ErrorActionPreference='Stop'",
+      `Get-NetFirewallRule -DisplayName '${FIREWALL_RULE}' -ErrorAction SilentlyContinue | Remove-NetFirewallRule`,
+      enabled ? `New-NetFirewallRule -DisplayName '${FIREWALL_RULE}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${PORT} -Profile Any -RemoteAddress LocalSubnet | Out-Null` : '',
+    ].filter(Boolean).join(';');
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    const elevate = `$p=Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ${encoded}' -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode`;
+    return new Promise((resolve, reject) => {
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', elevate], (error) => {
+        if (error) reject(new Error('A permissão do Firewall do Windows não foi concedida. Tente novamente e aceite a confirmação do sistema.'));
+        else resolve();
+      });
+    });
+  }
+
   function initIPC() {
     ipcMain.on('get-dark-mode', (event) => {
       const prefs = loadPrefs();
@@ -244,8 +263,10 @@ if (!gotLock) {
       event.returnValue = loadPrefs().mobileAccess === true;
     });
     ipcMain.handle('set-mobile-access', async (_event, value) => {
+      const enabled = value === true;
+      await configureLocalFirewall(enabled);
       const prefs = loadPrefs();
-      prefs.mobileAccess = value === true;
+      prefs.mobileAccess = enabled;
       savePrefs(prefs);
       setTimeout(() => { app.relaunch(); app.exit(0); }, 200);
       return true;

@@ -5,6 +5,7 @@ const express = require('express');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const QRCode = require('qrcode');
 const { initializeDatabase, closeDatabase, getDb, getInstanceIdentity } = require('./db');
 const { observability } = require('./middleware/observability');
 const logger = require('./lib/logger');
@@ -46,6 +47,16 @@ function createApp() {
     const port = Number(process.env.PORT || 3333);
     const mobileUrls = process.env.HOST === '0.0.0.0' ? localIPv4s().map((ip) => `http://${ip}:${port}`) : [];
     res.json({ version:pkg.version, updateUrl:process.env.UPDATE_URL || '', githubRepo:process.env.GITHUB_REPO || '', mobileUrls });
+  });
+  app.get('/api/mobile-qr', async (req, res, next) => {
+    try {
+      const ip = process.env.HOST === '0.0.0.0' ? localIPv4s()[0] : null;
+      if (!ip) return res.status(404).json({ erro:'Ative o acesso pelo celular para gerar o QR Code.' });
+      const url = `http://${ip}:${Number(process.env.PORT || 3333)}`;
+      const svg = await QRCode.toString(url, { type:'svg', width:240, margin:1, color:{ dark:'#021D26', light:'#FFFFFF' } });
+      res.setHeader('Cache-Control', 'no-store');
+      return res.type('svg').send(svg);
+    } catch (error) { return next(error); }
   });
 
   app.use('/api/auth', require('./routes/auth'));
@@ -123,7 +134,8 @@ function createApp() {
 }
 
 function localIPv4s() {
-  return Object.values(os.networkInterfaces()).flat().filter((item) => item && item.family === 'IPv4' && !item.internal).map((item) => item.address);
+  const privateIp = (address) => /^10\./.test(address) || /^192\.168\./.test(address) || /^172\.(1[6-9]|2\d|3[01])\./.test(address);
+  return Object.values(os.networkInterfaces()).flat().filter((item) => item && item.family === 'IPv4' && !item.internal && privateIp(item.address)).map((item) => item.address).sort((a, b) => Number(b.startsWith('192.168.')) - Number(a.startsWith('192.168.')));
 }
 
 function positiveEnv(name, fallback) {

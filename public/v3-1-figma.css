@@ -224,6 +224,10 @@ html.dark .settings-subsection h3{color:var(--ink)}
 .switch input:focus-visible+span{box-shadow:var(--ui-focus)}
 .mobile-access-details{padding:14px 16px;border-radius:10px;background:var(--ui-surface-soft);line-height:1.6;font-size:12px}
 .mobile-access-details a{display:block;color:#176f8e;font-weight:700;overflow-wrap:anywhere}
+.mobile-access-qr{display:grid;grid-template-columns:160px minmax(0,1fr);align-items:center;gap:24px}
+.mobile-access-qr img{display:block;width:160px;height:160px;padding:8px;border-radius:12px;background:#fff}
+.mobile-access-qr strong{display:block;font-size:15px;color:var(--ink)}
+.mobile-access-qr p{margin:4px 0 10px;color:var(--muted)}
 .settings-warning{margin:14px 0 0;padding-left:14px;border-left:1px solid var(--orange);color:var(--muted);font-size:12px;line-height:1.55}
 .update-track{height:8px;overflow:hidden;border-radius:8px;background:var(--ui-surface-soft);margin-top:14px}
 #update-bar{height:100%;width:0;background:var(--orange)}
@@ -404,6 +408,9 @@ html.dark .settings-subsection h3{color:var(--ink)}
   .settings-actions{align-items:stretch}
   .settings-actions>*{width:100%!important}
   .mobile-access-control{align-items:flex-start}
+  .mobile-access-qr{grid-template-columns:1fr;text-align:center}
+  .mobile-access-qr img{width:min(240px,100%);height:auto;margin:auto}
+  .mobile-access-qr a{font-size:14px}
 }
 
 @media(hover:none){

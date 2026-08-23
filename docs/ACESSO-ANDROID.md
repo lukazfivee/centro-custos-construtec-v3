@@ -4,11 +4,13 @@ O aplicativo Android é um cliente do Centro de Custos instalado no Windows. O b
 
 ## Na mesma rede Wi-Fi
 
-1. Instale e abra a versão RC10 no computador.
+1. Instale e abra a versão RC11 no computador.
 2. Entre como administrador e abra **Configurações > Acesso pelo celular**.
-3. Ative **Permitir acesso na rede local** e aguarde a reinicialização.
-4. Anote o endereço exibido, por exemplo `http://192.168.1.10:3333`.
-5. Instale o APK no Android, informe esse endereço e toque em **Conectar**.
+3. Ative **Permitir acesso na rede local**, aceite a confirmação do Firewall do Windows e aguarde a reinicialização.
+4. No celular conectado ao mesmo Wi-Fi, abra a câmera e escaneie o QR Code exibido.
+5. Entre normalmente na tela de login que abrir no navegador.
+
+Também é possível instalar o APK Android e informar o endereço exibido abaixo do QR Code.
 
 O computador precisa permanecer ligado e conectado à mesma rede. Use esse modo somente em uma rede confiável.
 
