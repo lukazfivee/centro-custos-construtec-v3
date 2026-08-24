@@ -4,7 +4,7 @@ O aplicativo Android é um cliente do Centro de Custos instalado no Windows. O b
 
 ## Na mesma rede Wi-Fi
 
-1. Instale e abra a versão RC11 no computador.
+1. Instale e abra a versão RC14 no computador.
 2. Entre como administrador e abra **Configurações > Acesso pelo celular**.
 3. Ative **Permitir acesso na rede local**, aceite a confirmação do Firewall do Windows e aguarde a reinicialização.
 4. No celular conectado ao mesmo Wi-Fi, abra a câmera e escaneie o QR Code exibido.
