@@ -25,6 +25,7 @@ test('acesso Android exige ativacao no Windows e restringe HTTP a rede privada',
   assert.match(desktop, /mobileAccess === true \? '0\.0\.0\.0' : '127\.0\.0\.1'/);
   assert.match(preload, /setMobileAccess/);
   assert.match(server, /mobileUrls/);
+  assert.match(server, /mobileAppUrl/);
   assert.match(server, /QRCode\.toString/);
   assert.match(desktop, /New-NetFirewallRule/);
   assert.match(desktop, /-Profile Any -RemoteAddress LocalSubnet/);
@@ -33,12 +34,23 @@ test('acesso Android exige ativacao no Windows e restringe HTTP a rede privada',
   assert.match(android, /setMixedContentMode\(WebSettings\.MIXED_CONTENT_NEVER_ALLOW\)/);
 });
 
-test('workflow RC14 publica instalador Windows e APK Android', () => {
+test('QR Code do desktop abre diretamente a versao mobile HTTPS', () => {
+  const { resolveMobileAppUrl } = require('../server');
+  const server = read('server.js');
+  const app = read('public/app.js');
+  const expected = 'https://centro-custos-api.construtec-reports.workers.dev';
+  assert.equal(resolveMobileAppUrl(`${expected}/`), expected);
+  assert.equal(resolveMobileAppUrl('http://192.168.0.13:3333'), '');
+  assert.match(server, /const url = resolveMobileAppUrl\(\)/);
+  assert.match(app, /version\.mobileAppUrl/);
+});
+
+test('workflow RC15 publica instalador Windows e APK Android', () => {
   const workflow = read('.github/workflows/publish-v3-1.yml');
   const androidBuild = read('android/app/build.gradle');
   assert.match(workflow, /assembleDebug/);
-  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc\.14\.apk/);
+  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc\.15\.apk/);
   assert.match(workflow, /dist\/\*\.apk/);
-  assert.match(androidBuild, /versionCode 31014/);
-  assert.match(androidBuild, /versionName '3\.1\.0-rc\.14'/);
+  assert.match(androidBuild, /versionCode 31015/);
+  assert.match(androidBuild, /versionName '3\.1\.0-rc\.15'/);
 });

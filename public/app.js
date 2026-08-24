@@ -657,9 +657,13 @@ async function loadMobileAccess(){
   try{
     const version=await api('/version');
     const urls=Array.isArray(version.mobileUrls)?version.mobileUrls:[];
-    details.innerHTML=urls.length
-      ? `<div class="mobile-access-qr"><img src="${API}/mobile-qr" alt="QR Code para abrir o Centro de Custos no celular" width="240" height="240"><div><strong>Escaneie com a câmera do celular</strong><p>O navegador abrirá a tela de login.</p><a href="${esc(urls[0])}" target="_blank" rel="noopener">${esc(urls[0])}</a></div></div>`
-      : toggle.checked?'Aguardando a reinicialização para mostrar o endereço desta máquina.':'Ative para liberar o acesso somente na rede local.';
+    const mobileAppUrl=String(version.mobileAppUrl||'').trim();
+    const localClient=urls.length
+      ? `<div class="mobile-access-local"><strong>Cliente conectado a este computador</strong><p>Use este endereço no APK Android:</p><a href="${esc(urls[0])}" target="_blank" rel="noopener">${esc(urls[0])}</a></div>`
+      : '';
+    details.innerHTML=mobileAppUrl
+      ? `<div class="mobile-access-qr"><img src="${API}/mobile-qr" alt="QR Code para abrir a versão mobile do Centro de Custos" width="240" height="240"><div><strong>Abra a versão mobile</strong><p>Escaneie com a câmera do celular para acessar o sistema seguro em HTTPS.</p><a href="${esc(mobileAppUrl)}" target="_blank" rel="noopener">${esc(mobileAppUrl)}</a></div></div>${localClient}`
+      : 'A versão mobile não está configurada nesta instalação.';
   }catch{details.textContent='Não foi possível verificar o endereço desta instalação.';}
 }
 
