@@ -150,3 +150,8 @@ html.dark :focus-visible{border:3px solid var(--orange)!important;outline:2px so
 html.dark button:focus-visible,html.dark input:focus-visible,html.dark select:focus-visible,html.dark textarea:focus-visible{border-color:var(--orange)!important;box-shadow:0 0 0 4px rgba(50,169,205,.3)}
 html.dark .nav-item:focus-visible{background:var(--orange);color:white}
 html.dark .nav-item:focus-visible span{color:white}
+
+/* Acesso pelo celular */
+.mobile-access-local{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.mobile-access-local strong{display:block;color:var(--ink);font-size:13px}
+.mobile-access-local p{margin:3px 0 6px;color:var(--muted)}

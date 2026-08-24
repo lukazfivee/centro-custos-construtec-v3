@@ -27,7 +27,7 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
       - name: Definir versao do pre-lancamento
-        run: npm version 3.1.0-rc.14 --no-git-tag-version
+        run: npm version 3.1.0-rc.15 --no-git-tag-version
       - name: Validar aplicacao
         run: npm run verify
       - name: Gerar instalador Windows
@@ -44,23 +44,23 @@ jobs:
       - name: Gerar APK Android
         run: |
           gradle -p android assembleDebug --no-daemon
-          Copy-Item android/app/build/outputs/apk/debug/app-debug.apk dist/Centro-de-Custos-Construtec-Android-3.1.0-rc.14.apk
+          Copy-Item android/app/build/outputs/apk/debug/app-debug.apk dist/Centro-de-Custos-Construtec-Android-3.1.0-rc.15.apk
       - name: Publicar pre-lancamento no GitHub
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.0-rc.14
-          name: Centro de Custos Construtec V3.1.0 RC14
+          tag_name: v3.1.0-rc.15
+          name: Centro de Custos Construtec V3.1.0 RC15
           target_commitish: ${{ github.sha }}
           prerelease: true
           make_latest: false
           body: |
-            Pre-lancamento RC14 da V3.1 para validacao interna.
+            Pre-lancamento RC15 da V3.1 para validacao interna.
 
             Melhorias desta versao:
-            - alinha a versao interna do aplicativo Android com o nome e a tag da publicacao;
-            - corrige o logout indevido ao adicionar ou remover foto de perfil quando apenas a sessao corporativa de sincronizacao expirou;
-            - integra a V3.1 multiusuario e sincronizacao Cloudflare na branch principal;
-            - inclui os ajustes de login, reports, cobrancas, Android e interface acumulados nas RCs anteriores.
+            - corrige o QR Code do aplicativo Windows para abrir diretamente a versao mobile publica em HTTPS;
+            - separa claramente o acesso mobile pela internet do endereco local usado pelo APK Android;
+            - permite configurar o destino do QR Code pela variavel MOBILE_APP_URL;
+            - inclui teste automatizado que rejeita destinos HTTP no QR Code mobile.
           files: |
             dist/*.exe
             dist/*.apk

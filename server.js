@@ -1,6 +1,7 @@
 require('dotenv').config();
 if (process.env.REPORT_API_URL === undefined) process.env.REPORT_API_URL = 'https://centro-custos-reports.construtec-reports.workers.dev';
 if (!process.env.SYNC_API_URL) process.env.SYNC_API_URL = 'https://centro-custos-api.construtec-reports.workers.dev';
+if (process.env.MOBILE_APP_URL === undefined) process.env.MOBILE_APP_URL = 'https://centro-custos-api.construtec-reports.workers.dev';
 const express = require('express');
 const os = require('os');
 const path = require('path');
@@ -46,13 +47,12 @@ function createApp() {
     const pkg = require('./package.json');
     const port = Number(process.env.PORT || 3333);
     const mobileUrls = process.env.HOST === '0.0.0.0' ? localIPv4s().map((ip) => `http://${ip}:${port}`) : [];
-    res.json({ version:pkg.version, updateUrl:process.env.UPDATE_URL || '', githubRepo:process.env.GITHUB_REPO || '', mobileUrls });
+    res.json({ version:pkg.version, updateUrl:process.env.UPDATE_URL || '', githubRepo:process.env.GITHUB_REPO || '', mobileAppUrl:resolveMobileAppUrl(), mobileUrls });
   });
   app.get('/api/mobile-qr', async (req, res, next) => {
     try {
-      const ip = process.env.HOST === '0.0.0.0' ? localIPv4s()[0] : null;
-      if (!ip) return res.status(404).json({ erro:'Ative o acesso pelo celular para gerar o QR Code.' });
-      const url = `http://${ip}:${Number(process.env.PORT || 3333)}`;
+      const url = resolveMobileAppUrl();
+      if (!url) return res.status(503).json({ erro:'A versão mobile HTTPS não está configurada.' });
       const svg = await QRCode.toString(url, { type:'svg', width:240, margin:1, color:{ dark:'#021D26', light:'#FFFFFF' } });
       res.setHeader('Cache-Control', 'no-store');
       return res.type('svg').send(svg);
@@ -138,6 +138,17 @@ function localIPv4s() {
   return Object.values(os.networkInterfaces()).flat().filter((item) => item && item.family === 'IPv4' && !item.internal && privateIp(item.address)).map((item) => item.address).sort((a, b) => Number(b.startsWith('192.168.')) - Number(a.startsWith('192.168.')));
 }
 
+function resolveMobileAppUrl(value = process.env.MOBILE_APP_URL) {
+  try {
+    const url = new URL(String(value || '').trim());
+    if (url.protocol !== 'https:') return '';
+    url.hash = '';
+    return url.href.replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+}
+
 function positiveEnv(name, fallback) {
   const value = Number(process.env[name]);
   return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -210,4 +221,4 @@ async function start() {
 if (require.main === module) {
   start().catch((error) => { logger.error('application_start_failed', { error }); console.error(`\nFalha ao iniciar: ${error.message}`); process.exit(1); });
 }
-module.exports = { createApp, start };
+module.exports = { createApp, start, resolveMobileAppUrl };
