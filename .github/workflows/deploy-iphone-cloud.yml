@@ -53,6 +53,7 @@ jobs:
         run: sed "s/__D1_DATABASE_ID__/$D1_DATABASE_ID/g" wrangler.toml.example > wrangler.toml
       - name: Validar JavaScript
         run: |
+          node --check public/runtime-compat.js
           node --check public/app-v2.js
           node --check public/sw.js
           node --check src/index.js
