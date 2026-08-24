@@ -2,17 +2,17 @@
   "id": "/",
   "name": "Centro de Custos Construtec",
   "short_name": "Centro de Custos",
-  "description": "Gestão financeira de obras e centros de custo da Construtec.",
+  "description": "Gestão financeira, cobranças e centros de custo da Construtec.",
   "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#f3f7f8",
   "theme_color": "#021d26",
   "categories": ["business", "finance", "productivity"],
   "icons": [
-    {"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+    {"src": "/construtec-favicon.png", "sizes": "any", "type": "image/png", "purpose": "any maskable"}
   ]
 }
