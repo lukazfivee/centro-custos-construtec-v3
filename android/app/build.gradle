@@ -8,7 +8,7 @@ android {
         applicationId 'br.com.rcconstrutec.centrocustos'
         minSdk 26
         targetSdk 35
-        versionCode 31012
-        versionName '3.1.0-rc.12'
+        versionCode 31014
+        versionName '3.1.0-rc.14'
     }
 }

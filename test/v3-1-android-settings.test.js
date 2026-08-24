@@ -33,9 +33,12 @@ test('acesso Android exige ativacao no Windows e restringe HTTP a rede privada',
   assert.match(android, /setMixedContentMode\(WebSettings\.MIXED_CONTENT_NEVER_ALLOW\)/);
 });
 
-test('workflow RC13 publica instalador Windows e APK Android', () => {
+test('workflow RC14 publica instalador Windows e APK Android', () => {
   const workflow = read('.github/workflows/publish-v3-1.yml');
+  const androidBuild = read('android/app/build.gradle');
   assert.match(workflow, /assembleDebug/);
-  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc\.13\.apk/);
+  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc\.14\.apk/);
   assert.match(workflow, /dist\/\*\.apk/);
+  assert.match(androidBuild, /versionCode 31014/);
+  assert.match(androidBuild, /versionName '3\.1\.0-rc\.14'/);
 });
