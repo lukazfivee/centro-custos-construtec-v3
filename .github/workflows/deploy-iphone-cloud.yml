@@ -9,6 +9,10 @@ on:
       - cloudflare-sync-worker/public/**
       - cloudflare-sync-worker/src/**
       - cloudflare-sync-worker/wrangler.toml.example
+      - cloudflare-report-worker/src/**
+      - cloudflare-report-worker/wrangler.toml
+      - public/assets/construtec-logo.png
+      - public/assets/construtec-favicon.png
       - .github/workflows/deploy-iphone-cloud.yml
 
 permissions:
@@ -16,7 +20,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Validar e publicar no Cloudflare
+    name: Validar e publicar PWA no Cloudflare
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -33,6 +37,13 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
+      - name: Copiar identidade visual oficial
+        shell: bash
+        run: |
+          cp ../public/assets/construtec-logo.png public/construtec-logo.png
+          cp ../public/assets/construtec-favicon.png public/construtec-favicon.png
+          test -s public/construtec-logo.png
+          test -s public/construtec-favicon.png
       - name: Validar segredos de implantacao
         shell: bash
         run: |
@@ -44,8 +55,36 @@ jobs:
         run: sed "s/__D1_DATABASE_ID__/$D1_DATABASE_ID/g" wrangler.toml.example > wrangler.toml
       - name: Validar JavaScript
         run: |
+          node --check public/runtime-compat.js
           node --check public/app-v2.js
           node --check public/sw.js
           node --check src/index.js
       - name: Publicar Worker, API e PWA
+        run: npx --yes wrangler@4.34.0 deploy --config=./wrangler.toml
+
+  deploy-reports:
+    name: Validar e publicar suporte no Cloudflare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: cloudflare-report-worker
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v6
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Validar segredos de implantacao
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Falta CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+      - name: Validar JavaScript
+        run: node --check src/index.js
+      - name: Publicar Worker de reports
         run: npx --yes wrangler@4.34.0 deploy --config=./wrangler.toml
