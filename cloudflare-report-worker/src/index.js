@@ -1,9 +1,17 @@
+const CORS_HEADERS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET,POST,OPTIONS',
+  'access-control-allow-headers': 'content-type,x-report-key',
+  'access-control-max-age': '86400',
+};
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
+      ...CORS_HEADERS,
     },
   });
 }
@@ -190,6 +198,9 @@ async function upsertAndSend(env, body, ip) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
     if (request.method === 'GET' && url.pathname === '/health') {
       return json({
         ok: true,
