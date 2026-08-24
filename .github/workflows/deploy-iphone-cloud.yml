@@ -8,6 +8,7 @@ on:
     paths:
       - cloudflare-sync-worker/public/**
       - cloudflare-sync-worker/src/**
+      - cloudflare-sync-worker/migrations/**
       - cloudflare-sync-worker/wrangler.toml.example
       - cloudflare-report-worker/src/**
       - cloudflare-report-worker/wrangler.toml
@@ -53,6 +54,16 @@ jobs:
       - name: Gerar configuracao do Wrangler
         shell: bash
         run: sed "s/__D1_DATABASE_ID__/$D1_DATABASE_ID/g" wrangler.toml.example > wrangler.toml
+      - name: Garantir colunas de foto no D1
+        shell: bash
+        run: |
+          schema="$(npx --yes wrangler@4.34.0 d1 execute centro-custos-producao --remote --command='PRAGMA table_info(cloud_users);' --json --config=./wrangler.toml)"
+          if ! printf '%s' "$schema" | grep -q 'profile_photo_base64'; then
+            npx --yes wrangler@4.34.0 d1 execute centro-custos-producao --remote --command='ALTER TABLE cloud_users ADD COLUMN profile_photo_base64 TEXT;' --config=./wrangler.toml
+          fi
+          if ! printf '%s' "$schema" | grep -q 'profile_photo_mime'; then
+            npx --yes wrangler@4.34.0 d1 execute centro-custos-producao --remote --command='ALTER TABLE cloud_users ADD COLUMN profile_photo_mime TEXT;' --config=./wrangler.toml
+          fi
       - name: Validar JavaScript
         run: |
           node --check public/runtime-compat.js
