@@ -9,6 +9,8 @@ on:
       - cloudflare-sync-worker/public/**
       - cloudflare-sync-worker/src/**
       - cloudflare-sync-worker/wrangler.toml.example
+      - public/assets/construtec-logo.png
+      - public/assets/construtec-favicon.png
       - .github/workflows/deploy-iphone-cloud.yml
 
 permissions:
@@ -33,6 +35,13 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
+      - name: Copiar identidade visual oficial
+        shell: bash
+        run: |
+          cp ../public/assets/construtec-logo.png public/construtec-logo.png
+          cp ../public/assets/construtec-favicon.png public/construtec-favicon.png
+          test -s public/construtec-logo.png
+          test -s public/construtec-favicon.png
       - name: Validar segredos de implantacao
         shell: bash
         run: |
