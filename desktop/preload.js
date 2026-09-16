@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setDarkMode: (value) => ipcRenderer.sendSync('set-dark-mode', value),
   getMobileAccess: () => ipcRenderer.sendSync('get-mobile-access'),
   setMobileAccess: (value) => ipcRenderer.invoke('set-mobile-access', value),
+  openWebmail: () => ipcRenderer.invoke('open-webmail'),
 });

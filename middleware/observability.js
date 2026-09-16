@@ -14,7 +14,7 @@ function observability(req, res, next) {
   req.requestId = requestId;
   res.setHeader('X-Request-Id', requestId);
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:* http://127.0.0.1:*");
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');

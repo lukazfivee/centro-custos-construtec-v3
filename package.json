@@ -2,8 +2,8 @@
   "name": "centro-de-custos",
   "version": "3.0.0",
   "private": true,
-  "description": "Centro de Custos Construtec V3 - gestao financeira offline com sincronizacao inteligente",
-  "main": "desktop/main.js",
+  "description": "Suíte desktop integrada da Construtec Engenharia",
+  "main": "desktop/main-unified.js",
   "engines": {
     "node": ">=20"
   },
@@ -15,11 +15,14 @@
     "test:ci": "node --test --test-reporter=spec",
     "test:coverage": "node --test --experimental-test-coverage",
     "verify": "npm run check && npm run test:ci",
-    "electron": "electron desktop/main.js",
+    "electron": "electron desktop/main-unified.js",
     "build": "electron-builder --win --publish never && node scripts/fix-latest-yml.js",
     "build:portable": "electron-builder --win portable --publish never",
     "build:dir": "electron-builder --win --dir --publish never",
-    "fix-yml": "node scripts/fix-latest-yml.js"
+    "fix-yml": "node scripts/fix-latest-yml.js",
+    "suite:prepare": "node scripts/build-suite-modules.js",
+    "preelectron-unified": "npm run suite:prepare",
+    "electron-unified": "electron desktop/main-unified.js"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.2",
@@ -30,15 +33,18 @@
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^9.0.5",
     "pg": "^8.13.1",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
+    "@cloudflare/containers": "^0.3.7",
     "electron": "^41.7.1",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "wrangler": "^4.131.2"
   },
   "build": {
-    "appId": "com.construtec.centro-custos",
-    "productName": "Centro de Custos Construtec",
+    "appId": "com.construtec.suite",
+    "productName": "Suíte Construtec",
     "directories": {
       "output": "dist"
     },
@@ -52,7 +58,10 @@
       "migrations/**/*",
       "public/**/*",
       "desktop/main.js",
+      "desktop/main-unified.js",
+      "desktop/suite-modules.js",
       "desktop/preload.js",
+      "modules/**/*",
       "desktop/icon.png"
     ],
     "asarUnpack": [
@@ -75,18 +84,18 @@
         }
       ],
       "icon": "desktop/icon.png",
-      "artifactName": "Centro-de-Custos-Construtec-${version}-${arch}.${ext}"
+      "artifactName": "Suite-Construtec-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Centro de Custos Construtec",
-      "artifactName": "Centro-de-Custos-Construtec-Setup-${version}-${arch}.${ext}"
+      "shortcutName": "Suíte Construtec",
+      "artifactName": "Suite-Construtec-Setup-${version}-${arch}.${ext}"
     },
     "portable": {
-      "artifactName": "Centro-de-Custos-Construtec-Portable-${version}-${arch}.${ext}"
+      "artifactName": "Suite-Construtec-Portable-${version}-${arch}.${ext}"
     },
     "publish": {
       "provider": "github",
