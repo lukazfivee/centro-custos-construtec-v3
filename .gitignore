@@ -3,6 +3,17 @@ node_modules/
 .env
 dados/
 dist/
+desktop.ini
+.serena/
+.impeccable/
+.wrangler/
+graphify-out/
+run.bat
+start-electron.vbs
+start-hidden.vbs
+start-3334.cjs
+modules/orcamentos/
+modules/orcamentos-api/
 *.log
 servidor-erro.log
 electron-stdout.txt
