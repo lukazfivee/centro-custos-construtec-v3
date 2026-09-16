@@ -20,7 +20,7 @@ router.post('/importar', exigirPapel('admin','gestor'), asyncRoute(async (req, r
     filename:req.body.nomeArquivo,
     user:req.usuario,
   });
-  res.json(result);
+  res.status(result.async ? 202 : 200).json(result);
 }));
 
 router.get('/historico', asyncRoute(async (req, res) => res.json(await listImports())));

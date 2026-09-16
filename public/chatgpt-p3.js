@@ -44,7 +44,15 @@
     importBtn.disabled = true;
     importBtn.textContent = 'Importando…';
     try {
-      const result = await api('/sincronizacao-inteligente/importar', { method:'POST', body:JSON.stringify({ nomeArquivo:selected.name, conteudo:await selected.text() }) });
+      let result = await api('/sincronizacao-inteligente/importar', { method:'POST', body:JSON.stringify({ nomeArquivo:selected.name, conteudo:await selected.text() }) });
+      if (result.async) {
+        importBtn.textContent = 'Processando em segundo plano…';
+        panel.querySelector('#smart-sync-result').innerHTML = `<strong>Pacote grande (${result.itens} itens).</strong> Processando em segundo plano, isso pode levar alguns minutos…`;
+        const job = await pollJob(result.jobId, {
+          onProgress: (j) => { if (j.status === 'running') importBtn.textContent = 'Processando em segundo plano…'; },
+        });
+        result = job.resultado;
+      }
       const r = result.resumo || {};
       panel.querySelector('#smart-sync-result').innerHTML = result.duplicado
         ? '<strong>Este pacote já havia sido importado. Nenhuma duplicidade foi criada.</strong>'

@@ -3,6 +3,7 @@ const path=require('path');
 const crypto=require('crypto');
 const {getDb,getInstanceIdentity}=require('../db');
 const logger=require('../lib/logger');
+const jobs=require('../lib/jobs');
 let timer=null;
 
 function root(){return path.resolve(process.env.RESTORE_ROOT_DIR||path.join(__dirname,'..','dados'));}
@@ -45,6 +46,11 @@ function enforceRetention(limit){
   const files=fs.readdirSync(dir()).filter(n=>n.endsWith('.tar.gz')).map(name=>({name,path:path.join(dir(),name),mtime:fs.statSync(path.join(dir(),name)).mtimeMs})).sort((a,b)=>b.mtime-a.mtime);
   for(const old of files.slice(Math.max(3,limit))){try{fs.unlinkSync(old.path);if(fs.existsSync(`${old.path}.sha256`))fs.unlinkSync(`${old.path}.sha256`);}catch{}}
 }
+
+// Disparo manual ("Executar agora") passa pelo mesmo mecanismo de job em
+// segundo plano do ciclo automatico, em vez de bloquear o request fazendo
+// dump+hash+escrita em disco de forma sincrona (ver routes/backupAuto.js).
+jobs.registerHandler('manual-backup', async () => runAutoBackup(true));
 
 function startAutoBackup(){
   if(timer)return;

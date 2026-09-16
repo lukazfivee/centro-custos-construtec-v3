@@ -4,7 +4,8 @@ const express=require('express');
 const {getDb}=require('../db');
 const {autenticar,exigirPapel}=require('../middleware/auth');
 const {asyncRoute,httpError}=require('../lib/http');
-const {runAutoBackup,autoBackupDir}=require('../services/autoBackup');
+const {autoBackupDir}=require('../services/autoBackup');
+const jobs=require('../lib/jobs');
 const router=express.Router();
 router.use(autenticar,exigirPapel('admin'));
 
@@ -23,5 +24,8 @@ router.put('/',asyncRoute(async(req,res)=>{
   res.json({ok:true});
 }));
 
-router.post('/executar',asyncRoute(async(req,res)=>res.json(await runAutoBackup(true))));
+router.post('/executar',asyncRoute(async(req,res)=>{
+  const {job}=await jobs.submitJob({type:'manual-backup',createdBy:req.usuario.id,timeoutMs:5*60*1000});
+  res.status(202).json({ok:true,async:true,jobId:job.id,status:job.status});
+}));
 module.exports=router;

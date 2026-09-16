@@ -6,6 +6,7 @@ const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 const { deliverReport, flushPendingReports, refreshAcceptedReports, platformLabel } = require('../services/reportDelivery');
+const logger = require('../lib/logger');
 
 router.use(autenticar);
 
@@ -109,16 +110,20 @@ router.post('/', asyncRoute(async (req, res) => {
     user: req.usuario,
   });
 
-  const delivery = await deliverReport(report.id);
-  const refreshed = (await db.query(`${reportSelect()} WHERE b.id = $1`, [report.id])).rows[0];
+  // Não bloqueia a resposta esperando a entrega central: o report já nasce
+  // rastreável (delivery_status='pending') e o próprio services/reportDelivery.js
+  // tem um ciclo de retry em segundo plano (ver startReportDelivery) que
+  // processa a fila; GET /delivery/status e POST /:id/retry permitem
+  // consultar/forçar o andamento depois.
+  deliverReport(report.id).catch((error) => logger.warn('bug_report_delivery_dispatch_failed', { reportId: report.id, error }));
 
   res.status(201).json({
-    ...refreshed,
+    ...report,
     delivery: {
-      ok: delivery.ok,
-      status: refreshed.delivery_status,
-      centralReportId: refreshed.central_report_id || null,
-      queued: refreshed.delivery_status !== 'delivered',
+      ok: null,
+      status: report.delivery_status,
+      centralReportId: report.central_report_id || null,
+      queued: true,
     },
   });
 }));
