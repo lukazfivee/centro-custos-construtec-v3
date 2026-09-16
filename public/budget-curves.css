@@ -1,0 +1,144 @@
+/* ==========================================================================
+   CURVA S FSICO-FINANCEIRA E PREVISO DE TRMINO (EAC / EVM)
+   Estilizao Tcnica Corporativa Construtec - Zero Emojis (SVG Apenas)
+   ========================================================================== */
+
+.budget-curves-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(7, 25, 38, 0.78);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1050; padding: 16px;
+  animation: curvesFadeIn 0.2s ease-out;
+}
+@keyframes curvesFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.budget-curves-modal {
+  background: #ffffff; color: #0f172a;
+  border-radius: 12px; border: 1px solid #cbd5e1;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  width: 100%; max-width: 1060px; max-height: 92vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: curvesSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+html.dark .budget-curves-modal { background: #0f172a; color: #f8fafc; border-color: #334155; }
+@keyframes curvesSlideUp { from { transform: translateY(16px) scale(0.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .budget-curves-backdrop, .budget-curves-modal { animation: none; }
+}
+
+.budget-curves-header {
+  padding: 16px 22px; border-bottom: 1px solid #e2e8f0;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+html.dark .budget-curves-header { border-bottom-color: #1e293b; }
+
+.curves-header-titles { display: flex; flex-direction: column; gap: 2px; }
+.curves-header-eyebrow {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: #085ce5; display: flex; align-items: center; gap: 6px;
+}
+html.dark .curves-header-eyebrow { color: #01b7f1; }
+.curves-header-title { font-size: 1.15rem; font-weight: 700; margin: 0; color: inherit; }
+.curves-header-sub { font-size: 0.8rem; color: #64748b; }
+html.dark .curves-header-sub { color: #94a3b8; }
+
+.budget-curves-close {
+  background: transparent; border: 1px solid transparent; color: #64748b;
+  width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; line-height: 1; transition: all 0.15s ease;
+}
+.budget-curves-close:hover { background: #f1f5f9; color: #0f172a; }
+html.dark .budget-curves-close:hover { background: #1e293b; color: #ffffff; }
+
+.budget-curves-body {
+  padding: 20px 22px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+/* Grid de KPIs EVM */
+.curves-kpi-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;
+}
+.curves-kpi-card {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 3px;
+}
+html.dark .curves-kpi-card { background: #1e293b; border-color: #334155; }
+.curves-kpi-card.highlight { border-color: rgba(8, 92, 229, 0.4); background: #f0fdf4; }
+html.dark .curves-kpi-card.highlight { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.3); }
+.curves-kpi-card.warning-box { background: #fffbeb; border-color: rgba(245, 158, 11, 0.4); }
+html.dark .curves-kpi-card.warning-box { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); }
+
+.curves-kpi-label {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em; color: #64748b;
+}
+html.dark .curves-kpi-label { color: #94a3b8; }
+.curves-kpi-val { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #0f172a; }
+html.dark .curves-kpi-val { color: #f8fafc; }
+.curves-kpi-val.positive { color: #10b981; }
+.curves-kpi-val.danger { color: #ef4444; }
+.curves-kpi-val.accent { color: #085ce5; }
+html.dark .curves-kpi-val.accent { color: #01b7f1; }
+.curves-kpi-sub { font-size: 0.68rem; color: #64748b; }
+html.dark .curves-kpi-sub { color: #94a3b8; }
+
+/* Grfico Vetorial SVG */
+.curves-chart-card {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 16px; display: flex; flex-direction: column; gap: 12px;
+}
+html.dark .curves-chart-card { background: #132238; border-color: #273b54; }
+
+.curves-chart-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.curves-chart-legend {
+  display: flex; align-items: center; gap: 14px; font-size: 0.76rem; font-weight: 600;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-swatch { width: 12px; height: 4px; border-radius: 2px; }
+.legend-swatch.planned { background: #085ce5; }
+.legend-swatch.realized { background: #10b981; }
+
+.curves-svg-wrapper { width: 100%; height: 280px; position: relative; }
+.curves-svg { width: 100%; height: 100%; overflow: visible; }
+.curve-grid-line { stroke: #e2e8f0; stroke-dasharray: 4, 4; }
+html.dark .curve-grid-line { stroke: rgba(255, 255, 255, 0.08); }
+.curve-axis-text { font-size: 10px; fill: #64748b; font-family: inherit; text-anchor: middle; }
+html.dark .curve-axis-text { fill: #94a3b8; }
+.curve-path-planned { fill: none; stroke: #085ce5; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+.curve-path-realized { fill: none; stroke: #10b981; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.curve-point { fill: #ffffff; stroke-width: 2.2; cursor: pointer; transition: r 0.15s ease; }
+html.dark .curve-point { fill: #0f172a; }
+.curve-point.planned { stroke: #085ce5; }
+.curve-point.realized { stroke: #10b981; }
+.curve-point:hover { r: 6; }
+
+/* Tabela de Evoluo Mensal */
+.curves-table-card { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+html.dark .curves-table-card { border-color: #334155; }
+.curves-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: left; }
+.curves-table th { background: #f1f5f9; padding: 8px 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0; }
+html.dark .curves-table th { background: #1e293b; color: #94a3b8; border-bottom-color: #334155; }
+.curves-table td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-variant-numeric: tabular-nums; }
+html.dark .curves-table td { border-bottom-color: #1e293b; }
+.curves-table tr:hover td { background: rgba(8, 92, 229, 0.04); }
+
+.curves-hypotheses-box {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 12px 16px; font-size: 0.74rem; color: #64748b; line-height: 1.5;
+}
+html.dark .curves-hypotheses-box { background: #1e293b; border-color: #334155; color: #94a3b8; }
+.curves-hypotheses-box strong { color: #0f172a; }
+html.dark .curves-hypotheses-box strong { color: #f8fafc; }
+
+@media (max-width: 768px) {
+  .budget-curves-modal { max-height: 96vh; }
+  .budget-curves-body { padding: 14px; gap: 14px; }
+  .curves-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .curves-svg-wrapper { height: 210px; }
+}
