@@ -60,7 +60,7 @@
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'cc-doc-button';
-      button.textContent = '📎 Documentos';
+      button.textContent = 'Documentos';
       button.title = 'Comprovantes, notas fiscais, boletos e recibos';
       button.addEventListener('click', () => openDocuments(item));
       actions.prepend(button);
@@ -112,6 +112,7 @@
     document.body.appendChild(backdrop);
     backdrop.querySelector('.cc-doc-close').addEventListener('click', closeModal);
     backdrop.addEventListener('click', (event) => { if (event.target === backdrop) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
     backdrop.querySelector('.cc-doc-upload').addEventListener('click', () => uploadDocument(item, backdrop));
     await loadDocuments(item, backdrop);
   }
