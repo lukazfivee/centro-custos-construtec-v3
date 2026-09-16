@@ -1,0 +1,156 @@
+/* Componente de lista paginada — controles, estados e acessibilidade.
+   Usado por categorias, fornecedores, centros de custo, histórico,
+   recorrentes, usuários e medições. Complementa .cc-pagination (lançamentos). */
+
+.cc-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.cc-list-toolbar .cc-list-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.cc-list-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted, #5a6b85);
+}
+
+.cc-list-toolbar select,
+.cc-list-toolbar input[type="search"] {
+  min-width: 130px;
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid var(--line, #d8dee9);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  color: var(--navy, #172033);
+}
+
+.cc-list-toolbar input[type="search"] { min-width: 210px; }
+
+.cc-pagination-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 2px 2px;
+  border-top: 1px solid var(--line, #e2e8f0);
+  margin-top: 10px;
+}
+
+.cc-pagination-bar .cc-pagination-summary {
+  font-size: 12px;
+  color: var(--muted, #5a6b85);
+}
+
+.cc-pagination-bar .cc-pagination-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.cc-pagination-bar button.cc-page-button {
+  min-width: 34px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line, #d8dee9);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  color: var(--navy, #172033);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cc-pagination-bar button.cc-page-button:hover:not(:disabled) {
+  border-color: var(--orange, #f97316);
+  color: var(--orange, #f97316);
+}
+
+.cc-pagination-bar button.cc-page-button:focus-visible {
+  outline: 2px solid var(--orange, #f97316);
+  outline-offset: 1px;
+}
+
+.cc-pagination-bar button.cc-page-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.cc-pagination-bar .cc-page-label {
+  min-width: 120px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy, #172033);
+}
+
+.cc-pagination-bar label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted, #5a6b85);
+}
+
+.cc-pagination-bar select {
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid var(--line, #d8dee9);
+  border-radius: 6px;
+}
+
+/* ------------------------------- Estados -------------------------------- */
+.cc-list-state {
+  padding: 26px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted, #5a6b85);
+}
+
+.cc-list-state.cc-list-error {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.cc-list-state.cc-list-error .cc-list-retry {
+  padding: 8px 16px;
+  border: 1px solid var(--orange, #f97316);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--orange, #f97316);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cc-list-state.cc-list-error .cc-list-retry:focus-visible {
+  outline: 2px solid var(--orange, #f97316);
+  outline-offset: 2px;
+}
+
+[data-cc-list-busy="true"] {
+  opacity: .55;
+  pointer-events: none;
+}
+
+/* --------------------------- Movimento reduzido --------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  [data-cc-list-busy="true"] { transition: none; }
+}

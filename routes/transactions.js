@@ -1,3 +1,4 @@
+const { isMonthClosed } = require('../services/financialPolicy');
 const crypto = require('crypto');
 const express = require('express');
 const { getDb, getInstanceIdentity } = require('../db');
@@ -11,15 +12,6 @@ const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(autenticar);
-
-async function isMonthClosed(dateStr) {
-  if (!dateStr) return false;
-  const d = new Date(`${String(dateStr).slice(0, 10)}T12:00:00`);
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const { rows } = await getDb().query('SELECT id FROM monthly_closings WHERE year=$1 AND month=$2', [year, month]);
-  return Boolean(rows[0]);
-}
 
 const selectSql = `
   SELECT t.id,t.public_id,t.type AS tipo,t.cost_center_id,t.category_id,
@@ -121,10 +113,11 @@ router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (re
   let created;
   await db.transaction(async (tx) => {
     const originalResult = await tx.query(
-      `SELECT * FROM transactions WHERE id=$1 AND deleted_at IS NULL`, [id]
+      `SELECT * FROM transactions WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, [id]
     );
     const original = originalResult.rows[0];
     if (!original) throw httpError(404, 'Lançamento não encontrado.');
+    if (original.approval_status !== 'aprovado') throw httpError(409, 'Somente lançamentos aprovados podem ser estornados.');
     if (original.reversal_of) throw httpError(409, 'Um estorno não pode ser estornado novamente. Crie um novo lançamento corretivo, se necessário.');
     if (Number(original.accounting_sign || 1) !== 1) throw httpError(409, 'Este registro já é um movimento de estorno.');
     if (original.financial_status !== 'liquidado') {
@@ -158,6 +151,8 @@ router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (re
       [req.usuario.id,instance.id,instance.name,id]
     );
     created = insert.rows[0];
+    await tx.query(`INSERT INTO transaction_allocations(transaction_id,cost_center_id,amount,note)
+      SELECT $1,cost_center_id,amount,note FROM transaction_allocations WHERE transaction_id=$2`,[created.id,id]);
     await recordAudit({
       entityType:'lancamento',entityId:original.public_id,action:'estornado',
       summary:`Lançamento estornado: ${original.description}`,
@@ -208,13 +203,15 @@ router.put('/:id', asyncRoute(async (req, res) => {
        financial_status=$11,document_number=$12,payment_method=$13,last_modified_instance_id=$14,
        last_modified_instance_name=$15,revision=revision+1,updated_by=$16,updated_at=NOW()
      WHERE id=$17 AND revision=$18 AND deleted_at IS NULL AND reversal_of IS NULL AND reversed_at IS NULL
+       AND (NOT EXISTS (SELECT 1 FROM transaction_allocations a WHERE a.transaction_id=transactions.id)
+         OR (amount=$6 AND cost_center_id=$2))
      RETURNING revision`,
     [data.type,data.costCenterId,data.categoryId,data.description,data.counterparty,data.amount,
       data.date,data.notes,data.dueDate,data.settlementDate,data.financialStatus,data.documentNumber,
       data.paymentMethod,instance.id,instance.name,req.usuario.id,id,expectedRevision]
   );
   if (!result.rowCount) {
-    throw httpError(409, 'Este lançamento foi alterado, excluído ou estornado. Atualize a lista antes de editar novamente.');
+    throw httpError(409, 'Este lançamento foi alterado, excluído, estornado ou possui rateio incompatível. Atualize a lista; remova o rateio antes de alterar valor ou obra.');
   }
   await recordAudit({
     entityType:'lancamento',entityId:existing.public_id,action:'atualizado',

@@ -1,0 +1,98 @@
+/* Impeccable bolder: mesma hierarquia operacional nos dois sistemas. */
+
+/* Delight: preenchimento preciso e retorno discreto, sem alterar o fluxo. */
+@media screen {
+  ::selection { background: #085ce5; color: #fff; }
+  :is(input, textarea):not(:disabled):not([readonly]) { caret-color: var(--blue, #085ce5); }
+  :is(input, textarea, select):not(:disabled):focus-visible {
+    outline: 2px solid var(--blue, #085ce5);
+    outline-offset: 2px;
+  }
+  .toast {
+    max-width: min(360px, calc(100vw - 44px));
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
+  .toast:not(.error) { border-inline-start: 1px solid #01b7f1; }
+}
+@media screen and (prefers-reduced-motion: no-preference) {
+  /* Avisos assentam no lugar: texto legível desde o primeiro quadro. */
+  .toast:not(.oculto) { animation: suite-notice-settle 160ms cubic-bezier(.16, 1, .3, 1); }
+  @keyframes suite-notice-settle {
+    from { transform: translateX(6px); }
+    to { transform: translateX(0); }
+  }
+}
+@media screen and (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+@media screen {
+  .page-head h1, .management-header h1, .home-header h1 {
+    font-weight:750; letter-spacing:-.025em; color:var(--ink);
+  }
+  .panel h2, .editor-heading h2, .works-heading h2,
+  .home-card-header h2, .settings-card h2, .modal-head h2 {
+    font-weight:700; color:var(--ink);
+  }
+  .btn.primary, .primary-btn, .actions .generate,
+  .new-proposal-dialog button.primary {
+    background:#085ce5!important; color:#fff!important;
+    border-color:#085ce5; font-weight:700;
+  }
+  .btn.primary:not(:disabled):hover, .primary-btn:not(:disabled):hover,
+  .actions .generate:not(:disabled):hover,
+  .new-proposal-dialog button.primary:not(:disabled):hover {
+    background:#064bbd!important; border-color:#064bbd;
+  }
+  .sidebar nav button.active, #app .sidebar nav .nav-item.ativo {
+    background:#1b2c45!important; color:#fff!important; font-weight:700;
+  }
+  .sidebar nav button.active span, #app .sidebar nav .nav-item.ativo span {
+    font-weight:700!important;
+  }
+  .sidebar nav button.active svg, #app .sidebar nav .nav-item.ativo svg {
+    color:#01b7f1;
+  }
+  .section-tabs button.selected, .proposal-tabs button.selected,
+  .filter-chip.active { font-weight:700; }
+  .section-tabs button.selected { color:var(--blue); }
+  .section-tabs button.selected::after { height:3px; }
+  .filter-chip.active { border-color:var(--blue); }
+  .kpi strong, .kpi-content strong, .amount strong,
+  .budget-kpi-card strong, .portfolio-kpi-card strong {
+    font-weight:750; font-variant-numeric:tabular-nums;
+    letter-spacing:-.025em; overflow-wrap:anywhere;
+  }
+  .kpi-content strong { font-size:24px; }
+  .kpi.balance { border-color:var(--blue); background:var(--surface-muted); }
+  .amount.blue { padding-bottom:12px; border-bottom:1px solid var(--line-strong); }
+  .amount.blue strong { font-weight:800; }
+  .table-region th, .proposals-table th, .home-proposals-table th,
+  .table-scroll th, .budget-table th {
+    color:var(--ink); font-weight:700; letter-spacing:.025em;
+    border-bottom:1px solid var(--line-strong);
+  }
+  .table-region tfoot, .table-scroll tfoot, .budget-table tfoot {
+    font-weight:700; color:var(--ink); background:var(--surface-subtle, var(--surface-muted));
+  }
+  .management-search input::placeholder, .search-box input::placeholder {
+    color:var(--muted); opacity:1;
+  }
+  .auth-card h1, .login-card h2 { font-weight:750; letter-spacing:-.025em; }
+  .topbar .icon-button:focus-visible, .topbar #topbar-theme-toggle:focus-visible,
+  .sidebar button:focus-visible { outline:2px solid #9bc1ff!important; outline-offset:-3px; }
+}
+
+/* Superficies claras alinhadas ao aplicativo de Orcamentos. */
+@media screen {
+  html:not(.dark) { --canvas:#f5f6f8; }
+  html:not(.dark) body,
+  html:not(.dark) #app,
+  html:not(.dark) #app .main { background:#f5f6f8!important; }
+  html:not(.dark) #app .view { background:transparent!important; }
+  html:not(.dark) :is(.kpi, .panel, .center-card, .table-card, .filter-bar, .budget-kpi-card, .portfolio-kpi-card) {
+    background:#fff!important;
+    box-shadow:0 2px 5px rgba(18,32,54,.07)!important;
+  }
+}

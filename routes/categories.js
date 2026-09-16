@@ -3,18 +3,31 @@ const crypto = require('crypto');
 const { getDb } = require('../db');
 const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
+const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(autenticar);
 
+const CATEGORIES_SELECT = `
+  SELECT c.id,c.name AS nome,c.type AS tipo,c.active AS ativo,c.revision,COUNT(t.id) AS total_lancamentos
+  FROM categories c LEFT JOIN transactions t ON t.category_id=c.id AND t.deleted_at IS NULL`;
+
 router.get('/', asyncRoute(async (req, res) => {
-  const { rows } = await getDb().query(`
-    SELECT c.id,c.name AS nome,c.type AS tipo,c.active AS ativo,c.revision,COUNT(t.id) AS total_lancamentos
-    FROM categories c LEFT JOIN transactions t ON t.category_id=c.id AND t.deleted_at IS NULL
-    GROUP BY c.id ORDER BY c.active DESC,c.type,c.name
-  `);
-  res.json(rows);
+  const orderBy = 'c.active DESC,c.type,c.name';
+  if (!wantsPagination(req.query)) {
+    const { rows } = await getDb().query(`${CATEGORIES_SELECT} GROUP BY c.id ORDER BY ${orderBy} LIMIT 500`);
+    res.setHeader('X-Result-Limit', '500');
+    return res.json(rows);
+  }
+  const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
+  const [dataResult, countResult] = await Promise.all([
+    getDb().query(`${CATEGORIES_SELECT} GROUP BY c.id ORDER BY ${orderBy} LIMIT $1 OFFSET $2`, [limit, offset]),
+    getDb().query('SELECT COUNT(*)::int AS total FROM categories'),
+  ]);
+  const total = Number(countResult.rows[0]?.total || 0);
+  res.setHeader('X-Total-Count', String(total));
+  return res.json({ itens: dataResult.rows, paginacao: paginationMeta(total, page, limit) });
 }));
 
 router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {

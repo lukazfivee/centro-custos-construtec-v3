@@ -1,0 +1,286 @@
+@media (max-width: 800px) {
+  .app-shell {
+    display: block !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  .topbar {
+    position: sticky !important;
+    top: 0 !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    max-height: 60px !important;
+    padding: 0 14px !important;
+    gap: 8px !important;
+  }
+
+  .topbar .brand {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    gap: 0 !important;
+  }
+
+  .topbar .brand-logo {
+    display: none !important;
+  }
+
+  .topbar .brand-symbol-mobile {
+    display: block !important;
+    width: 34px !important;
+    height: 34px !important;
+    object-fit: contain !important;
+  }
+
+  .topbar .brand span,
+  .instance-name,
+  .topbar-divider,
+  .mobile-header {
+    display: none !important;
+  }
+
+  .user-block.topbar-profile {
+    display: none !important;
+  }
+
+  .topbar-actions {
+    margin-left: auto !important;
+    gap: 7px !important;
+  }
+
+  .topbar #mobile-menu,
+  .btn-theme-topbar {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 42px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 10px !important;
+    font-size: 0 !important;
+    border-radius: 8px !important;
+  }
+
+  .topbar #mobile-menu::before { content: '☰'; font-size: 19px; line-height: 1; }
+  .btn-theme-topbar::before { content: '◐'; font-size: 18px; line-height: 1; }
+
+  .sidebar {
+    position: fixed !important;
+    top: 60px !important;
+    left: -300px !important;
+    z-index: 40 !important;
+    width: min(300px, 86vw) !important;
+    min-width: min(300px, 86vw) !important;
+    max-width: min(300px, 86vw) !important;
+    bottom: 0 !important;
+    height: auto !important;
+    padding: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 14px 0 35px rgba(2,29,38,.3) !important;
+    transition: left .2s ease !important;
+  }
+
+  .sidebar.open { left: 0 !important; }
+  .mobile-nav-scrim { display: none; }
+  .sidebar.open + .mobile-nav-scrim {
+    display: block !important;
+    position: fixed !important;
+    inset: 60px 0 0 !important;
+    z-index: 39 !important;
+    border: 0 !important;
+    padding: 0 !important;
+    background: rgba(2,29,38,.56) !important;
+  }
+  .sidebar.open ~ .mobile-bottom-nav {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  .sidebar nav { gap: 3px !important; padding: 0 0 12px !important; overflow-y: auto !important; }
+  .sidebar nav .nav-item { flex-direction: row !important; justify-content: flex-start !important; width: 100% !important; height: 46px !important; min-height: 46px !important; padding: 10px 12px !important; border-radius: 9px !important; text-align: left !important; }
+  .sidebar nav .nav-item span { max-width: none !important; font-size: 13px !important; text-align: left !important; }
+  .sidebar nav .nav-item svg { width: 19px !important; height: 19px !important; }
+
+  .main {
+    height: auto !important;
+    min-height: calc(100dvh - 60px) !important;
+    overflow: visible !important;
+    padding: 22px 15px 92px !important;
+  }
+
+  .page-head {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .page-head h1 { font-size: 27px !important; line-height: 1.15 !important; }
+  .dashboard-actions { display: grid !important; width: 100% !important; gap: 10px !important; }
+  .dashboard-actions > .btn { width: 100% !important; min-height: 44px !important; order: -1; }
+  .dashboard-actions .head-filters { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 9px !important; width: 100% !important; }
+  .dashboard-actions .head-filters select,
+  .dashboard-actions .head-filters input { width: 100% !important; min-width: 0 !important; height: 42px !important; }
+
+  .kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 10px !important; }
+  .kpi { min-height: 112px !important; padding: 15px !important; }
+  .kpi strong { font-size: 20px !important; overflow-wrap: anywhere; }
+  .dashboard-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+  .panel { padding: 17px 16px !important; border-radius: 12px !important; }
+  .mobile-bottom-nav { z-index: 35 !important; }
+}
+
+/* Cabeçalho e navegação lateral alinhados ao padrão do Construtec Orçamentos. */
+:root {
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+.topbar {
+  background: #122036 !important;
+  border-bottom-color: #324056 !important;
+}
+
+/* Navegação lateral alinhada ao padrão do Construtec Orçamentos (desktop). */
+@media (min-width: 801px) {
+  .app-shell {
+    grid-template-columns: 118px minmax(0, 1fr) !important;
+    grid-template-rows: 43px minmax(0, 1fr) !important;
+    height: 100vh;
+    min-height: 0;
+  }
+
+  .topbar {
+    min-height: 43px !important;
+    height: 43px !important;
+    padding: 0 170px 0 16px !important;
+    gap: 10px !important;
+    box-shadow: none !important;
+  }
+
+  .topbar .brand-logo { width: 100px !important; height: 24px !important; }
+  .topbar .brand span { font-size: 12px !important; }
+  .topbar-actions { gap: 4px !important; }
+  .topbar .btn, .btn-suite-topbar, .btn-theme-topbar, .btn-sair-topbar { min-height: 30px !important; }
+
+  .sidebar {
+    grid-area: 2 / 1 !important;
+    width: 118px !important;
+    min-width: 118px !important;
+    max-width: 118px !important;
+    height: calc(100vh - 43px) !important;
+    padding: 0 !important;
+    color: #b8c3d3 !important;
+    background: #122036 !important;
+    border-right: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .sidebar nav {
+    gap: 0 !important;
+    padding: 10px 0 0 !important;
+    overflow-y: auto !important;
+  }
+
+  .sidebar .nav-item {
+    position: relative;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    width: 100% !important;
+    min-height: 82px !important;
+    height: 82px !important;
+    padding: 8px !important;
+    color: inherit !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif !important;
+    font-size: inherit !important;
+    font-weight: 400 !important;
+    text-align: center !important;
+    box-shadow: none !important;
+  }
+
+  .sidebar .nav-item span {
+    width: auto !important;
+    max-width: 108px !important;
+    color: inherit !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+  }
+
+  .sidebar .nav-item svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .sidebar .nav-item:hover {
+    color: #fff !important;
+    background: #182941 !important;
+  }
+
+  .sidebar .nav-item.ativo {
+    color: #fff !important;
+    background: #1b2c45 !important;
+    box-shadow: none !important;
+  }
+
+  .sidebar .nav-item.ativo::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px !important;
+    background: #085ce5 !important;
+  }
+
+  .sidebar .nav-item.sync-link:not(.ativo) {
+    margin-top: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  /* Escala e densidade do ambiente de trabalho do Orçamentos. */
+  .main {
+    grid-area: 2 / 2 !important;
+    height: calc(100vh - 43px) !important;
+    overflow-y: auto !important;
+    padding: 24px 32px 48px !important;
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  }
+
+  .page-head { margin-bottom: 18px !important; }
+  .page-head h1 { font-size: 28px !important; }
+  .btn { min-height: 34px !important; padding: 7px 12px !important; border-radius: 6px !important; }
+  input, select, textarea { min-height: 34px !important; padding: 7px 10px !important; border-radius: 6px !important; }
+  .kpi-grid { gap: 12px !important; margin: 16px 0 !important; }
+  .kpi { min-height: 108px !important; padding: 15px 16px !important; border-radius: 8px !important; }
+  .panel, .table-card, .filter-bar { border-radius: 8px !important; }
+  .panel { padding: 16px !important; }
+.filter-bar { padding: 10px !important; }
+  .table-meta { padding: 10px 14px !important; }
+  th { padding: 9px 12px !important; }
+  td { padding: 10px 12px !important; }
+  .modal { border-radius: 8px !important; }
+
+  /* Mesmas larguras progressivas da rail do Construtec Orçamentos. */
+  @media (max-width: 1350px) {
+    #app.app-shell { grid-template-columns: 94px minmax(0, 1fr) !important; }
+    #app.app-shell .sidebar { width: 94px !important; min-width: 94px !important; max-width: 94px !important; }
+    #app.app-shell .sidebar nav .nav-item { height: 76px !important; min-height: 76px !important; }
+    #app.app-shell .sidebar nav .nav-item span { max-width: 88px !important; font-size: 12px !important; }
+  }
+
+  @media (max-width: 1024px) {
+    #app.app-shell { grid-template-columns: 80px minmax(0, 1fr) !important; }
+    #app.app-shell .sidebar { width: 80px !important; min-width: 80px !important; max-width: 80px !important; }
+    #app.app-shell .sidebar nav .nav-item { height: 68px !important; min-height: 68px !important; gap: 5px !important; }
+    #app.app-shell .sidebar nav .nav-item span { max-width: 74px !important; font-size: 12px !important; }
+  }
+}

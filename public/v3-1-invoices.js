@@ -61,6 +61,31 @@
       const data = await response.json().catch(() => ({}));
       throw new Error(data.erro || 'Não foi possível baixar a nota fiscal.');
     }
+    return data;
+  }
+
+  function toast(message, error=false) {
+    if (typeof window.toast === 'function') return window.toast(message, error);
+    const el = q('#toast');
+    if (!el) return;
+    el.textContent = message;
+    el.className = `toast${error?' error':''}`;
+    setTimeout(() => el.classList.add('oculto'), 3500);
+  }
+
+  function sizeText(bytes) {
+    const n = Number(bytes || 0);
+    if (n < 1024) return `${n} B`;
+    if (n < 1024*1024) return `${(n/1024).toFixed(1)} KB`;
+    return `${(n/1024/1024).toFixed(2)} MB`;
+  }
+
+  async function downloadInvoice(centerId, filename) {
+    const response = await fetch(`/api/notas-fiscais-centro/${centerId}/arquivo`, { headers:{ Authorization:`Bearer ${token()}` } });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.erro || 'Não foi possível baixar a nota fiscal.');
+    }
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -72,6 +97,9 @@
     const detail = q('.center-detail-header');
     if (!detail || !centerId) return;
     let panel = q('#v31-center-invoice');
+    if (panel && (panel.dataset.renderedCenterId === String(centerId) || panel.dataset.loading === 'true')) {
+      return;
+    }
     if (!panel) {
       panel = document.createElement('section');
       panel.id = 'v31-center-invoice';
@@ -82,6 +110,8 @@
       if (anchor?.parentNode) anchor.parentNode.insertBefore(panel, anchor.nextSibling);
       else detail.parentNode.appendChild(panel);
     }
+    panel.dataset.loading = 'true';
+    panel.dataset.renderedCenterId = String(centerId);
     panel.innerHTML = '<div class="v31-center-invoice-file">Carregando nota fiscal...</div>';
     try {
       const data = await api(`/api/notas-fiscais-centro/${centerId}`);
@@ -110,6 +140,7 @@
           try {
             await api(`/api/notas-fiscais-centro/${centerId}`, { method:'POST', body:JSON.stringify({ nome:file.name, tipo:'application/pdf', conteudoBase64:String(reader.result||'').split(',').pop() }) });
             toast('Nota fiscal vinculada ao centro de custo.');
+            panel.dataset.renderedCenterId = '';
             await renderCenterInvoice(centerId);
           } catch (e) { toast(e.message, true); }
         };
@@ -117,11 +148,13 @@
       });
       q('#v31-invoice-remove')?.addEventListener('click', async () => {
         if (!confirm('Remover a nota fiscal vinculada a este centro de custo?')) return;
-        try { await api(`/api/notas-fiscais-centro/${centerId}`, { method:'DELETE' }); toast('Nota fiscal removida.'); await renderCenterInvoice(centerId); }
+        try { await api(`/api/notas-fiscais-centro/${centerId}`, { method:'DELETE' }); toast('Nota fiscal removida.'); panel.dataset.renderedCenterId = ''; await renderCenterInvoice(centerId); }
         catch (e) { toast(e.message,true); }
       });
     } catch (e) {
       panel.innerHTML = `<div class="v31-center-invoice-file">${esc(e.message)}</div>`;
+    } finally {
+      panel.dataset.loading = 'false';
     }
   }
 
@@ -182,7 +215,13 @@
   function watch() {
     document.addEventListener('click', captureContext, true);
     const observer = new MutationObserver(() => {
-      if (q('.center-detail-header') && lastCenterId) renderCenterInvoice(lastCenterId);
+      const header = q('.center-detail-header');
+      if (header && lastCenterId) {
+        const existing = q('#v31-center-invoice');
+        if (!existing || (existing.dataset.renderedCenterId !== String(lastCenterId) && existing.dataset.loading !== 'true')) {
+          renderCenterInvoice(lastCenterId);
+        }
+      }
       if (q('#v31-email-form') && lastBillingPublicId) {
         attachLinkedInvoiceToBilling(lastBillingPublicId);
         decorateCorporateCc();

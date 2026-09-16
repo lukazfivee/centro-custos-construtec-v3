@@ -1,0 +1,333 @@
+@media(min-width: 801px) {
+  .sidebar {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 118px !important;
+    min-width: 118px !important;
+    max-width: 118px !important;
+    height: calc(100vh - 48px) !important;
+    background: var(--navy) !important;
+    color: #b8c3d3 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+  }
+
+  .sidebar nav {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 4px 0 12px !important;
+    gap: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent !important;
+  }
+
+  .sidebar nav::-webkit-scrollbar {
+    width: 4px !important;
+  }
+
+  .sidebar nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-radius: 4px !important;
+  }
+
+  .sidebar nav .nav-item {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    height: 72px !important;
+    min-height: 72px !important;
+    padding: 6px 4px !important;
+    color: #aebdc5 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    cursor: pointer !important;
+    text-align: center !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+    box-shadow: none !important;
+  }
+
+  .sidebar nav .nav-item svg {
+    width: 22px !important;
+    height: 22px !important;
+    flex-shrink: 0 !important;
+    stroke-width: 1.8 !important;
+  }
+
+  .sidebar nav .nav-item span {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 102px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  .sidebar nav .nav-item:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .sidebar nav .nav-item.ativo {
+    color: #ffffff !important;
+    background: #0b232e !important;
+  }
+
+  .sidebar nav .nav-item.ativo::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 auto 0 0 !important;
+    width: 4px !important;
+    background: var(--orange) !important;
+  }
+
+  .sidebar nav .nav-item.sync-link:not(.ativo) {
+    margin-top: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .main {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    height: calc(100vh - 48px) !important;
+    overflow-y: auto !important;
+    padding: 24px 32px 60px !important;
+  }
+}
+
+/* 3. Correção Absoluta do Avatar e Fotos de Perfil (Nunca estoura a tela) */
+.avatar, #usuario-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: var(--navy-2) !important;
+  border: 1.5px solid rgba(81, 166, 203, 0.4) !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+.avatar img, #usuario-avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  display: block !important;
+}
+
+.profile-photo-preview, #profile-photo-preview {
+  width: 72px !important;
+  height: 72px !important;
+  min-width: 72px !important;
+  min-height: 72px !important;
+  max-width: 72px !important;
+  max-height: 72px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  background: var(--navy-2) !important;
+  border: 2px solid var(--orange) !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.profile-photo-preview img, #profile-photo-preview img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  display: block !important;
+}
+
+/* 4. Oculta o botão flutuante duplicado de tema e scrim no desktop */
+.fab-theme {
+  display: none !important;
+}
+
+.brand-symbol-mobile,
+.mobile-nav-scrim {
+  display: none !important;
+}
+
+/* A troca de tema não pode alterar a largura útil da página. */
+html {
+  scrollbar-gutter: stable;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+html.dark::-webkit-scrollbar,
+html.dark body::-webkit-scrollbar {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* Interruptor de tema para a barra superior no desktop. */
+@media (min-width: 801px) {
+  .topbar .brand-logo {
+    display: none !important;
+  }
+
+  .topbar .brand-symbol-mobile {
+    display: block !important;
+    width: 32px !important;
+    height: 32px !important;
+    object-fit: contain !important;
+  }
+
+  .btn-theme-topbar {
+    position: relative !important;
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 !important;
+    border: 1px solid rgba(255,255,255,.24) !important;
+    border-radius: 999px !important;
+    background: #45616a !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    text-indent: -9999px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.22) !important;
+  }
+
+  .btn-theme-topbar::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: 3px auto 3px 3px !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    background: #f8fbfc !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,.3) !important;
+    transition: transform .2s ease, background-color .2s ease !important;
+  }
+
+  .btn-theme-topbar::after {
+    content: '' !important;
+  }
+
+  html.dark .btn-theme-topbar {
+    background: var(--orange) !important;
+    border-color: rgba(255,255,255,.34) !important;
+  }
+
+  html.dark .btn-theme-topbar::before {
+    transform: translateX(24px) !important;
+    background: #fff !important;
+  }
+
+  .btn-theme-topbar:hover {
+    color: transparent !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    transform: none !important;
+    filter: brightness(1.08);
+  }
+  .btn-theme-topbar:focus-visible { outline: 3px solid rgba(80,190,221,.42) !important; outline-offset: 3px !important; }
+}
+
+/* Obras / centros: uma coluna sem rolagem horizontal no celular. */
+@media (max-width: 800px) {
+  .settings-index a[href="#config-celular"],
+  #config-celular {
+    display: none !important;
+  }
+
+  html,
+  body,
+  .app-shell,
+  .main,
+  .view,
+  #view-centros {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  #view-centros .page-head-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    width: 100% !important;
+  }
+
+  #view-centros .page-head-actions .btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-inline: 10px !important;
+  }
+
+  #lista-centros-cards.centers-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 12px !important;
+  }
+
+  #lista-centros-cards .center-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 18px !important;
+  }
+
+  #lista-centros-cards .center-card-title,
+  #lista-centros-cards .center-card-client,
+  #lista-centros-cards .center-card-desc {
+    overflow-wrap: anywhere !important;
+  }
+
+  #lista-centros-cards .center-card-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  #lista-centros-cards .center-card-stats strong {
+    font-size: 12px !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .mobile-bottom-nav #mobile-theme {
+    display: none !important;
+  }
+
+  .mobile-bottom-nav .mobile-nav-item {
+    flex: 1 1 0 !important;
+  }
+}
+
+/* Correções de composição para a navegação em telas estreitas. */

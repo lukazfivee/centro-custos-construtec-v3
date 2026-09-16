@@ -16,6 +16,7 @@ test('Report V2 distingue aceite do provedor e entrega confirmada', async (conte
   const { initializeDatabase, closeDatabase, getDb } = require('../db');
   const { createApp } = require('../server');
   const delivery = require('../services/reportDelivery');
+  delete process.env.DATABASE_URL;
   const httpFetch = global.fetch;
   await initializeDatabase();
   const server = createApp().listen(0,'127.0.0.1');

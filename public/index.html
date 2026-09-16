@@ -1,18 +1,32 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#021D26">
   <title>Centro de Custos | Construtec</title>
   <link rel="icon" type="image/png" href="assets/construtec-favicon.png">
+  <link rel="stylesheet" href="style-base.css">
+  <link rel="stylesheet" href="style-layout.css">
+  <link rel="stylesheet" href="style-components.css">
+  <link rel="stylesheet" href="style-responsive.css">
+  <link rel="stylesheet" href="budget-view.css">
+  <link rel="stylesheet" href="budget-reports.css">
+  <link rel="stylesheet" href="budget-measurements.css">
+  <link rel="stylesheet" href="budget-portfolio.css">
+  <link rel="stylesheet" href="budget-curves.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="suite-design.css">
+  <link rel="stylesheet" href="suite-bolder.css">
+  <link rel="stylesheet" href="action-help.css">
+  <link rel="stylesheet" href="async-feedback.css">
+  <link rel="stylesheet" href="list-panel.css">
+  <link rel="stylesheet" href="chatgpt-p1.css">
   <script>if(localStorage.getItem('cc_dark')==='true')document.documentElement.classList.add('dark')</script>
 </head>
 <body>
   <div id="toast" class="toast oculto" role="status"></div>
-
   <section id="tela-login" class="login-shell">
     <div class="login-about">
       <img class="brand-logo login-logo" src="assets/construtec-logo.png" alt="Construtec Engenharia e Instalações">
@@ -22,7 +36,7 @@
     </div>
     <div class="login-panel">
       <form id="form-login" class="login-card">
-        <div class="mobile-brand"><img class="brand-symbol" src="assets/construtec-favicon.png" alt=""> Centro de Custos</div>
+        <div class="mobile-brand"><img src="assets/construtec-logo.png" alt="Construtec Engenharia e Instalações"></div>
         <h2>Bem-vindo</h2>
         <p class="muted">Entre com seu usuário para continuar.</p>
         <label for="login-email">E-mail</label>
@@ -34,43 +48,90 @@
         </div>
         <div id="login-erro" class="form-error" role="alert"></div>
         <button class="btn primary wide" type="submit">Entrar</button>
-        <p class="login-foot">Aplicação local • sem IA, tokens ou serviço online</p>
+        <p class="login-foot">Aplicação local  sem IA, tokens ou serviço online</p>
       </form>
     </div>
   </section>
-
   <div id="app" class="app-shell oculto">
-    <aside class="sidebar">
-      <div class="brand"><img class="brand-logo sidebar-logo" src="assets/construtec-logo.png" alt="Construtec"><div><strong>Centro de Custos</strong><span id="instancia-nome"></span></div></div>
-      <nav>
-        <button class="nav-item ativo" data-view="dashboard"><span>◫</span>Painel</button>
-        <button class="nav-item" data-view="lancamentos"><span>↕</span>Lançamentos</button>
-        <button class="nav-item" data-view="centros"><span>◎</span>Obras / centros</button>
-        <button class="nav-item" data-view="categorias"><span>◇</span>Categorias</button>
-        <button class="nav-item" data-view="fornecedores"><span>▦</span>Fornecedores</button>
-        <button class="nav-item" data-view="historico"><span>◷</span>Histórico</button>
-        <button class="nav-item sync-link" data-view="sincronizacao"><span>⇄</span>Trocar dados</button>
-        <button class="nav-item admin-only" data-view="usuarios"><span>♙</span>Usuários</button>
-        <button class="nav-item" data-view="config"><span>⚙</span>Configurações</button>
-        <button class="nav-item admin-only" data-view="recorrentes"><span>↻</span>Recorrentes</button>
-        <button class="nav-item" data-view="bugreports"><span>⚑</span>Reports</button>
-      </nav>
-      <div class="user-block">
-        <div class="avatar" id="usuario-avatar"></div>
-        <div class="user-copy"><strong id="usuario-nome"></strong><span id="usuario-papel"></span></div>
-        <button id="btn-sair" class="btn danger" style="font-size:11px;padding:6px 12px">Sair</button>
+    <a class="skip-link" href="#conteudo-principal">Ir para o conteúdo</a>
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-symbol-mobile" src="assets/construtec-favicon.png" alt="CONSTRUTEC">
+        <span>Centro de Custos</span>
       </div>
+      <span id="instancia-nome" class="instance-name"></span>
+      <div class="topbar-status" aria-label="Status da conexão"><span class="status-dot"></span><span>Offline</span><span>Dados locais</span><span class="status-caret">⌄</span></div>
+      <label class="topbar-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" placeholder="Busca disponível no Centro de Custos" aria-label="Buscar no Centro de Custos" disabled></label>
+      <div class="topbar-actions">
+        <!-- Botão Suíte Construtec / App Switcher -->
+        <div class="suite-switcher-container" id="suite-switcher-container">
+          <button id="btn-suite-switcher" class="btn-suite-topbar" type="button" aria-expanded="false" aria-haspopup="menu" aria-controls="suite-dropdown-menu" aria-label="Abrir seletor de sistemas da Suíte Construtec" title="Abrir seletor de sistemas da Suíte Construtec">
+            <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span class="suite-label">Suíte</span>
+            <span class="suite-caret"></span>
+          </button>
+          <div class="suite-dropdown-menu oculto" id="suite-dropdown-menu" role="menu" aria-label="Sistemas da Suíte Construtec">
+            <div class="suite-dropdown-header"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/></svg> Esteira Operacional Construtec</div>
+            <a href="https://hub-sistemas-construtec.lucas-coelho5923.workers.dev/" class="suite-dropdown-item hub-link" target="_blank" rel="noopener" role="menuitem" title="Abrir o Portal Hub em nova aba">
+              <span class="suite-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+              <div class="suite-item-text"><strong>Portal Hub</strong><small>Launcher e esteira de trabalho</small></div><span class="suite-item-ext">↗</span>
+            </a>
+            <div class="suite-dropdown-sep"></div>
+            <a href="https://construtec-orcamentos.pages.dev/" class="suite-dropdown-item" target="_blank" rel="noopener" role="menuitem" title="Abrir Construtec Orçamentos em nova aba">
+              <span class="suite-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></span>
+              <div class="suite-item-text"><strong>Construtec Orçamentos</strong><small>Etapa 01: Propostas e BDI</small></div><span class="suite-item-ext">↗</span>
+            </a>
+            <div class="suite-dropdown-item current-system" role="menuitem" aria-current="page" aria-label="Centro de Custos v3, sistema atual">
+              <span class="suite-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+              <div class="suite-item-text"><strong>Centro de Custos v3</strong><small>Etapa 02: Gestao ativa de obras</small></div>
+              <span class="suite-current-badge">Atual</span>
+            </div>
+            <a href="https://chamadopro-app.lucas-coelho5923.workers.dev/" class="suite-dropdown-item" target="_blank" rel="noopener" role="menuitem" title="Abrir Chamados e O.S. em nova aba">
+              <span class="suite-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+              <div class="suite-item-text"><strong>Chamados &amp; O.S.</strong><small>Etapa 03: ChamadoPro integrado</small></div>
+            </a>
+          </div>
+        </div>
+        <button id="mobile-menu" class="btn secondary" type="button" aria-label="Abrir menu" aria-controls="navegacao-principal" aria-expanded="false"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <button class="icon-button" aria-label="Abrir Webmail Corporativo UOL Pro" type="button" title="Abrir Webmail Corporativo UOL Pro" onclick="window.electronAPI?.openWebmail?.() || window.open('https://webmailpro.uol.com.br/','_blank','noopener,noreferrer')"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect></svg></button>
+        <button id="topbar-theme-toggle" class="btn-theme-topbar" type="button" aria-label="Ativar modo noturno" title="Ativar modo noturno" aria-pressed="false"> Tema</button>
+        <div class="topbar-divider"></div>
+        <div class="user-block topbar-profile">
+          <button id="profile-toggle" class="profile-trigger" type="button" aria-expanded="false" aria-haspopup="menu" aria-controls="profile-menu" aria-label="Abrir menu do perfil"><span id="profile-initial">L</span><b id="usuario-nome"></b><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div id="profile-menu" class="profile-menu oculto">
+            <div class="profile-menu-head"><div class="profile-menu-avatar" id="profile-menu-avatar"></div><div><strong id="profile-menu-name"></strong><span id="profile-menu-email"></span><em id="profile-menu-role"></em></div></div>
+            <div class="profile-menu-info"><strong>◈ &nbsp;Armazenamento Local</strong><span>Dados protegidos neste computador</span><strong>● &nbsp;Tipo de Sessão</strong><span>Sessão local ativa</span></div>
+            <button id="btn-sair" type="button" title="Encerrar sua sessão neste sistema">↪ &nbsp; Sair da conta</button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <aside id="navegacao-principal" class="sidebar" aria-label="Navegação principal">
+      <nav>
+        <button type="button" class="nav-item ativo" data-view="dashboard"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18"/><path d="M12 3v18"/></svg><span>Início</span></button>
+        <button type="button" class="nav-item" data-view="lancamentos"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span>Lançamentos</span></button>
+        <button type="button" class="nav-item" data-view="centros"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Obras / centros</span></button>
+        <button type="button" class="nav-item" data-view="categorias"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span>Categorias</span></button>
+        <button type="button" class="nav-item" data-view="fornecedores"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/></svg><span>Fornecedores</span></button>
+        <button type="button" class="nav-item" data-view="config"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Configurações</span></button>
+        <button type="button" class="nav-item sync-link" data-view="sincronizacao"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg><span>Sincronização</span></button>
+        <button type="button" class="nav-item" data-view="historico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Histórico</span></button>
+        <button type="button" class="nav-item" data-view="chamados"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span>Chamados</span></button>
+        <button type="button" class="nav-item" data-view="orcamentos"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg><span>Orcamentos</span></button>
+        <button type="button" class="nav-item admin-only" data-view="recorrentes"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg><span>Recorrentes</span></button>
+        <button type="button" class="nav-item" data-view="bugreports"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg><span>Reports</span></button>
+        <button type="button" class="nav-item admin-only" data-view="usuarios"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Usuários</span></button>
+      </nav>
     </aside>
-
-    <main class="main">
+    <button id="mobile-nav-scrim" class="mobile-nav-scrim" type="button" aria-label="Fechar menu"></button>
+    <main id="conteudo-principal" class="main" tabindex="-1">
       <header class="mobile-header">
         <img class="brand-symbol" src="assets/construtec-favicon.png" alt=""><strong>Centro de Custos</strong>
-        <button id="mobile-menu" class="icon-btn" aria-label="Abrir menu">☰</button>
+        <button id="mobile-menu-legacy" class="icon-btn" type="button" aria-label="Abrir menu de navegação" title="Abrir menu de navegação"></button>
       </header>
-
       <section id="view-dashboard" class="view">
         <div id="first-use-banner" class="first-use-banner oculto">
-          <div class="first-use-header"><span class="first-use-icon">★</span><div><strong>Assistente de primeiro uso</strong><p>Complete os passos abaixo para começar a usar o sistema.</p></div><button id="first-use-dismiss" class="icon-btn" title="Fechar">×</button></div>
+          <div class="first-use-header"><span class="first-use-icon"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/></svg></span><div><strong>Assistente de primeiro uso</strong><p>Complete os passos abaixo para começar a usar o sistema.</p></div><button id="first-use-dismiss" class="icon-btn" aria-label="Fechar assistente de primeiro uso" title="Fechar assistente de primeiro uso" type="button" onclick="document.getElementById('first-use-banner')?.classList.add('oculto')"></button></div>
           <div class="first-use-checklist">
             <div class="check-item" id="check-obras"><span class="check-icon"></span><div><strong>Cadastrar obra / centro de custo</strong><span class="check-hint">Registro necessário para lançamentos</span></div><span class="check-count" id="count-obras">0</span></div>
             <div class="check-item" id="check-categorias"><span class="check-icon"></span><div><strong>Cadastrar categorias</strong><span class="check-hint">Classificação de receitas e despesas</span></div><span class="check-count" id="count-categorias">0</span></div>
@@ -78,123 +139,236 @@
             <div class="check-item" id="check-usuarios"><span class="check-icon"></span><div><strong>Criar usuário adicional</strong><span class="check-hint">Cada pessoa deve ter seu próprio acesso</span></div><span class="check-count" id="count-usuarios">0</span></div>
             <div class="check-item" id="check-foto"><span class="check-icon"></span><div><strong>Adicionar foto de perfil</strong><span class="check-hint">A foto acompanha seu usuário nas instalações sincronizadas</span></div><button id="first-use-photo" class="text-btn" type="button">Adicionar</button><span class="check-count oculto" id="count-foto">0</span></div>
           </div>
-          <div class="first-use-footer"><button id="first-use-complete" class="btn primary">Marcar como concluído</button></div>
+          <div class="first-use-footer"><button id="first-use-complete" class="btn primary" type="button" title="Marcar o assistente de primeiro uso como concluído">Marcar como concluído</button></div>
         </div>
-
         <div class="page-head">
           <div><h1>Painel financeiro</h1></div>
-          <div class="dashboard-actions"><button id="btn-lancamento-rapido" class="btn secondary">+ Lançamento rápido</button><div class="head-filters"><select id="dash-centro" aria-label="Centro de custo"><option value="">Todas as obras / centros</option></select><input id="dash-mes" type="month" aria-label="Mês"></div></div>
+          <div class="dashboard-actions"><button id="btn-lancamento-rapido" class="btn secondary" type="button" title="Abrir formulário de lançamento rápido">+ Lançamento rápido</button><div class="head-filters"><select id="dash-centro" aria-label="Filtrar painel por obra ou centro de custo"><option value="">Todas as obras / centros</option></select><input id="dash-mes" type="month" aria-label="Filtrar painel por mês" title="Filtrar painel por mês"></div></div>
         </div>
         <div class="kpi-grid">
-          <article class="kpi revenue"><p>Recebido</p><strong id="kpi-receitas">R$ 0,00</strong><span id="kpi-receitas-count">no período</span></article>
-          <article class="kpi expense"><p>Pago</p><strong id="kpi-despesas">R$ 0,00</strong><span>despesas liquidadas</span></article>
-          <article class="kpi balance"><p>Saldo realizado</p><strong id="kpi-saldo">R$ 0,00</strong><span>recebido − pago</span></article>
-          <article class="kpi pending"><p>A receber</p><strong id="kpi-a-receber">R$ 0,00</strong><span>vencimentos no mês</span></article>
-          <article class="kpi pending"><p>A pagar</p><strong id="kpi-a-pagar">R$ 0,00</strong><span>vencimentos no mês</span></article>
-          <article class="kpi overdue"><p>Vencidos</p><strong id="kpi-vencidos">R$ 0,00</strong><span id="kpi-vencidos-count">nenhuma pendência</span></article>
+          <article class="kpi revenue"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17 9 11l4 4 8-8M15 7h6v6"/></svg></span><p>Recebido</p><strong id="kpi-receitas">R$ 0,00</strong><span id="kpi-receitas-count">no período</span></article>
+          <article class="kpi expense"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18M5 7v13h14V7M8 4h8v3"/></svg></span><p>Pago</p><strong id="kpi-despesas">R$ 0,00</strong><span>despesas liquidadas</span></article>
+          <article class="kpi balance"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h18M12 3v18"/></svg></span><p>Resultado</p><strong id="kpi-saldo">R$ 0,00</strong><span>receitas - despesas</span></article>
+          <article class="kpi pending"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 10l7-7 7 7"/></svg></span><p>A receber</p><strong id="kpi-a-receber">R$ 0,00</strong><span>previsão em aberto</span></article>
+          <article class="kpi overdue"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 14l7 7 7-7"/></svg></span><p>A pagar</p><strong id="kpi-a-pagar">R$ 0,00</strong><span>contas pendentes</span></article>
+          <article class="kpi overdue"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span><p>Vencidos</p><strong id="kpi-vencidos">R$ 0,00</strong><span id="kpi-vencidos-count">nenhuma pendência</span></article>
         </div>
         <div class="dashboard-grid">
-          <article class="panel span-2"><div class="panel-head"><div><h2>Evolução financeira</h2></div><div class="legend"><i class="rev"></i>Receita <i class="desp"></i>Despesa</div></div><div id="trend-chart" class="trend-chart"></div></article>
-          <article class="panel"><div class="panel-head"><div><h2>Últimos lançamentos</h2></div></div><div id="lista-ultimos" class="activity-list"></div></article>
-          <article class="panel span-2"><div class="panel-head"><div><h2>Comprometimento por obra</h2></div></div><div id="lista-centros-resumo"></div></article>
-          <article class="panel"><div class="panel-head"><div><h2>Por categoria</h2></div></div><div id="lista-categorias-resumo"></div></article>
+          <div class="panel span-2">
+            <div class="panel-head"><h2>Evolução mensal (12 meses)</h2><div class="legend"><i class="rev"></i>Receitas<i class="desp"></i>Despesas</div></div>
+            <div id="trend-chart" class="trend-chart"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Atividades recentes</h2></div>
+            <div id="lista-ultimos" class="activity-list"></div>
+          </div>
         </div>
-      </section>
-
-      <section id="view-lancamentos" class="view oculto">
-        <div class="page-head"><div><h1>Lançamentos</h1></div><button id="btn-novo-lancamento" class="btn primary">+ Novo lançamento</button></div>
-        <div class="filter-bar">
-          <input id="filtro-busca" type="search" placeholder="Buscar descrição ou cliente/fornecedor">
-          <select id="filtro-tipo"><option value="">Receitas e despesas</option><option value="receita">Somente receitas</option><option value="despesa">Somente despesas</option></select>
-          <select id="filtro-situacao"><option value="">Todas as situações</option><option value="pendente">Pendentes</option><option value="vencido">Vencidos</option><option value="liquidado">Pagos / recebidos</option></select>
-          <select id="filtro-centro"><option value="">Todos os centros</option></select>
-          <select id="filtro-categoria"><option value="">Todas as categorias</option></select>
-          <input id="filtro-inicio" type="date" aria-label="Data inicial">
-          <input id="filtro-fim" type="date" aria-label="Data final">
-          <button id="btn-filtrar" class="btn secondary">Aplicar</button>
-        </div>
-        <div class="table-card"><div class="table-meta"><span id="lancamentos-total">0 lançamentos</span><button id="btn-exportar-relatorio" class="text-btn">Exportar relatório CSV</button></div><div class="table-scroll"><table><thead><tr><th>Competência</th><th>Vencimento</th><th>Situação</th><th>Tipo</th><th>Obra / centro</th><th>Descrição</th><th>Valor</th><th></th></tr></thead><tbody id="tabela-lancamentos"></tbody></table></div></div>
-      </section>
-
-      <section id="view-centros" class="view oculto">
-        <div class="page-head"><div><h1>Centros de custo</h1><p class="muted">Crie, edite, altere o status e consulte as compras de cada centro.</p></div><div class="page-head-actions"><button id="btn-exportar-centros" class="btn secondary">Exportar CSV</button><button id="btn-novo-centro" class="btn primary manager-only">+ Novo centro</button></div></div>
-        <div id="lista-centros-cards" class="centers-grid"></div>
-      </section>
-
-      <section id="view-categorias" class="view oculto">
-        <div class="page-head"><div><h1>Categorias</h1></div><button id="btn-nova-categoria" class="btn primary manager-only">+ Nova categoria</button></div>
-        <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Nome</th><th>Aplicação</th><th>Lançamentos</th><th>Status</th><th></th></tr></thead><tbody id="tabela-categorias"></tbody></table></div></div>
-      </section>
-
-      <section id="view-fornecedores" class="view oculto">
-        <div class="page-head"><div><h1>Fornecedores</h1></div><button id="btn-novo-fornecedor" class="btn primary manager-only">+ Novo fornecedor</button></div>
-        <div class="table-card"><div class="table-meta"><span>Base de fornecedores para lançamentos rápidos</span><button id="btn-exportar-fornecedores" class="text-btn">Exportar CSV</button></div><div class="table-scroll"><table><thead><tr><th>Fornecedor</th><th>Documento</th><th>Contato</th><th>E-mail / telefone</th><th>Status</th><th></th></tr></thead><tbody id="tabela-fornecedores"></tbody></table></div></div>
-      </section>
-
-      <section id="view-historico" class="view oculto">
-        <div class="page-head"><div><h1>Histórico de alterações</h1></div><select id="historico-tipo" aria-label="Filtrar histórico"><option value="">Todas as ações</option><option value="lancamento">Lançamentos</option><option value="obra">Obras / centros</option><option value="fornecedor">Fornecedores</option><option value="sincronizacao">Sincronização</option><option value="backup">Backups</option></select></div>
-        <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Quando</th><th>Ação</th><th>Resumo</th><th>Usuário</th><th>Instalação</th></tr></thead><tbody id="tabela-historico"></tbody></table></div></div>
-      </section>
-
-      <section id="view-sincronizacao" class="view oculto">
-        <div class="page-head"><div><h1>Trocar dados por planilha</h1></div></div>
-        <div class="sync-intro"><div class="sync-icon">⇄</div><div><strong>Compartilhe lançamentos sem internet</strong><p>Exporte nesta máquina e importe na outra. O identificador único evita duplicatas; conflitos nunca substituem o dado local automaticamente.</p></div></div>
-        <div class="sync-grid">
-          <article class="panel sync-card"><span class="step">1</span><h2>Exportar dados</h2><p>Gere o arquivo padronizado para enviar ao outro usuário por pendrive, pasta de rede ou e-mail.</p><div class="stack"><button id="sync-exportar-todos" class="btn primary wide">Exportar todos os lançamentos</button><button id="sync-exportar-mes" class="btn secondary wide">Exportar somente o mês do painel</button></div><small>O arquivo CSV abre normalmente no Excel. Não altere as colunas técnicas.</small></article>
-          <article class="panel sync-card"><span class="step">2</span><h2>Importar dados recebidos</h2><p>Selecione o CSV exportado na outra instalação. Antes de gravar, todas as linhas são verificadas.</p><label class="file-drop" for="sync-arquivo"><strong id="sync-arquivo-label">Escolher arquivo CSV</strong><span>até 8 MB ou 5.000 lançamentos</span></label><input id="sync-arquivo" class="oculto" type="file" accept=".csv,text/csv"><button id="sync-importar" class="btn primary wide" disabled>Validar e importar</button></article>
-        </div>
-        <div id="sync-resultado" class="panel sync-result oculto"></div>
-        <div class="sync-cadastros">
-          <article class="panel"><div class="panel-head"><div><h2>Sincronizar fornecedores, categorias e obras</h2></div></div>
-            <p class="muted">Exporte e importe cadastros entre instalações. Cada registro possui identificador único e revisão; conflitos de edição exigem decisão manual.</p>
-            <div class="sync-cadastros-actions"><button id="sync-exportar-cadastros" class="btn secondary">Exportar cadastros</button><label class="file-drop compact" for="sync-cadastro-arquivo"><strong id="sync-cadastro-label">Escolher CSV de cadastros</strong><span>até 8 MB</span></label><input id="sync-cadastro-arquivo" class="oculto" type="file" accept=".csv,text/csv"><button id="sync-importar-cadastros" class="btn primary" disabled>Importar cadastros</button></div>
-            <div id="sync-cadastro-resultado" class="form-error" style="margin-top:10px"></div>
-          </article>
-        </div>
-        <div class="dashboard-grid sync-lists">
-          <article class="panel span-2"><div class="panel-head"><div><h2>Últimas importações</h2></div></div><div class="table-scroll"><table><thead><tr><th>Quando</th><th>Arquivo / origem</th><th>Incluídos</th><th>Atualizados</th><th>Ignorados</th><th>Conflitos</th><th>Erros</th></tr></thead><tbody id="sync-historico"></tbody></table></div></article>
-          <article class="panel span-2"><div class="panel-head"><div><h2>Conflitos pendentes</h2></div></div><div id="sync-conflitos" class="conflict-list"></div></article>
-        </div>
-      </section>
-
-      <section id="view-usuarios" class="view oculto">
-        <div class="page-head"><div><h1>Usuários</h1></div><button id="btn-novo-usuario" class="btn primary">+ Novo usuário</button></div>
-        <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th></th></tr></thead><tbody id="tabela-usuarios"></tbody></table></div></div>
-      </section>
-
-      <section id="view-config" class="view oculto">
-        <div class="page-head"><div><h1>Configurações</h1><p class="muted">Conta, operação e acesso organizados em um só lugar.</p></div></div>
-        <div class="settings-layout">
-          <nav class="settings-index" aria-label="Seções das configurações">
-            <a href="#config-conta">Conta</a><a class="admin-only" href="#config-operacao">Operação</a><a class="admin-only" href="#config-celular">Acesso pelo celular</a><a href="#config-sistema">Sistema</a>
-          </nav>
-          <div class="settings-sheet settings-grid">
-            <article class="panel settings-section" id="config-conta"><div class="settings-section-head"><h2>Conta e segurança</h2><p>Gerencie sua senha e identificação pessoal.</p></div><form id="form-senha"><label for="senha-atual">Senha atual</label><input id="senha-atual" type="password" autocomplete="current-password" required><label for="senha-nova">Nova senha</label><input id="senha-nova" type="password" autocomplete="new-password" minlength="10" required><p class="hint">Use ao menos 10 caracteres.</p><div id="senha-mensagem" class="form-error"></div><button class="btn primary" type="submit">Salvar nova senha</button></form><div class="settings-subsection" id="profile-photo-panel"><h3>Foto de perfil</h3><p>Use uma imagem JPG, PNG ou WEBP.</p><div class="profile-photo-row"><div id="profile-photo-preview" class="avatar profile-photo-preview" aria-hidden="true"></div><div class="profile-photo-actions"><label for="profile-photo-input" class="btn secondary">Escolher foto</label><input id="profile-photo-input" class="oculto" type="file" accept="image/jpeg,image/png,image/webp"><button id="profile-photo-remove" class="text-btn oculto" type="button">Remover foto</button></div></div><div id="profile-photo-message" class="form-error" role="status"></div></div></article>
-            <article class="panel settings-section admin-only" id="config-operacao"><div class="settings-section-head"><h2>Operação financeira</h2><p>Proteja competências encerradas e mantenha cópias dos dados.</p></div><div class="settings-subsection"><h3>Fechamento mensal</h3><p>Bloqueie competências encerradas para impedir edição de lançamentos.</p><div class="closing-form"><div class="form-grid"><div><label for="fechamento-ano">Ano</label><input id="fechamento-ano" type="number" min="2000" max="2100"></div><div><label for="fechamento-mes">Mês</label><select id="fechamento-mes"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div></div><button id="btn-fechar-mes" class="btn primary">Fechar competência</button></div><div id="fechamento-mensagem" class="form-error"></div><div id="fechamentos-ativos" class="closing-list"></div></div><div class="settings-subsection"><h3>Backup e restauração</h3><p>Baixe uma cópia completa ou restaure um backup gerado pelo sistema.</p><div class="settings-actions"><button id="btn-backup" class="btn secondary">Baixar backup</button><label class="file-drop compact" for="restore-arquivo"><strong id="restore-arquivo-label">Escolher backup .tar.gz</strong><span>A base atual será preservada</span></label><input id="restore-arquivo" class="oculto" type="file" accept=".gz,.tar.gz,application/gzip"><button id="btn-restaurar" class="btn danger" disabled>Validar e restaurar</button></div><div id="restore-mensagem" class="form-error"></div><p class="hint">Nunca feche o computador durante a restauração.</p></div></article>
-            <article class="panel settings-section admin-only" id="config-celular"><div class="settings-section-head"><h2>Acesso pelo celular</h2><p>Escaneie o QR Code para abrir diretamente a versão mobile segura em HTTPS.</p></div><div class="mobile-access-control"><div><strong>Permitir acesso na rede local</strong><span>Ative somente para conectar um cliente ao aplicativo deste computador. O aplicativo reiniciará após a permissão do Firewall.</span></div><label class="switch"><input id="mobile-access-toggle" type="checkbox"><span aria-hidden="true"></span></label></div><div id="mobile-access-details" class="mobile-access-details" role="status"></div><p class="settings-warning">O QR Code abre a versão mobile pela internet. Ao permitir acesso local, mantenha o computador ligado e use somente uma rede confiável.</p></article>
-            <article class="panel settings-section" id="config-sistema"><div class="settings-section-head"><h2>Sistema</h2><p>Informações da instalação e atualizações disponíveis.</p></div><dl><dt>Nome</dt><dd id="config-instancia"></dd><dt>Versão</dt><dd id="config-versao">—</dd><dt>Operação</dt><dd>Local e offline</dd><dt>IA / tokens</dt><dd>Não utiliza</dd></dl><div class="settings-subsection"><h3>Atualizações</h3><button id="btn-verificar-update" class="btn secondary">Verificar atualizações</button><div id="update-mensagem" class="form-error"></div><div id="update-progress" class="oculto"><div class="update-track"><div id="update-bar"></div></div><p id="update-progress-text" class="hint"></p></div><button id="btn-download-update" class="btn primary oculto">Baixar atualização</button><button id="btn-install-update" class="btn primary oculto">Reiniciar e instalar</button></div></article>
+        <div class="dashboard-grid" style="margin-top:18px">
+          <div class="panel">
+            <div class="panel-head"><h2>Obras / centros com maior movimentação</h2></div>
+            <div id="lista-centros-resumo"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Despesas por categoria</h2></div>
+            <div id="lista-categorias-resumo"></div>
           </div>
         </div>
       </section>
-
+      <section id="view-lancamentos" class="view oculto">
+        <div class="page-head">
+          <div><h1>Lançamentos</h1></div>
+          <div class="page-head-actions"><button id="btn-exportar-relatorio" class="btn secondary" type="button" title="Baixar os lançamentos filtrados em CSV">Exportar lançamentos em CSV</button><button id="btn-novo-lancamento" class="btn primary" type="button" title="Abrir formulário para criar lançamento">+ Novo lançamento</button></div>
+        </div>
+        <div class="filter-bar">
+          <input id="filtro-busca" aria-label="Buscar lançamentos" type="search" placeholder="Buscar por descrição, fornecedor, documento ou notas">
+          <select id="filtro-centro" aria-label="Filtrar por obra ou centro"><option value="">Todas as obras / centros</option></select>
+          <select id="filtro-tipo" aria-label="Filtrar tipo"><option value="">Todos os tipos</option><option value="receita">Receita</option><option value="despesa">Despesa</option></select>
+          <select id="filtro-situacao" aria-label="Filtrar situação"><option value="">Todos os status</option><option value="pendente">Pendente</option><option value="liquidado">Liquidado</option><option value="cancelado">Cancelado</option></select>
+          <select id="filtro-categoria" aria-label="Filtrar categoria"><option value="">Todas as categorias</option></select>
+          <input id="filtro-inicio" aria-label="Competência inicial" type="date">
+          <input id="filtro-fim" aria-label="Competência final" type="date">
+          <button id="btn-limpar-filtros" class="btn secondary" type="button" title="Remover todos os filtros de lançamentos">Limpar filtros de lançamentos</button>
+        </div>
+        <div class="table-card">
+          <div class="table-meta"><span id="lancamentos-total">0 lançamentos encontrados</span><span id="soma-filtrada">Total líquido: R$ 0,00</span></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de lançamentos; deslize horizontalmente para ver todas as colunas">
+            <table>
+              <thead><tr><th>Competência</th><th>Vencimento</th><th>Situação</th><th>Tipo</th><th>Obra / centro</th><th>Descrição / categoria / favorecido</th><th>Valor</th><th>Ações</th></tr></thead>
+              <tbody id="tabela-lancamentos"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <section id="view-centros" class="view oculto">
+        <div class="page-head">
+          <div><h1>Obras / centros de custo</h1></div>
+          <div class="page-head-actions">
+            <button id="btn-sync-centros" class="btn secondary" type="button" title="Abrir sincronização de obras e centros" onclick="showView('sincronizacao')">Sincronizar obras e centros</button>
+            <button id="btn-novo-centro" class="btn primary" type="button" title="Abrir formulário para cadastrar obra ou centro">+ Novo centro</button>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <input id="busca-centros" aria-label="Buscar obras e centros" type="search" placeholder="Buscar por código, nome, cliente ou responsável">
+          <select id="filtro-centro-status" aria-label="Situação da obra"><option value="">Todos os status</option><option value="ativo">Ativo</option><option value="em-aberto">Em aberto</option><option value="pausado">Pausado</option><option value="concluido">Concluído</option><option value="inativo">Inativo</option></select>
+          <button id="btn-limpar-filtros-centros" class="btn secondary" type="button" title="Remover todos os filtros de obras e centros">Limpar filtros de obras</button>
+        </div>
+        <div id="lista-centros-cards" class="centers-grid"></div>
+      </section>
+      <section id="view-categorias" class="view oculto">
+        <div class="page-head"><div><h1>Categorias financeiras</h1></div><button id="btn-nova-categoria" class="btn primary" type="button" title="Abrir formulário para cadastrar categoria">+ Nova categoria</button></div>
+        <div class="filter-bar category-filter-bar">
+          <input id="busca-categorias" aria-label="Buscar categorias" type="search" placeholder="Buscar categoria">
+          <select id="filtro-categoria-tipo" aria-label="Tipo da categoria"><option value="">Todos os tipos</option><option value="receita">Receita</option><option value="despesa">Despesa</option><option value="ambos">Receita e despesa</option></select>
+          <button id="btn-limpar-filtros-categorias" class="btn secondary" type="button" title="Remover todos os filtros de categorias">Limpar filtros de categorias</button>
+        </div>
+        <div class="table-card"><div class="table-meta"><span id="total-categorias">0 categorias</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de categorias financeiras; deslize horizontalmente para ver todas as colunas"><table><thead><tr><th>Nome</th><th>Tipo padrão</th><th>Lançamentos</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-categorias"></tbody></table></div></div>
+      </section>
+      <section id="view-fornecedores" class="view oculto">
+        <div class="page-head"><div><h1>Fornecedores e parceiros</h1></div><button id="btn-novo-fornecedor" class="btn primary" type="button" title="Abrir formulário para cadastrar fornecedor">+ Novo fornecedor</button></div>
+        <div class="filter-bar supplier-filter-bar">
+          <input id="busca-fornecedores" aria-label="Buscar fornecedores" type="search" placeholder="Buscar por nome, CPF/CNPJ, contato ou e-mail">
+          <select id="filtro-fornecedor-status" aria-label="Situação do fornecedor"><option value="">Todos os status</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option></select>
+          <button id="btn-limpar-filtros-fornecedores" class="btn secondary" type="button" title="Remover todos os filtros de fornecedores">Limpar filtros de fornecedores</button>
+        </div>
+        <div class="table-card"><div class="table-meta"><span id="total-fornecedores">0 fornecedor(es)</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de fornecedores e parceiros; deslize horizontalmente para ver todas as colunas"><table><thead><tr><th>Nome / Razão</th><th>CPF / CNPJ</th><th>Contato</th><th>E-mail / telefone</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-fornecedores"></tbody></table></div></div>
+      </section>
+      <section id="view-historico" class="view oculto">
+        <div class="page-head"><div><h1>Histórico de auditoria</h1></div><select id="historico-tipo" aria-label="Tipo de registro"><option value="">Todos os registros</option><option value="lancamento">Lançamentos</option><option value="obra">Obras / centros</option><option value="categoria">Categorias</option><option value="fornecedor">Fornecedores</option></select></div>
+        <div class="table-card"><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela do histórico de auditoria; deslize horizontalmente para ver todas as colunas"><table><thead><tr><th>Data/hora</th><th>Tipo / ação</th><th>Resumo</th><th>Usuário</th><th>Instalação</th></tr></thead><tbody id="tabela-historico"></tbody></table></div></div>
+      </section>
+      <section id="view-sincronizacao" class="view oculto">
+        <div class="page-head"><div><h1>Sincronização de dados</h1></div></div>
+        <div class="sync-intro">
+          <div class="sync-icon"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v18m-4-4 4 4 4-4M16 21V3m-4 4 4-4 4 4"/></svg></div>
+          <div><strong>Transferência segura entre instalações</strong><p>Exporte e importe pacotes CSV para transferir lançamentos e obras entre computadores da Construtec.</p></div>
+        </div>
+        <div class="sync-grid">
+          <div class="panel sync-card">
+            <span class="step">1</span>
+            <h2>Exportar para outra instalação</h2>
+            <p>Gera um pacote CSV com as alterações realizadas neste computador.</p>
+            <button id="sync-exportar-todos" class="btn primary wide" type="button" title="Gerar arquivo CSV para levar os dados a outra instalação">Exportar dados para outra instalação</button>
+            <small id="sync-export-info">Lançamentos prontos para exportar</small>
+          </div>
+          <div class="panel sync-card">
+            <span class="step">2</span>
+            <h2>Importar de outra instalação</h2>
+            <p>Carregue um arquivo CSV gerado em outro computador da Construtec para incorporar novos registros.</p>
+            <label for="sync-arquivo" id="sync-arquivo-label" title="Selecionar um arquivo CSV exportado por outra instalação">Selecionar arquivo CSV para importar</label>
+            <input id="sync-arquivo" type="file" accept=".csv,text/csv" aria-label="Arquivo CSV de outra instalação" title="Selecionar arquivo CSV de outra instalação">
+            <button id="sync-importar" class="btn primary wide" type="button" title="Validar o arquivo selecionado e importar os registros" disabled>Validar e importar registros</button>
+          </div>
+        </div>
+        <div id="sync-resultado" class="panel oculto" role="status"></div>
+        <button id="sync-importar-cadastros" type="button" hidden aria-hidden="true"></button>
+        <div id="sync-conflitos-card" class="panel sync-card" style="margin-top:18px">
+          <div class="panel-head"><h2>Conflitos de sincronização</h2></div>
+          <p class="hint">Os registros abaixo foram alterados em ambas as instalações. Escolha qual versão manter.</p>
+          <div id="sync-conflitos" class="conflict-list"></div>
+        </div>
+        <div class="panel" style="margin-top:18px"><h2>Histórico de importações</h2><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela do histórico de importações; deslize horizontalmente para ver todas as colunas"><table><thead><tr><th>Data</th><th>Arquivo / origem</th><th>Incluídos</th><th>Atualizados</th><th>Ignorados</th><th>Conflitos</th><th>Erros</th></tr></thead><tbody id="sync-historico"></tbody></table></div></div>
+      </section>
+      <section id="view-usuarios" class="view oculto">
+        <div class="page-head"><div><h1>Usuários do sistema</h1></div><button id="btn-novo-usuario" class="btn primary" type="button" title="Abrir formulário para cadastrar usuário">+ Novo usuário</button></div>
+        <div class="table-card"><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de usuários do sistema; deslize horizontalmente para ver todas as colunas"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-usuarios"></tbody></table></div></div>
+      </section>
+      <section id="view-config" class="view oculto">
+        <div class="page-head"><div><h1>Configurações do sistema</h1><p>Instalação: <span id="config-instancia"></span> · Versão: <span id="config-versao"></span></p></div></div>
+        <div class="settings-layout">
+          <div class="settings-grid">
+            <div class="panel" id="profile-photo-panel">
+              <h2>Foto de perfil</h2>
+              <p>Use uma imagem JPG, PNG ou WEBP.</p>
+              <div class="profile-photo-row">
+                <div id="profile-photo-preview" class="avatar profile-photo-preview" aria-hidden="true"></div>
+                <div class="profile-photo-actions">
+                  <label for="profile-photo-input" class="btn secondary" title="Selecionar uma foto JPG, PNG ou WEBP para o perfil">Selecionar foto de perfil</label>
+                  <input id="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Foto de perfil" title="Selecionar foto de perfil">
+                  <button id="profile-photo-remove" class="text-btn oculto" type="button" title="Remover a foto de perfil atual">Remover foto de perfil</button>
+                </div>
+              </div>
+              <div id="profile-photo-message" class="form-error" role="status"></div>
+            </div>
+            <div class="panel">
+              <h2>Identificação da instalação</h2>
+              <p>O nome configurado nesta instalação aparece no cabeçalho e identifica a origem dos lançamentos sincronizados.</p>
+            </div>
+            <div class="panel">
+              <h2>Backup manual</h2>
+              <p>Baixe uma cópia completa da base de dados em formato .tar.gz para arquivamento ou recuperação de desastres.</p>
+              <button id="btn-backup" class="btn secondary wide" type="button" style="margin-top:14px" title="Baixar uma cópia completa dos dados locais">Baixar backup completo</button>
+              <hr style="margin:20px 0;border:0;border-top:1px solid var(--line)">
+              <h2>Restaurar de backup</h2>
+              <p>Substitui os dados locais pelo conteúdo de um backup anterior.</p>
+              <label id="restore-arquivo-label" for="restore-arquivo" title="Selecionar um backup .tar.gz ou .tgz para validar">Selecionar backup .tar.gz</label>
+              <input id="restore-arquivo" type="file" accept=".tar.gz,.tgz,application/gzip" aria-label="Arquivo de backup .tar.gz" title="Selecionar arquivo de backup .tar.gz">
+              <button id="btn-restaurar" class="btn danger wide" type="button" title="Validar o backup selecionado e restaurar os dados locais" disabled>Validar e restaurar dados</button>
+              <p id="restore-mensagem" class="form-error" role="status"></p>
+            </div>
+            <div class="panel" id="config-celular">
+              <h2>Acesso pelo celular</h2>
+              <p>Use o aplicativo Android na mesma rede Wi-Fi ou por um endereço HTTPS seguro.</p>
+              <div class="mobile-access-control">
+                <div><strong>Permitir acesso na rede local</strong><span>O aplicativo reiniciará para aplicar a alteração.</span></div>
+                <label class="switch"><input id="mobile-access-toggle" aria-label="Permitir acesso na rede local" type="checkbox"><span aria-hidden="true"></span></label>
+              </div>
+              <div id="mobile-access-details" class="mobile-access-details" role="status"></div>
+              <p class="settings-warning">Use somente em uma rede confiável. Para acessar fora da empresa, configure um endereço HTTPS protegido.</p>
+            </div>
+            <div class="panel">
+              <h2>Informações do sistema</h2>
+              <dl>
+                <dt>Versão da aplicação</dt><dd id="sys-versao">3.0.0</dd>
+                <dt>Banco de dados</dt><dd id="sys-db">PGlite (PostgreSQL local)</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </section>
       <section id="view-recorrentes" class="view oculto">
-        <div class="page-head"><div><h1>Contas recorrentes</h1><p class="muted">Crie modelos de lançamentos que se repetem automaticamente.</p></div><div class="page-head-actions"><button id="btn-gerar-recorrentes" class="btn secondary">Gerar lançamentos do mês</button><button id="btn-novo-recorrente" class="btn primary manager-only">+ Novo modelo</button></div></div>
+        <div class="page-head"><div><h1>Lançamentos recorrentes</h1></div><button id="btn-novo-recorrente" class="btn primary" type="button" title="Abrir formulário para cadastrar lançamento recorrente">+ Nova recorrência</button></div>
         <div id="lista-recorrentes" class="centers-grid"></div>
       </section>
-
       <section id="view-bugreports" class="view oculto">
-        <div class="page-head"><div><h1>Reports de Bugs</h1></div><div class="page-head-actions"><button id="btn-novo-bugreport" class="btn primary">+ Reportar bug</button></div></div>
+        <div class="page-head"><div><h1>Relatórios de erros e sugestões</h1></div><button id="btn-novo-bugreport" class="btn primary" type="button" title="Abrir formulário para registrar erro ou sugestão">Registrar erro ou sugestão</button></div>
         <div id="lista-bugreports" class="table-card"></div>
       </section>
+      <section id="view-chamados" class="view oculto">
+        <div class="chamados-iframe-wrap">
+          <div class="chamados-toolbar">
+            <span class="chamados-label">ChamadoPro  Chamados e Ordens de Servico</span>
+          </div>
+          <iframe id="chamados-frame" src="about:blank" class="chamados-frame" title="ChamadoPro" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+        </div>
+      </section>
+      <section id="view-orcamentos" class="view oculto">
+        <div class="chamados-iframe-wrap">
+          <div class="chamados-toolbar">
+            <span class="chamados-label">Construtec Orcamentos  Etapa 01: Propostas e BDI</span>
+          </div>
+          <iframe id="orcamentos-frame" src="https://construtec-orcamentos.pages.dev/" class="chamados-frame" title="Orcamentos" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+        </div>
+      </section>
     </main>
-    <nav class="mobile-bottom-nav" aria-label="Navegação principal"><button class="mobile-nav-item ativo" data-mobile-view="dashboard"><span>◫</span>Painel</button><button class="mobile-nav-item" data-mobile-view="lancamentos"><span>↕</span>Lançar</button><button class="mobile-nav-item" data-mobile-view="centros"><span>◎</span>Obras</button><button class="mobile-nav-item" id="mobile-theme"><span>☾</span>Tema</button><button class="mobile-nav-item" id="mobile-more"><span>☰</span>Menu</button></nav>
-    <button id="fab-theme" class="fab-theme" type="button" title="Ativar modo noturno" aria-label="Ativar modo noturno" aria-pressed="false">☾</button>
-    <button id="fab-bugreport" class="fab-bug" type="button" title="Reportar bug ou falha" aria-label="Reportar bug ou falha">⚑</button>
+    <nav class="mobile-bottom-nav" aria-label="Navegação principal"><button class="mobile-nav-item ativo" data-mobile-view="dashboard"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/></svg>Painel</button><button class="mobile-nav-item" data-mobile-view="lancamentos"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v18m-4-4 4 4 4-4M16 21V3m-4 4 4-4 4 4"/></svg>Lançar</button><button class="mobile-nav-item" data-mobile-view="centros"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V7l8-4 8 4v14M9 21v-5h6v5M8 9h1m6 0h1M8 12h1m6 0h1"/></svg>Obras</button><button class="mobile-nav-item" id="mobile-theme"><span></span>Tema</button><button class="mobile-nav-item" id="mobile-more"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button></nav>
+    <button id="fab-theme" class="fab-theme" type="button" title="Ativar modo noturno" aria-label="Ativar modo noturno" aria-pressed="false"></button>
+    <button id="fab-bugreport" class="fab-bug" type="button" title="Reportar bug ou falha" aria-label="Reportar bug ou falha"></button>
   </div>
-
-  <div id="modal-fundo" class="modal-backdrop oculto" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><div><h2 id="modal-titulo"></h2></div><button id="modal-fechar" class="icon-btn" aria-label="Fechar">×</button></div><div id="modal-corpo"></div></div></div>
+  <div id="modal-fundo" class="modal-backdrop oculto" role="dialog" aria-modal="true" aria-labelledby="modal-titulo" tabindex="-1"><div class="modal"><div class="modal-head"><div><h2 id="modal-titulo"></h2></div><button id="modal-fechar" class="icon-btn" aria-label="Fechar" type="button"></button></div><div id="modal-corpo"></div></div></div>
+  <script src="modal-compat.js"></script>
+  <script src="navigation.js"></script>
+  <script src="list-filters.js"></script>
   <script src="app.js"></script>
-</body>
+  <script src="budget-view.js"></script>
+  <script src="budget-reports.js"></script>
+  <script src="budget-measurements.js"></script>
+  <script src="budget-portfolio.js"></script>
+  <script src="budget-curves.js"></script>
+  <script src="suite-controls.js"></script>
+   <script src="action-help.js"></script>
+   <script src="async-feedback.js"></script>
+   <script src="chatgpt-p1.js"></script>
+   <script src="list-panel.js"></script>
+   <script src="list-panel-lists.js"></script>
+  </body>
 </html>
-
-

@@ -1,0 +1,347 @@
+
+.topbar {
+  -webkit-app-region: drag;
+  grid-column: 1 / -1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  padding: 0 130px 0 20px !important;
+  background: var(--navy) !important;
+  color: #fff !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12) !important;
+  z-index: 25 !important;
+}
+
+.topbar button,
+.topbar a,
+.topbar input,
+.topbar select,
+.topbar .suite-dropdown-menu,
+.topbar .topbar-actions {
+  -webkit-app-region: no-drag;
+}
+
+.topbar .brand {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  height: 100% !important;
+  padding-right: 18px !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.topbar .brand-logo {
+  height: 24px !important;
+  width: auto !important;
+  object-fit: contain !important;
+}
+
+.topbar .brand span {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #c2d5de !important;
+  letter-spacing: -0.01em !important;
+}
+
+.instance-name {
+  font-size: 11px !important;
+  color: #8da4af !important;
+  margin-left: 14px !important;
+  font-weight: 500 !important;
+}
+
+.topbar-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-left: auto !important;
+}
+
+.topbar-divider {
+  width: 1px !important;
+  height: 22px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  margin: 0 2px !important;
+}
+
+/* App Switcher / Suíte Construtec */
+.suite-switcher-container {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.btn-suite-topbar {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 10px !important;
+  height: 30px !important;
+  border-radius: 6px !important;
+  background: rgba(8, 92, 229, 0.22) !important;
+  border: 1px solid rgba(1, 183, 241, 0.35) !important;
+  color: #f2f7fa !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-suite-topbar:hover {
+  background: rgba(8, 92, 229, 0.38) !important;
+  border-color: #01b7f1 !important;
+  color: #fff !important;
+}
+
+.btn-suite-topbar svg {
+  color: #01b7f1 !important;
+}
+
+.suite-caret {
+  font-size: 10px !important;
+  opacity: 0.7 !important;
+}
+
+.suite-dropdown-menu {
+  position: absolute !important;
+  top: calc(100% + 6px) !important;
+  left: 0 !important;
+  z-index: 100 !important;
+  width: 250px !important;
+  background: #0a1724 !important;
+  border: 1px solid rgba(1, 183, 241, 0.28) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5) !important;
+  padding: 6px !important;
+  display: flex;
+  flex-direction: column !important;
+  gap: 2px !important;
+  animation: fade .15s ease !important;
+}
+
+.suite-dropdown-menu.oculto {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.suite-dropdown-header {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  color: #01b7f1 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  padding: 6px 8px 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.suite-dropdown-sep {
+  height: 1px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  margin: 3px 0 !important;
+}
+
+.suite-dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 10px !important;
+  border-radius: 6px !important;
+  text-decoration: none !important;
+  color: #b8c3d3 !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.suite-dropdown-item:hover:not(.disabled-system):not(.current-system) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+.suite-dropdown-item.hub-link {
+  background: rgba(8, 92, 229, 0.15) !important;
+  color: #fff !important;
+  border: 1px solid rgba(8, 92, 229, 0.25) !important;
+}
+
+.suite-dropdown-item.hub-link:hover {
+  background: rgba(8, 92, 229, 0.28) !important;
+  border-color: #01b7f1 !important;
+}
+
+.suite-dropdown-item.current-system {
+  background: rgba(22, 131, 93, 0.16) !important;
+  color: #34d399 !important;
+}
+
+.suite-dropdown-item.disabled-system {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+}
+
+.suite-item-icon {
+  font-size: 15px !important;
+  width: 20px !important;
+  text-align: center !important;
+}
+
+.suite-item-text {
+  display: flex !important;
+  flex-direction: column !important;
+  line-height: 1.15 !important;
+  flex: 1 !important;
+}
+
+.suite-item-text strong {
+  font-size: 11.5px !important;
+  color: inherit !important;
+}
+
+.suite-item-text small {
+  font-size: 9.5px !important;
+  opacity: 0.7 !important;
+}
+
+.suite-item-ext { color: #64748b !important; flex-shrink: 0; }
+
+.suite-current-badge {
+  font-size: 8.5px !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  background: #178442 !important;
+  color: #fff !important;
+  text-transform: uppercase !important;
+}
+
+.suite-soon-badge {
+  font-size: 8.5px !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fbbf24 !important;
+  text-transform: uppercase !important;
+}
+
+html:not(.dark) .suite-dropdown-menu {
+  background: #ffffff !important;
+  border-color: #cfd5de !important;
+  box-shadow: 0 16px 35px rgba(2, 29, 38, 0.15) !important;
+}
+
+html:not(.dark) .suite-dropdown-item {
+  color: #172033 !important;
+}
+
+html:not(.dark) .suite-dropdown-item:hover:not(.disabled-system):not(.current-system) {
+  background: #eef4ff !important;
+  color: #172033 !important;
+}
+
+.btn-theme-topbar {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 5px 12px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #dce7eb !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-theme-topbar:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.user-block.topbar-profile {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+}
+
+.user-block.topbar-profile .user-copy {
+  display: flex !important;
+  flex-direction: column !important;
+  line-height: 1.2 !important;
+  min-width: 0 !important;
+}
+
+.user-block.topbar-profile .user-copy strong {
+  font-size: 12px !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+}
+
+.user-block.topbar-profile .user-copy span {
+  font-size: 10px !important;
+  color: #8fa2ad !important;
+  text-transform: uppercase !important;
+}
+
+.btn-sair-topbar {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 4px 10px !important;
+  height: 28px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #ff9b9b !important;
+  background: rgba(196, 71, 71, 0.18) !important;
+  border: 1px solid rgba(196, 71, 71, 0.35) !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-sair-topbar:hover {
+  background: var(--red) !important;
+  color: #fff !important;
+  border-color: var(--red) !important;
+}
+
+/* 2. Barra Lateral (Sidebar) no padrão exato do Construtec Orçamentos */
+
+/* Chamados / Orcamentos iframe — seamless, fills entire view */
+.view:has(.chamados-iframe-wrap) {
+  padding: 0 !important;
+  overflow: hidden;
+}
+.chamados-iframe-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.chamados-toolbar {
+  display: none;
+}
+.chamados-label {
+  display: none;
+}
+.chamados-frame {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: var(--white, #fff);
+}

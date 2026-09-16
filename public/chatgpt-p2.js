@@ -100,7 +100,10 @@
     backdrop.className = 'cc-reversal-modal-backdrop';
     backdrop.innerHTML = `
       <section class="cc-reversal-modal" role="dialog" aria-modal="true" aria-label="Registrar estorno">
-        <header><p>Estorno formal</p><h3>${escapeHtml(item.descricao || 'Lançamento')}</h3></header>
+        <header style="position:relative;display:flex;justify-content:space-between;align-items:start;">
+          <div><p>Estorno formal</p><h3>${escapeHtml(item.descricao || 'Lançamento')}</h3></div>
+          <button type="button" class="cc-doc-close cc-cancel" aria-label="Fechar" style="background:transparent;border:0;font-size:22px;line-height:1;cursor:pointer;color:var(--muted);padding:4px 8px;">×</button>
+        </header>
         <div class="cc-body">
           <p class="cc-warning"><strong>${money(item.valor)}</strong> será compensado por um novo movimento de estorno. O lançamento original não será apagado e continuará disponível no histórico.</p>
           <label for="cc-reversal-date">Data do estorno</label>
@@ -115,8 +118,10 @@
         </div>
       </section>`;
     document.body.appendChild(backdrop);
-    backdrop.querySelector('.cc-cancel').addEventListener('click', closeModal);
+    backdrop.querySelectorAll('.cc-cancel').forEach((btn) => btn.addEventListener('click', closeModal));
     backdrop.addEventListener('click', (event) => { if (event.target === backdrop) closeModal(); });
+    const escHandler = (e) => { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', escHandler); } };
+    document.addEventListener('keydown', escHandler);
     backdrop.querySelector('.cc-confirm').addEventListener('click', async () => {
       const button = backdrop.querySelector('.cc-confirm');
       const error = backdrop.querySelector('.cc-reversal-error');

@@ -16,6 +16,7 @@ test('API local cobre obras, fluxo financeiro, fornecedores, sincronização, au
 
   const { initializeDatabase, closeDatabase, getDb } = require('../db');
   const { createApp } = require('../server');
+  delete process.env.DATABASE_URL;
   await initializeDatabase();
   let server = createApp().listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
