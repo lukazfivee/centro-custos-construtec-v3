@@ -28,8 +28,16 @@
 
   // Mapeia cada loader para o container de conteúdo e o skeleton a ser exibido
   // enquanto os dados chegam. Estrutura antecipável = skeleton.
+  // OBS: 'dashboard' foi removido deste mapa de propósito. loadDashboard()
+  // não recria o .kpi-grid — ela apenas seta textContent em elementos
+  // (#kpi-receitas, #kpi-a-pagar etc.) que precisam continuar existindo no
+  // DOM. Um skeleton que substitui o innerHTML do .kpi-grid os apaga, e
+  // loadDashboard() falha com "Cannot set properties of null (setting
+  // 'textContent')" assim que tenta escrever no primeiro deles — e como
+  // clearSkeleton() não reconstrói o HTML original, o painel fica travado
+  // no skeleton para sempre. wrapLoader('dashboard', 'loadDashboard')
+  // continua ativo (retry + aria-busy), só sem essa entrada aqui.
   const VIEWS = {
-    dashboard: { target: '#view-dashboard .kpi-grid', render: () => skeletonCards(6) },
     lancamentos: { target: '#tabela-lancamentos', render: () => skeletonRows(8, 6) },
     centros: { target: '#lista-centros-cards', render: () => skeletonCards(6) },
     categorias: { target: '#tabela-categorias', render: () => skeletonRows(5, 6) },

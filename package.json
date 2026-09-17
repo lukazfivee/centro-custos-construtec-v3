@@ -13,6 +13,7 @@
     "check": "node scripts/check-syntax.js",
     "test": "node --test",
     "test:ci": "node --test --test-reporter=spec",
+    "test:e2e": "node --test --test-concurrency=1 --test-reporter=spec test/e2e/*.e2e.js",
     "test:coverage": "node --test --experimental-test-coverage",
     "verify": "npm run check && npm run test:ci",
     "electron": "electron desktop/main-unified.js",
@@ -40,6 +41,7 @@
     "@cloudflare/containers": "^0.3.7",
     "electron": "^41.7.1",
     "electron-builder": "^26.15.3",
+    "selenium-webdriver": "^4.49.0",
     "wrangler": "^4.131.2"
   },
   "build": {
