@@ -225,6 +225,12 @@
   .curves-table-card {
     flex-shrink: 0 !important;
   }
+
+  /* Comparação de conflitos de sincronização (view-sincronizacao):
+     versão local vs. recebida lado a lado ficava apertada em 390px. */
+  .conflict-compare {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* Cabeçalho e navegação lateral alinhados ao padrão do Construtec Orçamentos. */
