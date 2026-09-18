@@ -16,8 +16,13 @@
   background: var(--line, #e2e8f0);
 }
 
-.cc-skeleton-line.is-short { width: 45%; }
-.cc-skeleton-line.is-medium { width: 70%; }
+.cc-skeleton-line.is-short {
+  width: 45%;
+}
+
+.cc-skeleton-line.is-medium {
+  width: 70%;
+}
 
 .cc-skeleton-card {
   height: 92px;
@@ -29,7 +34,9 @@
   padding: 12px 14px;
 }
 
-.cc-skeleton-row .cc-skeleton-line { margin: 0; }
+.cc-skeleton-row .cc-skeleton-line {
+  margin: 0;
+}
 
 .cc-skeleton-kpi {
   height: 26px;
@@ -65,7 +72,9 @@
   animation: cc-retry-in .18s cubic-bezier(.2, .8, .2, 1);
 }
 
-.cc-retry-toast .cc-retry-message { line-height: 1.5; }
+.cc-retry-toast .cc-retry-message {
+  line-height: 1.5;
+}
 
 .cc-retry-toast .cc-retry-actions {
   display: flex;
@@ -88,11 +97,21 @@
   border-color: var(--orange, #f97316);
 }
 
-.cc-retry-toast button:disabled { opacity: .55; cursor: progress; }
+.cc-retry-toast button:disabled {
+  opacity: .55;
+  cursor: progress;
+}
 
 @keyframes cc-retry-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ---------------------- Ação de botão durante operação -------------------- */
@@ -126,6 +145,7 @@ button.is-loading::after,
 
 /* --------------------------- Movimento reduzido --------------------------- */
 @media (prefers-reduced-motion: reduce) {
+
   .cc-skeleton-block,
   .cc-skeleton-line,
   .cc-skeleton-card,
@@ -136,7 +156,11 @@ button.is-loading::after,
     animation-iteration-count: 1 !important;
   }
 
-  [data-cc-busy="true"] { transition: none; }
+  [data-cc-busy="true"] {
+    transition: none;
+  }
 
-  .cc-retry-toast { animation: none; }
+  .cc-retry-toast {
+    animation: none;
+  }
 }

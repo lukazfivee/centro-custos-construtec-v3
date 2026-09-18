@@ -330,9 +330,24 @@
     renderPreviewAndConfirm(envelope, 'direct-preview-box', 'btn-confirmar-importacao-direta', null);
   }
 
+  const ORCAMENTOS_TRUSTED_ORIGINS = [
+    'https://construtec-orcamentos-cloud.construtec-reports.workers.dev',
+    'https://construtec-orcamentos.pages.dev',
+    'http://localhost:5173',
+    'http://localhost:4173',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:4173',
+  ];
+
+  const isTrustedBudgetOrigin = (origin) => {
+    if (!origin) return false;
+    if (ORCAMENTOS_TRUSTED_ORIGINS.includes(origin)) return true;
+    return /^https:\/\/[a-z0-9-]+\.construtec-orcamentos\.pages\.dev$/.test(origin);
+  };
+
   window.addEventListener('message', (event) => {
-    const trustedLocalOrigin = /^https?:\/\/(localhost|127\.0\.0\.1):(5173|4173)$/.test(event.origin);
-    if (!trustedLocalOrigin || event.data?.type !== 'construtec:budget-envelope' || !event.data.envelope) return;
+    if (!isTrustedBudgetOrigin(event.origin)) return;
+    if (event.data?.type !== 'construtec:budget-envelope' || !event.data.envelope) return;
     openDirectBudgetImport(event.data.envelope);
   });
 })();

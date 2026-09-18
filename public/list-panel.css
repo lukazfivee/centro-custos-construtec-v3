@@ -40,7 +40,9 @@
   color: var(--navy, #172033);
 }
 
-.cc-list-toolbar input[type="search"] { min-width: 210px; }
+.cc-list-toolbar input[type="search"] {
+  min-width: 210px;
+}
 
 .cc-pagination-bar {
   display: flex;
@@ -152,5 +154,7 @@
 
 /* --------------------------- Movimento reduzido --------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  [data-cc-list-busy="true"] { transition: none; }
+  [data-cc-list-busy="true"] {
+    transition: none;
+  }
 }
