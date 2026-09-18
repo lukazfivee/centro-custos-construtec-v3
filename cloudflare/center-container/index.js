@@ -1,6 +1,7 @@
 import { Container } from '@cloudflare/containers';
 import { env } from 'cloudflare:workers';
 import { handleCentralAuth } from './centralAuth.js';
+import { handleCommercialSync } from './commercialSync.js';
 
 // O Container passa cada valor de envVars pelo ambiente do processo, que so
 // aceita string — um valor `undefined` (secret nunca configurado no Worker)
@@ -41,6 +42,7 @@ export default {
     if (url.pathname.startsWith('/v1/')) {
       const central = await handleCentralAuth(request, env);
       if (central) return central;
+      return handleCommercialSync(request, env);
     }
     return env.API.getByName('production').fetch(request);
   },

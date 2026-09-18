@@ -14,7 +14,7 @@ const ORG_ID = 'rcconstrutec.com.br';
 const SESSION_SECONDS = 8 * 3600;
 const MAX_PROFILE_PHOTO_BYTES = 512 * 1024;
 
-function json(data, status = 200) {
+export function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -24,11 +24,11 @@ function json(data, status = 200) {
   });
 }
 
-function text(value) {
+export function text(value) {
   return String(value ?? '').trim();
 }
 
-function validCorporateEmail(value) {
+export function validCorporateEmail(value) {
   return /^[^\s@]+@rcconstrutec\.com\.br$/i.test(text(value));
 }
 
@@ -36,13 +36,13 @@ function validRole(value) {
   return ['admin', 'gestor', 'supervisor'].includes(text(value));
 }
 
-function bytesToBase64(bytes) {
+export function bytesToBase64(bytes) {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary);
 }
 
-function base64ToBytes(value) {
+export function base64ToBytes(value) {
   const binary = atob(value);
   return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
 }
@@ -72,7 +72,7 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
-async function sha256Text(value) {
+export async function sha256Text(value) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(value)));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -104,7 +104,7 @@ async function makePasswordRecord(password) {
   };
 }
 
-async function consumeRate(db, ip, scope = 'api', limit = 5000) {
+export async function consumeRate(db, ip, scope = 'api', limit = 5000) {
   const now = Math.floor(Date.now() / 1000);
   const hour = Math.floor(now / 3600);
   const bucket = `${scope}:${ip || 'unknown'}:${hour}`;
@@ -151,7 +151,7 @@ async function createSession(env, user, request) {
   return { token, expiresAt };
 }
 
-async function sessionUser(request, env) {
+export async function sessionUser(request, env) {
   const header = request.headers.get('authorization') || '';
   if (!header.startsWith('Bearer ')) return null;
   const token = header.slice(7).trim();
@@ -170,7 +170,7 @@ async function sessionUser(request, env) {
   return row;
 }
 
-async function requireSession(request, env, roles = []) {
+export async function requireSession(request, env, roles = []) {
   const user = await sessionUser(request, env);
   if (!user) return { error: 'Sessao invalida ou expirada.', status: 401 };
   if (roles.length && !roles.includes(user.role)) return { error: 'Sem permissao para esta acao.', status: 403 };
