@@ -20,7 +20,7 @@ Gestão financeira orientada às obras da Construtec, com operação local-first
 
 ## Operating Context
 
-O uso principal ocorre em computadores Windows da empresa. A rotina inclui cadastro de obras, clientes, categorias e fornecedores; registro e liquidação de receitas e despesas; acompanhamento mensal; cobrança de clientes; anexos e notas fiscais; exportação para Excel; fechamento mensal; conciliação; sincronização e backup. Uma versão web responsiva para celular está prevista no roadmap.
+O uso principal ocorre em computadores Windows da empresa. A rotina inclui cadastro de obras, clientes, categorias e fornecedores; registro e liquidação de receitas e despesas; acompanhamento mensal; cobrança de clientes; anexos e notas fiscais; exportação para Excel; fechamento mensal; conciliação; sincronização e backup. O sistema já tem uma interface web responsiva para celular (casca, navegação, dashboard e as listas principais — fornecedores, categorias, histórico, usuários, lançamentos, obras/centros de custo e recorrências, já em formato de cartão tocável); as telas de orçamento, medições e contratos ainda estão em adaptação (ver `docs/notas-desenvolvimento/ROADMAP-RESTANTE.md`, P9).
 
 ## Capabilities and Constraints
 

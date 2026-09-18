@@ -34,9 +34,9 @@
     onItems: (items) => { window.categorias = items; },
     render: (items) => items.map((item) => `<tr>
       <td><strong>${esc(item.nome)}</strong></td>
-      <td><span class="pill">${esc(item.tipo)}</span></td>
-      <td>${Number(item.total_lancamentos || 0)}</td>
-      <td><span class="pill ${item.ativo ? 'ativo' : 'inativo'}">${item.ativo ? 'Ativa' : 'Inativa'}</span></td>
+      <td data-label="Tipo padrão"><span class="pill">${esc(item.tipo)}</span></td>
+      <td data-label="Lançamentos">${Number(item.total_lancamentos || 0)}</td>
+      <td data-label="Status"><span class="pill ${item.ativo ? 'ativo' : 'inativo'}">${item.ativo ? 'Ativa' : 'Inativa'}</span></td>
     </tr>`).join(''),
     bind: (container, items) => {
       if (!canEdit()) return;
@@ -71,11 +71,11 @@
     onItems: (items) => { window.fornecedores = items; },
     render: (items) => items.map((item) => `<tr>
       <td><strong>${esc(item.nome)}</strong></td>
-      <td>${esc(item.documento || '—')}</td>
-      <td>${esc(item.contato || '—')}</td>
-      <td>${esc(item.email || '—')}${item.telefone ? `<br><span class="muted">${esc(item.telefone)}</span>` : ''}</td>
-      <td><span class="pill ${item.ativo ? 'ativo' : 'inativo'}">${item.ativo ? 'Ativo' : 'Inativo'}</span></td>
-      <td><div class="row-actions">${canEdit() ? `<button data-edit-supplier="${item.id}" aria-label="Editar fornecedor: ${esc(item.nome)}" title="Editar fornecedor: ${esc(item.nome)}">Editar</button>` : ''}</div></td>
+      <td data-label="CPF / CNPJ">${esc(item.documento || '—')}</td>
+      <td data-label="Contato">${esc(item.contato || '—')}</td>
+      <td data-label="E-mail / telefone">${esc(item.email || '—')}${item.telefone ? `<br><span class="muted">${esc(item.telefone)}</span>` : ''}</td>
+      <td data-label="Status"><span class="pill ${item.ativo ? 'ativo' : 'inativo'}">${item.ativo ? 'Ativo' : 'Inativo'}</span></td>
+      <td data-label="Ações"><div class="row-actions">${canEdit() ? `<button data-edit-supplier="${item.id}" aria-label="Editar fornecedor: ${esc(item.nome)}" title="Editar fornecedor: ${esc(item.nome)}">Editar</button>` : ''}</div></td>
     </tr>`).join(''),
     bind: (container, items) => {
       container.querySelectorAll('[data-edit-supplier]').forEach((button) => {
@@ -139,10 +139,10 @@
     skeleton: () => Array.from({ length: 5 }).map(() => '<tr class="cc-skeleton-row"><td><div class="cc-skeleton-line is-short"></div></td><td><div class="cc-skeleton-line"></div></td><td><div class="cc-skeleton-line is-medium"></div></td><td><div class="cc-skeleton-line is-short"></div></td><td><div class="cc-skeleton-line is-short"></div></td></tr>').join(''),
     render: (items) => items.map((item) => `<tr>
       <td>${dateTimeBr(item.created_at)}</td>
-      <td><span class="pill">${esc(item.tipo)} · ${esc(item.acao)}</span></td>
-      <td><strong>${esc(item.resumo)}</strong></td>
-      <td>${esc(item.usuario)}</td>
-      <td>${esc(item.instancia)}</td>
+      <td data-label="Tipo / ação"><span class="pill">${esc(item.tipo)} · ${esc(item.acao)}</span></td>
+      <td data-label="Resumo">${esc(item.resumo)}</td>
+      <td data-label="Usuário">${esc(item.usuario)}</td>
+      <td data-label="Instalação">${esc(item.instancia)}</td>
     </tr>`).join(''),
     bind: () => {},
   });
@@ -209,10 +209,10 @@
     skeleton: () => Array.from({ length: 4 }).map(() => '<tr class="cc-skeleton-row"><td><div class="cc-skeleton-line"></div></td><td><div class="cc-skeleton-line is-medium"></div></td><td><div class="cc-skeleton-line is-short"></div></td><td><div class="cc-skeleton-line is-short"></div></td><td><div class="cc-skeleton-line is-short"></div></td></tr>').join(''),
     render: (items) => items.map((item) => `<tr>
       <td><strong>${esc(item.nome)}</strong></td>
-      <td>${esc(item.email)}</td>
-      <td><span class="pill">${esc(roleName[item.role] || item.role)}</span></td>
-      <td><span class="pill ${item.ativo ? 'ativo' : 'inativo'}">${item.ativo ? 'Ativo' : 'Inativo'}</span></td>
-      <td>${dateBr(item.created_at)}</td>
+      <td data-label="E-mail">${esc(item.email)}</td>
+      <td data-label="Papel"><span class="pill">${esc(roleName[item.role] || item.role)}</span></td>
+      <td data-label="Status"><span class="pill ${item.ativo ? 'ativo' : 'inativo'}">${item.ativo ? 'Ativo' : 'Inativo'}</span></td>
+      <td data-label="Cadastrado em">${dateBr(item.created_at)}</td>
     </tr>`).join(''),
     bind: () => {},
   });

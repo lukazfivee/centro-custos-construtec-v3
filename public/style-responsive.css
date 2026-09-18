@@ -130,6 +130,67 @@
   .dashboard-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
   .panel { padding: 17px 16px !important; border-radius: 12px !important; }
   .mobile-bottom-nav { z-index: 35 !important; }
+
+  /* Listas paginadas (categorias, fornecedores, histórico, usuários, lançamentos):
+     tabelas largas viram cartões tocáveis, sem scroll horizontal forçado.
+     Escopo: apenas <table class="cc-mobile-table">, nunca o desktop. */
+  .table-card .table-scroll:has(.cc-mobile-table) {
+    overflow: visible !important;
+  }
+  .table-card .cc-mobile-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .table-card .cc-mobile-table thead {
+    display: none !important;
+  }
+  .table-card .cc-mobile-table tbody {
+    display: block !important;
+  }
+  .table-card .cc-mobile-table tr {
+    display: block !important;
+    margin-bottom: 10px !important;
+    padding: 12px 14px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 10px !important;
+    background: var(--white) !important;
+  }
+  .table-card .cc-mobile-table tr:last-child {
+    margin-bottom: 0 !important;
+  }
+  .table-card .cc-mobile-table tr[role="button"] {
+    cursor: pointer;
+  }
+  .table-card .cc-mobile-table td {
+    display: block !important;
+    padding: 6px 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+    font-size: 13px !important;
+  }
+  .table-card .cc-mobile-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .02em;
+  }
+  .table-card .cc-mobile-table td:first-child {
+    padding-top: 0 !important;
+    font-size: 14px !important;
+  }
+  .table-card .cc-mobile-table .row-actions {
+    justify-content: flex-start !important;
+    margin-top: 2px !important;
+  }
+  .table-card .cc-mobile-table .row-actions button {
+    min-height: 40px !important;
+    padding: 0 14px !important;
+  }
 }
 
 /* Cabeçalho e navegação lateral alinhados ao padrão do Construtec Orçamentos. */

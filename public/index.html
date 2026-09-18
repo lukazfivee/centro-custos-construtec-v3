@@ -192,7 +192,7 @@
         <div class="table-card">
           <div class="table-meta"><span id="lancamentos-total">0 lançamentos encontrados</span><span id="soma-filtrada">Total líquido: R$ 0,00</span></div>
           <div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de lançamentos; deslize horizontalmente para ver todas as colunas">
-            <table>
+            <table class="cc-mobile-table">
               <thead><tr><th>Competência</th><th>Vencimento</th><th>Situação</th><th>Tipo</th><th>Obra / centro</th><th>Descrição / categoria / favorecido</th><th>Valor</th><th>Ações</th></tr></thead>
               <tbody id="tabela-lancamentos"></tbody>
             </table>
@@ -221,7 +221,7 @@
           <select id="filtro-categoria-tipo" aria-label="Tipo da categoria"><option value="">Todos os tipos</option><option value="receita">Receita</option><option value="despesa">Despesa</option><option value="ambos">Receita e despesa</option></select>
           <button id="btn-limpar-filtros-categorias" class="btn secondary" type="button" title="Remover todos os filtros de categorias">Limpar filtros de categorias</button>
         </div>
-        <div class="table-card"><div class="table-meta"><span id="total-categorias">0 categorias</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de categorias financeiras; deslize horizontalmente para ver todas as colunas"><table><thead><tr><th>Nome</th><th>Tipo padrão</th><th>Lançamentos</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-categorias"></tbody></table></div></div>
+        <div class="table-card"><div class="table-meta"><span id="total-categorias">0 categorias</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de categorias financeiras; deslize horizontalmente para ver todas as colunas"><table class="cc-mobile-table"><thead><tr><th>Nome</th><th>Tipo padrão</th><th>Lançamentos</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-categorias"></tbody></table></div></div>
       </section>
       <section id="view-fornecedores" class="view oculto">
         <div class="page-head"><div><h1>Fornecedores e parceiros</h1></div><button id="btn-novo-fornecedor" class="btn primary" type="button" title="Abrir formulário para cadastrar fornecedor">+ Novo fornecedor</button></div>
@@ -230,11 +230,11 @@
           <select id="filtro-fornecedor-status" aria-label="Situação do fornecedor"><option value="">Todos os status</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option></select>
           <button id="btn-limpar-filtros-fornecedores" class="btn secondary" type="button" title="Remover todos os filtros de fornecedores">Limpar filtros de fornecedores</button>
         </div>
-        <div class="table-card"><div class="table-meta"><span id="total-fornecedores">0 fornecedor(es)</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de fornecedores e parceiros; deslize horizontalmente para ver todas as colunas"><table><thead><tr><th>Nome / Razão</th><th>CPF / CNPJ</th><th>Contato</th><th>E-mail / telefone</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-fornecedores"></tbody></table></div></div>
+        <div class="table-card"><div class="table-meta"><span id="total-fornecedores">0 fornecedor(es)</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de fornecedores e parceiros; deslize horizontalmente para ver todas as colunas"><table class="cc-mobile-table"><thead><tr><th>Nome / Razão</th><th>CPF / CNPJ</th><th>Contato</th><th>E-mail / telefone</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-fornecedores"></tbody></table></div></div>
       </section>
       <section id="view-historico" class="view oculto">
         <div class="page-head"><div><h1>Histórico de auditoria</h1></div><select id="historico-tipo" aria-label="Tipo de registro"><option value="">Todos os registros</option><option value="lancamento">Lançamentos</option><option value="obra">Obras / centros</option><option value="categoria">Categorias</option><option value="fornecedor">Fornecedores</option></select></div>
-        <div class="table-card"><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela do histórico de auditoria; deslize horizontalmente para ver todas as colunas"><table><thead><tr><th>Data/hora</th><th>Tipo / ação</th><th>Resumo</th><th>Usuário</th><th>Instalação</th></tr></thead><tbody id="tabela-historico"></tbody></table></div></div>
+        <div class="table-card"><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela do histórico de auditoria; deslize horizontalmente para ver todas as colunas"><table class="cc-mobile-table"><thead><tr><th>Data/hora</th><th>Tipo / ação</th><th>Resumo</th><th>Usuário</th><th>Instalação</th></tr></thead><tbody id="tabela-historico"></tbody></table></div></div>
       </section>
       <section id="view-sincronizacao" class="view oculto">
         <div class="page-head"><div><h1>Sincronização de dados</h1></div></div>
@@ -270,7 +270,7 @@
       </section>
       <section id="view-usuarios" class="view oculto">
         <div class="page-head"><div><h1>Usuários do sistema</h1></div><button id="btn-novo-usuario" class="btn primary" type="button" title="Abrir formulário para cadastrar usuário">+ Novo usuário</button></div>
-        <div class="table-card"><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de usuários do sistema; deslize horizontalmente para ver todas as colunas"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-usuarios"></tbody></table></div></div>
+        <div class="table-card"><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de usuários do sistema; deslize horizontalmente para ver todas as colunas"><table class="cc-mobile-table"><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-usuarios"></tbody></table></div></div>
       </section>
       <section id="view-config" class="view oculto">
         <div class="page-head"><div><h1>Configurações do sistema</h1><p>Instalação: <span id="config-instancia"></span> · Versão: <span id="config-versao"></span></p></div></div>

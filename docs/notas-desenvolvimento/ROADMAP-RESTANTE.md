@@ -37,9 +37,11 @@ Este documento registra o lote final de evolução do Centro de Custos Construte
 - permissões por obra e limite de aprovação como base de expansão.
 
 ## P9 - acesso móvel
-- concluído na RC10: interface responsiva, navegação inferior e aplicativo Android;
+- concluído na RC10: interface responsiva (casca: topbar, sidebar/drawer, dashboard), navegação inferior e aplicativo Android;
 - concluído na RC10: conexão na rede local com ativação explícita e autenticação normal do sistema;
 - concluído na RC10: cliente aceita endereço HTTPS protegido para acesso remoto;
+- concluído em 2026-09-18: listas que ainda eram tabelas largas no mobile (fornecedores, categorias, histórico, usuários, lançamentos) convertidas em cartões tocáveis, sem scroll horizontal forçado; obras/centros de custo e recorrências já usavam cartão nativo;
+- pendente: telas de orçamento, medições e contratos (módulo `budget-view`) ainda não adaptadas para mobile — mesmo levantamento em `HANDOFF-MOBILE-PARIDADE-DUPLA.md` (raiz do workspace);
 - futuro: hospedagem centralizada para funcionar sem depender do computador da empresa ligado.
 
 As entregas são mantidas em branches separadas da `main` e validadas pelo GitHub Actions antes de integração.

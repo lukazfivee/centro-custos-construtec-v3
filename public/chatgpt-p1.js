@@ -205,13 +205,13 @@
     const tbody = element('tabela-lancamentos');
     if (!tbody) return;
     tbody.innerHTML = items.length ? items.map((item) => `<tr>
-      <td>${dateBr(item.data)}</td><td>${dateBr(item.vencimento)}</td>
-      <td><span class="pill ${esc(item.situacao)}">${esc(financialLabel(item))}</span></td>
-      <td><span class="pill ${esc(item.tipo)}">${esc(item.tipo)}</span></td>
-      <td><strong>${esc(item.centro_codigo)}</strong><br>${esc(item.centro_nome)}</td>
-      <td><strong>${esc(item.descricao)}</strong><br><span class="muted">${esc(item.categoria)}${item.favorecido?` · ${esc(item.favorecido)}`:''}</span></td>
-      <td class="money" style="color:var(--${item.tipo==='receita'?'green':'red'})">${item.tipo==='receita'?'+':'-'} ${money(item.valor)}</td>
-      <td><div class="row-actions"><button data-edit-transaction="${item.id}">Editar</button>${['admin','gestor'].includes(usuario.role)?`<button class="danger" data-delete-transaction="${item.id}">Excluir</button>`:''}</div></td>
+      <td>${dateBr(item.data)}</td><td data-label="Vencimento">${dateBr(item.vencimento)}</td>
+      <td data-label="Situação"><span class="pill ${esc(item.situacao)}">${esc(financialLabel(item))}</span></td>
+      <td data-label="Tipo"><span class="pill ${esc(item.tipo)}">${esc(item.tipo)}</span></td>
+      <td data-label="Obra / centro"><strong>${esc(item.centro_codigo)}</strong><br>${esc(item.centro_nome)}</td>
+      <td data-label="Descrição"><strong>${esc(item.descricao)}</strong><br><span class="muted">${esc(item.categoria)}${item.favorecido?` · ${esc(item.favorecido)}`:''}</span></td>
+      <td data-label="Valor" class="money" style="color:var(--${item.tipo==='receita'?'green':'red'})">${item.tipo==='receita'?'+':'-'} ${money(item.valor)}</td>
+      <td data-label="Ações"><div class="row-actions"><button data-edit-transaction="${item.id}">Editar</button>${['admin','gestor'].includes(usuario.role)?`<button class="danger" data-delete-transaction="${item.id}">Excluir</button>`:''}</div></td>
     </tr>`).join('') : '<tr><td colspan="8"><div class="empty">Nenhum lançamento encontrado.</div></td></tr>';
 
     document.querySelectorAll('[data-edit-transaction]').forEach((button) => {
