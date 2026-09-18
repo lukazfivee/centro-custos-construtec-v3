@@ -1,12 +1,13 @@
 import { Container } from '@cloudflare/containers';
 import { env } from 'cloudflare:workers';
 import { handleCentralAuth } from './centralAuth.js';
+import { compactContainerEnv } from './containerEnv.mjs';
 
 export class CentroCustosApi extends Container {
   defaultPort = 8080;
   sleepAfter = '10m';
   enableInternet = true;
-  envVars = {
+  envVars = compactContainerEnv({
     DATABASE_URL: env.DATABASE_URL,
     DB_SSL: env.DB_SSL,
     DB_POOL_MAX: env.DB_POOL_MAX,
@@ -22,7 +23,7 @@ export class CentroCustosApi extends Container {
     SYNC_SHARED_KEY: env.SYNC_SHARED_KEY,
     MOBILE_APP_URL: env.MOBILE_APP_URL,
     NODE_ENV: env.NODE_ENV,
-  };
+  });
 }
 
 export default {
