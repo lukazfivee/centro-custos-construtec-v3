@@ -170,12 +170,12 @@
     const tableRows = timeline.map((t) => `
       <tr>
         <td><strong>${t.month}</strong></td>
-        <td>${formatCurrency(t.plannedMonth)}</td>
-        <td style="color: #085ce5; font-weight: 600;">${formatCurrency(t.plannedCumulative)}</td>
-        <td>${t.realizedMonth !== null ? formatCurrency(t.realizedMonth) : ''}</td>
-        <td style="color: #10b981; font-weight: 700;">${t.realizedCumulative !== null ? formatCurrency(t.realizedCumulative) : ''}</td>
-        <td>${t.measuredMonth !== null ? formatCurrency(t.measuredMonth) : ''}</td>
-        <td>${t.measuredCumulative !== null ? formatCurrency(t.measuredCumulative) : ''}</td>
+        <td data-label="Previsto Mês">${formatCurrency(t.plannedMonth)}</td>
+        <td data-label="Previsto Acum." style="color: #085ce5; font-weight: 600;">${formatCurrency(t.plannedCumulative)}</td>
+        <td data-label="Realizado Mês">${t.realizedMonth !== null ? formatCurrency(t.realizedMonth) : ''}</td>
+        <td data-label="Realizado Acum." style="color: #10b981; font-weight: 700;">${t.realizedCumulative !== null ? formatCurrency(t.realizedCumulative) : ''}</td>
+        <td data-label="Medido Mês">${t.measuredMonth !== null ? formatCurrency(t.measuredMonth) : ''}</td>
+        <td data-label="Medido Acum.">${t.measuredCumulative !== null ? formatCurrency(t.measuredCumulative) : ''}</td>
       </tr>
     `).join('');
 
@@ -230,7 +230,7 @@
       </div>
 
       <div class="curves-table-card">
-        <table class="curves-table">
+        <table class="curves-table cc-mobile-table">
           <thead>
             <tr>
               <th>Ms</th>

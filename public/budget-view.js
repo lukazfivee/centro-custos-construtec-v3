@@ -167,7 +167,7 @@
             </div>
           </div>
           <div class="budget-table-scroll">
-            <table class="budget-table">
+            <table class="budget-table cc-mobile-table">
               <thead><tr><th>Código</th><th>Insumo / Descrição</th><th>Tipo</th><th>Qtd Orçada</th><th>Custo Orçado</th><th>Realizado</th><th>Desvio</th><th>Saldo</th><th>Curva ABC</th></tr></thead>
               <tbody id="budget-items-tbody">${renderTableRows(items, abcCurve)}</tbody>
             </table>
@@ -205,15 +205,15 @@
       else if (cIds.has(i.controlItemId)) abcBadge = '<span class="badge-abc badge-c">C</span>';
       const varianceColor = i.variance > 0 ? '#dc2626' : i.variance < 0 ? '#059669' : 'inherit';
       return `<tr>
-        <td><span class="muted">${esc(i.code || '—')}</span></td>
-        <td><strong>${esc(i.name)}</strong></td>
-        <td><span class="pill ${i.kind === 'labor' ? 'ativo' : ''}" style="font-size:0.7rem;">${i.kind === 'labor' ? 'Mão de Obra' : 'Material'}</span></td>
-        <td>${i.budgetedQuantity} ${esc(i.unit)}</td>
-        <td>${fmtMoney(i.budgetedCost)}</td>
-        <td style="font-weight:700;color:#0284c7;">${fmtMoney(i.realizedCost)}</td>
-        <td style="color:${varianceColor};font-weight:600;">${i.variance > 0 ? '+' : ''}${fmtMoney(i.variance)}</td>
-        <td style="font-weight:700;color:${i.isOverBudget ? '#dc2626' : '#059669'};">${fmtMoney(i.balance)}</td>
-        <td>${abcBadge}</td>
+        <td data-label="Código"><span class="muted">${esc(i.code || '—')}</span></td>
+        <td data-label="Insumo / Descrição"><strong>${esc(i.name)}</strong></td>
+        <td data-label="Tipo"><span class="pill ${i.kind === 'labor' ? 'ativo' : ''}" style="font-size:0.7rem;">${i.kind === 'labor' ? 'Mão de Obra' : 'Material'}</span></td>
+        <td data-label="Qtd Orçada">${i.budgetedQuantity} ${esc(i.unit)}</td>
+        <td data-label="Custo Orçado">${fmtMoney(i.budgetedCost)}</td>
+        <td data-label="Realizado" style="font-weight:700;color:#0284c7;">${fmtMoney(i.realizedCost)}</td>
+        <td data-label="Desvio" style="color:${varianceColor};font-weight:600;">${i.variance > 0 ? '+' : ''}${fmtMoney(i.variance)}</td>
+        <td data-label="Saldo" style="font-weight:700;color:${i.isOverBudget ? '#dc2626' : '#059669'};">${fmtMoney(i.balance)}</td>
+        <td data-label="Curva ABC">${abcBadge}</td>
       </tr>`;
     }).join('');
   }

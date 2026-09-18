@@ -128,16 +128,16 @@
 
           <div class="measurements-table-card">
             <div class="measurements-table-title">Histórico de Medições de Campo (${(measurementsData.labor || []).length})</div>
-            <table class="measurements-table">
+            <table class="measurements-table cc-mobile-table">
               <thead><tr><th>Período</th><th>Horas Medidas</th><th>Observações</th><th>Registro</th></tr></thead>
               <tbody>
                 ${(measurementsData.labor || []).length === 0 ? '<tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Nenhuma medição de mão de obra registrada.</td></tr>' : ''}
                 ${(measurementsData.labor || []).map(m => `
                   <tr>
-                    <td><strong>${esc(m.period_start)}</strong> até <strong>${esc(m.period_end)}</strong></td>
-                    <td><strong style="color:#0284c7;">${Number(m.team_hours).toFixed(1)}h</strong></td>
-                    <td>${esc(m.notes || '—')}</td>
-                    <td>${new Date(m.created_at).toLocaleDateString('pt-BR')}</td>
+                    <td data-label="Período"><strong>${esc(m.period_start)}</strong> até <strong>${esc(m.period_end)}</strong></td>
+                    <td data-label="Horas Medidas"><strong style="color:#0284c7;">${Number(m.team_hours).toFixed(1)}h</strong></td>
+                    <td data-label="Observações">${esc(m.notes || '—')}</td>
+                    <td data-label="Registro">${new Date(m.created_at).toLocaleDateString('pt-BR')}</td>
                   </tr>`).join('')}
               </tbody>
             </table>
@@ -208,17 +208,17 @@
 
           <div class="measurements-table-card">
             <div class="measurements-table-title">Medições de Faturamento Contratual (${(measurementsData.contracts || []).length})</div>
-            <table class="measurements-table">
+            <table class="measurements-table cc-mobile-table">
               <thead><tr><th>Medição</th><th>Período</th><th>Valor Medido</th><th>Status</th><th>Boletim</th></tr></thead>
               <tbody>
                 ${(measurementsData.contracts || []).length === 0 ? '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Nenhuma medição contratual registrada.</td></tr>' : ''}
                 ${(measurementsData.contracts || []).map(m => `
                   <tr>
-                    <td><strong>Medição ${String(m.measurement_number).padStart(2, '0')}</strong></td>
-                    <td>${esc(m.period_start)} até ${esc(m.period_end)}</td>
-                    <td><strong style="color:#059669;">${fmtMoney(m.measured_amount)}</strong></td>
-                    <td><span class="pill ativo" style="font-size:0.72rem;">Aprovada</span></td>
-                    <td><button type="button" class="btn secondary" data-boletim-id="${m.id}" aria-label="Emitir boletim da medição ${String(m.measurement_number).padStart(2, '0')} de ${esc(m.period_start)} a ${esc(m.period_end)}" title="Emitir boletim desta medição" style="font-size:0.72rem;padding:3px 8px;">Emitir Boletim</button></td>
+                    <td data-label="Medição"><strong>Medição ${String(m.measurement_number).padStart(2, '0')}</strong></td>
+                    <td data-label="Período">${esc(m.period_start)} até ${esc(m.period_end)}</td>
+                    <td data-label="Valor Medido"><strong style="color:#059669;">${fmtMoney(m.measured_amount)}</strong></td>
+                    <td data-label="Status"><span class="pill ativo" style="font-size:0.72rem;">Aprovada</span></td>
+                    <td data-label="Boletim"><button type="button" class="btn secondary" data-boletim-id="${m.id}" aria-label="Emitir boletim da medição ${String(m.measurement_number).padStart(2, '0')} de ${esc(m.period_start)} a ${esc(m.period_end)}" title="Emitir boletim desta medição" style="font-size:0.72rem;padding:3px 8px;">Emitir Boletim</button></td>
                   </tr>`).join('')}
               </tbody>
             </table>
