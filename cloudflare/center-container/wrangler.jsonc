@@ -15,5 +15,10 @@
   "durable_objects": {
     "bindings": [{ "name": "API", "class_name": "CentroCustosApi" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CentroCustosApi"] }]
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CentroCustosApi"] }],
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "centro-custos-producao",
+    "database_id": "95e0be7b-2f59-4af4-87c3-95dc6b0ef95c"
+  }]
 }

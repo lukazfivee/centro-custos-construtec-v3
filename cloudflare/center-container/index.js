@@ -1,5 +1,6 @@
 import { Container } from '@cloudflare/containers';
 import { env } from 'cloudflare:workers';
+import { handleCentralAuth } from './centralAuth.js';
 
 export class CentroCustosApi extends Container {
   defaultPort = 8080;
@@ -26,6 +27,11 @@ export class CentroCustosApi extends Container {
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/v1/')) {
+      const central = await handleCentralAuth(request, env);
+      if (central) return central;
+    }
     return env.API.getByName('production').fetch(request);
   },
 };
