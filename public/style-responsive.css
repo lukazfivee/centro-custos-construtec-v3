@@ -231,6 +231,18 @@
   .conflict-compare {
     grid-template-columns: 1fr !important;
   }
+
+  /* Cobranças (v3-1-enhancements): grade de KPIs fixa em 4 colunas e o
+     grid de formulário (acompanhamento/e-mail) fixo em 2 colunas. */
+  .v31-collection-kpis {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .v31-modal-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .v31-modal-grid .span-2 {
+    grid-column: 1 !important;
+  }
 }
 
 /* Cabeçalho e navegação lateral alinhados ao padrão do Construtec Orçamentos. */

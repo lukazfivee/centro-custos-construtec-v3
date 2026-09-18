@@ -13,6 +13,7 @@
   }
 
   async function refreshItems() {
+    if (!localStorage.getItem('cc_token')) return;
     try {
       const response = await fetch('/api/lancamentos', { headers:authHeaders() });
       if (!response.ok) return;

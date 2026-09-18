@@ -71,6 +71,7 @@
   panel.querySelector('#smart-sync-refresh').addEventListener('click', refreshSmartSync);
 
   async function refreshSmartSync() {
+    if (!localStorage.getItem('cc_token')) return;
     try {
       const [history, conflicts] = await Promise.all([
         api('/sincronizacao-inteligente/historico'),

@@ -51,7 +51,7 @@
 
   async function loadReportDeliveryStatus() {
     const el = document.querySelector('#report-v2-status');
-    if (!el) return;
+    if (!el || !localStorage.getItem('cc_token')) return;
     try {
       const data = await api('/bug-reports/delivery/status');
       el.style.color = data.configured ? 'var(--green)' : 'var(--orange)';
@@ -91,18 +91,18 @@
     const isAdminOrGestor = ['admin', 'gestor'].includes(usuario.role);
     el.innerHTML = `
       <div class="table-meta"><span>${items.length} report(s)</span><span class="muted">Destino: pcm@rcconstrutec.com.br</span></div>
-      <div class="table-scroll"><table>
+      <div class="table-scroll"><table class="cc-mobile-table">
         <thead><tr><th>#</th><th>Título</th><th>Tipo</th><th>Severidade</th><th>Entrega</th><th>Autor</th><th>Data</th><th>Ações</th></tr></thead>
         <tbody>${items.map((r) => `
           <tr>
             <td><strong>${r.central_report_id ? esc(r.central_report_id) : r.id}</strong></td>
-            <td>${esc(r.titulo)}</td>
-            <td><span class="pill">${bugTipoLabel[r.tipo] || esc(r.tipo)}</span></td>
-            <td><span class="${bugSeveridadeClass[r.severidade] || 'pill'}">${bugSeveridadeLabel[r.severidade] || esc(r.severidade)}</span></td>
-            <td><span class="${deliveryClass[r.delivery_status] || 'pill'}">${deliveryLabel[r.delivery_status] || esc(r.delivery_status || 'local')}</span>${r.last_delivery_error ? `<br><small class="muted">${esc(r.last_delivery_error)}</small>` : ''}</td>
-            <td>${esc(r.author_name)}</td>
-            <td>${dateTimeBr(r.created_at)}</td>
-            <td><div class="row-actions">
+            <td data-label="Título">${esc(r.titulo)}</td>
+            <td data-label="Tipo"><span class="pill">${bugTipoLabel[r.tipo] || esc(r.tipo)}</span></td>
+            <td data-label="Severidade"><span class="${bugSeveridadeClass[r.severidade] || 'pill'}">${bugSeveridadeLabel[r.severidade] || esc(r.severidade)}</span></td>
+            <td data-label="Entrega"><span class="${deliveryClass[r.delivery_status] || 'pill'}">${deliveryLabel[r.delivery_status] || esc(r.delivery_status || 'local')}</span>${r.last_delivery_error ? `<br><small class="muted">${esc(r.last_delivery_error)}</small>` : ''}</td>
+            <td data-label="Autor">${esc(r.author_name)}</td>
+            <td data-label="Data">${dateTimeBr(r.created_at)}</td>
+            <td data-label="Ações"><div class="row-actions">
               ${['pending','failed'].includes(r.delivery_status) ? `<button data-retry-report="${r.id}">Reenviar</button>` : ''}
               ${isAdminOrGestor ? `<button data-manage-report="${r.id}">Gerenciar</button>` : ''}
             </div></td>

@@ -36,6 +36,8 @@ Este documento registra o lote final de evolução do Centro de Custos Construte
 - verificação de espaço livre;
 - permissões por obra e limite de aprovação como base de expansão.
 
+**Nota de 2026-09-18:** o backend de P5-P8 já existe, está montado (`routes/productivity.js`, `routes/banking.js`, `routes/insights.js`, `routes/backupAuto.js`) e é validado por teste automatizado (`test/p5-p8-final.test.js`). Existe também uma interface pronta ("Cockpit inteligente", `public/chatgpt-final.js/css`) cobrindo as 5 sub-áreas (P5 produtividade/ações em massa, P6 bancos/conciliação, P7 fluxo de caixa/ABC/tendência, P8 backup automático) — mas ela não está referenciada em `index.html`, então nunca aparece no app real. Nesta sessão o usuário viu o Cockpit funcionando numa instância de teste e pediu para não ativá-lo; ele continua no repositório, pronto para ativação futura caso o usuário decida (bastam duas linhas em `index.html`: `<link>` do CSS e `<script>` do JS).
+
 ## P9 - acesso móvel
 - concluído na RC10: interface responsiva (casca: topbar, sidebar/drawer, dashboard), navegação inferior e aplicativo Android;
 - concluído na RC10: conexão na rede local com ativação explícita e autenticação normal do sistema;

@@ -1,6 +1,6 @@
 // ==========================================================================
-// CURVA S FSICO-FINANCEIRA E PREVISO DE TRMINO (EAC / EVM)
-// Visualizao Executiva e Projeo Matemtica - Zero Emojis
+// CURVA S FÍSICO-FINANCEIRA E PREVISÃO DE TÉRMINO (EAC / EVM)
+// Visualização Executiva e Projeção Matemática - Zero Emojis
 // ==========================================================================
 
 (function () {
@@ -101,15 +101,15 @@
           <div class="curves-header-titles">
             <span class="curves-header-eyebrow">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
-              Anlise de Tendncia & EVM
+              Análise de Tendência & EVM
             </span>
-            <h2 class="curves-header-title" id="curves-dialog-title">Curva S Fsico-Financeira  ${esc(center?.nome || 'Obra')}</h2>
-            <span class="curves-header-sub">Contrato: ${esc(center?.contrato || 'N/D')}  Carregando projees...</span>
+            <h2 class="curves-header-title" id="curves-dialog-title">Curva S Físico-Financeira — ${esc(center?.nome || 'Obra')}</h2>
+            <span class="curves-header-sub">Contrato: ${esc(center?.contrato || 'N/D')} — Carregando projeções...</span>
           </div>
           <button class="budget-curves-close" id="curves-btn-close" type="button" aria-label="Fechar análise da Curva S" title="Fechar análise da Curva S"></button>
         </div>
         <div class="budget-curves-body" id="curves-body-content">
-          <div style="text-align: center; padding: 40px; color: #64748b;">Carregando dados da Curva S e projeo EAC...</div>
+          <div style="text-align: center; padding: 40px; color: #64748b;">Carregando dados da Curva S e projeção EAC...</div>
         </div>
       </div>
     `;
@@ -145,7 +145,7 @@
       const body = backdrop.querySelector('#curves-body-content');
       if (body) {
         body.innerHTML = `<div style="padding: 24px; color: #ef4444; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
-          <strong>Falha ao carregar anlise de Curva S:</strong> ${esc(err.message)}
+          <strong>Falha ao carregar análise de Curva S:</strong> ${esc(err.message)}
         </div>`;
       }
     }
@@ -159,7 +159,7 @@
     const timeline = data.timeline || [];
     const baseCost = Number(data.center?.baseCost || 0);
     const subtitle = document.querySelector('#budget-curves-backdrop .curves-header-sub');
-    if (subtitle) subtitle.textContent = `Contrato: ${data.center?.contractNumber || 'N/D'}  ${data.center?.startMonth || ''} a ${data.center?.endMonth || ''}`;
+    if (subtitle) subtitle.textContent = `Contrato: ${data.center?.contractNumber || 'N/D'} — ${data.center?.startMonth || ''} a ${data.center?.endMonth || ''}`;
 
     const isOver = Boolean(evm.isOverBudget);
     const vacClass = evm.vac == null ? '' : isOver ? 'danger' : 'positive';
@@ -184,7 +184,7 @@
         <div class="curves-kpi-card">
           <span class="curves-kpi-label">Custo Base (BAC)</span>
           <span class="curves-kpi-val">${formatCurrency(evm.bac)}</span>
-          <span class="curves-kpi-sub">Oramento aprovado</span>
+          <span class="curves-kpi-sub">Orçamento aprovado</span>
         </div>
 
         <div class="curves-kpi-card">
@@ -196,23 +196,23 @@
         <div class="curves-kpi-card">
           <span class="curves-kpi-label">Valor Agregado (EV)</span>
           <span class="curves-kpi-val accent">${formatCurrency(evm.ev)}</span>
-          <span class="curves-kpi-sub">Proporo comercial medida: ${evm.physicalPercent ?? ''}%</span>
+          <span class="curves-kpi-sub">Proporção comercial medida: ${evm.physicalPercent ?? ''}%</span>
         </div>
 
         <div class="curves-kpi-card">
-          <span class="curves-kpi-label">ndice Custo (CPI)</span>
+          <span class="curves-kpi-label">Índice Custo (CPI)</span>
           <span class="curves-kpi-val ${cpiClass}">${evm.cpi == null ? '' : Number(evm.cpi).toFixed(2)}</span>
-          <span class="curves-kpi-sub">${evm.cpi == null ? 'Sem base para projeo' : evm.cpi >= 1 ? 'Ritmo econmico estimado' : 'Sobrecusto estimado'}</span>
+          <span class="curves-kpi-sub">${evm.cpi == null ? 'Sem base para projeção' : evm.cpi >= 1 ? 'Ritmo econômico estimado' : 'Sobrecusto estimado'}</span>
         </div>
 
         <div class="curves-kpi-card ${isOver ? 'warning-box' : 'highlight'}">
-          <span class="curves-kpi-label">Projetado Trmino (EAC)</span>
+          <span class="curves-kpi-label">Projetado Término (EAC)</span>
           <span class="curves-kpi-val ${vacClass}">${formatCurrency(evm.eac)}</span>
-          <span class="curves-kpi-sub">Frmula EVM PMBOK</span>
+          <span class="curves-kpi-sub">Fórmula EVM PMBOK</span>
         </div>
 
         <div class="curves-kpi-card ${isOver ? 'warning-box' : 'highlight'}">
-          <span class="curves-kpi-label">Desvio Trmino (VAC)</span>
+          <span class="curves-kpi-label">Desvio Término (VAC)</span>
           <span class="curves-kpi-val ${vacClass}">${formatCurrency(evm.vac)}</span>
           <span class="curves-kpi-sub">${evm.projectedStatus}</span>
         </div>
@@ -220,10 +220,10 @@
 
       <div class="curves-chart-card">
         <div class="curves-chart-header">
-          <strong style="font-size: 0.88rem;">Evoluo Temporal Acumulada (Previsto vs. Realizado Lquido)</strong>
+          <strong style="font-size: 0.88rem;">Evolução Temporal Acumulada (Previsto vs. Realizado Líquido)</strong>
           <div class="curves-chart-legend">
             <div class="legend-item"><span class="legend-swatch planned"></span> <span>Previsto Acumulado (S-Curve)</span></div>
-            <div class="legend-item"><span class="legend-swatch realized"></span> <span>Realizado Lquido Acumulado</span></div>
+            <div class="legend-item"><span class="legend-swatch realized"></span> <span>Realizado Líquido Acumulado</span></div>
           </div>
         </div>
         <div class="curves-svg-wrapper">${svgChart}</div>
@@ -233,12 +233,12 @@
         <table class="curves-table cc-mobile-table">
           <thead>
             <tr>
-              <th>Ms</th>
-              <th>Previsto Ms</th>
+              <th>Mês</th>
+              <th>Previsto Mês</th>
               <th>Previsto Acum.</th>
-              <th>Realizado Ms</th>
+              <th>Realizado Mês</th>
               <th>Realizado Acum.</th>
-              <th>Medido Ms</th>
+              <th>Medido Mês</th>
               <th>Medido Acum.</th>
             </tr>
           </thead>
@@ -249,7 +249,7 @@
       </div>
 
       <div class="curves-hypotheses-box">
-        <strong>Premissas da Metodologia de Projeo:</strong>
+        <strong>Premissas da Metodologia de Projeção:</strong>
         <ul style="margin: 6px 0 0 16px; padding: 0;">
           ${(data.hypotheses || []).map((h) => `<li>${h}</li>`).join('')}
         </ul>

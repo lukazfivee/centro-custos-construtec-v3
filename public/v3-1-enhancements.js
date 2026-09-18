@@ -75,7 +75,7 @@
         <div class="v31-collection-kpi"><span>Cobranças pendentes</span><strong id="v31-kpi-pendentes">0</strong></div>
         <div class="v31-collection-kpi"><span>A receber</span><strong id="v31-kpi-receber">R$ 0,00</strong></div>
       </div>
-      <div class="table-card v31-collection-table"><div class="table-scroll"><table><thead><tr><th>Obra / cliente</th><th>Operação</th><th>Financeiro</th><th>NF</th><th>Vencimento</th><th>A receber</th><th>Ações</th></tr></thead><tbody id="v31-collections-body"></tbody></table></div></div>`;
+      <div class="table-card v31-collection-table"><div class="table-scroll"><table class="cc-mobile-table"><thead><tr><th>Obra / cliente</th><th>Operação</th><th>Financeiro</th><th>NF</th><th>Vencimento</th><th>A receber</th><th>Ações</th></tr></thead><tbody id="v31-collections-body"></tbody></table></div></div>`;
     main.appendChild(section);
     $('#v31-refresh-collections').addEventListener('click', loadCollections);
   }
@@ -116,7 +116,7 @@
         const pending = ['finalizada','entregue'].includes(r.operationalStatus) && r.financialStatus !== 'pago';
         const opClass = r.operationalStatus==='entregue' ? 'good' : (r.operationalStatus==='finalizada' ? 'warn':'');
         const finClass = r.financialStatus==='pago' ? 'good' : (pending ? 'bad':'');
-        return `<tr><td><strong>${esc(r.code || '')} — ${esc(r.name || '')}</strong><div class="muted">${esc(r.clientName || r.client || 'Cliente não informado')}</div></td><td>${chip(OP[r.operationalStatus]||r.operationalStatus,opClass)}</td><td>${chip(FIN[r.financialStatus]||r.financialStatus,finClass)}</td><td>${esc(r.invoiceNumber||'—')}</td><td>${esc(r.dueDate||'—')}</td><td>${money(r.receivableAmount)}</td><td><div class="v31-collection-actions"><button class="text-btn" data-edit-followup="${esc(r.publicId)}">Editar</button><button class="text-btn" data-email-followup="${esc(r.publicId)}">E-mail</button></div></td></tr>`;
+        return `<tr><td><strong>${esc(r.code || '')} — ${esc(r.name || '')}</strong><div class="muted">${esc(r.clientName || r.client || 'Cliente não informado')}</div></td><td data-label="Operação">${chip(OP[r.operationalStatus]||r.operationalStatus,opClass)}</td><td data-label="Financeiro">${chip(FIN[r.financialStatus]||r.financialStatus,finClass)}</td><td data-label="NF">${esc(r.invoiceNumber||'—')}</td><td data-label="Vencimento">${esc(r.dueDate||'—')}</td><td data-label="A receber">${money(r.receivableAmount)}</td><td data-label="Ações"><div class="v31-collection-actions"><button class="text-btn" data-edit-followup="${esc(r.publicId)}">Editar</button><button class="text-btn" data-email-followup="${esc(r.publicId)}">E-mail</button></div></td></tr>`;
       }).join('') : '<tr><td colspan="7">Nenhuma obra disponível.</td></tr>';
       body.querySelectorAll('[data-edit-followup]').forEach(b=>b.addEventListener('click',()=>openFollowup(rows.find(r=>r.publicId===b.dataset.editFollowup))));
       body.querySelectorAll('[data-email-followup]').forEach(b=>b.addEventListener('click',()=>openEmailDraft(rows.find(r=>r.publicId===b.dataset.emailFollowup))));

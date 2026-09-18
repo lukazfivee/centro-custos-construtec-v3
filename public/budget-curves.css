@@ -118,7 +118,7 @@ html.dark .curve-point { fill: #0f172a; }
 .curve-point.realized { stroke: #10b981; }
 .curve-point:hover { r: 6; }
 
-/* Tabela de Evoluo Mensal */
+/* Tabela de Evolução Mensal */
 .curves-table-card { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
 html.dark .curves-table-card { border-color: #334155; }
 .curves-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: left; }
