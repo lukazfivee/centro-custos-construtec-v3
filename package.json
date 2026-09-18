@@ -21,6 +21,8 @@
     "build:portable": "electron-builder --win portable --publish never",
     "build:dir": "electron-builder --win --dir --publish never",
     "fix-yml": "node scripts/fix-latest-yml.js",
+    "deploy:cloud": "node scripts/deploy-cloud.js",
+    "deploy:cloud:dry": "node scripts/deploy-cloud.js --dry-run",
     "suite:prepare": "node scripts/build-suite-modules.js",
     "preelectron-unified": "npm run suite:prepare",
     "electron-unified": "electron desktop/main-unified.js"
