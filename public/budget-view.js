@@ -28,7 +28,7 @@
     btn.className = 'btn primary';
     btn.type = 'button';
     btn.title = 'Abrir a análise de orçamento desta obra';
-    btn.innerHTML = 'Orçado vs. Realizado';
+    btn.innerHTML = 'Análise de Orçamento';
     btn.onclick = () => openBudgetViewModal(costCenterId);
     actions.prepend(btn);
   }
