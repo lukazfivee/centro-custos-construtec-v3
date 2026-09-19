@@ -192,7 +192,7 @@ async function handleLogin(request, env) {
   try { body = await request.json(); } catch { return json({ ok: false, error: 'JSON invalido.' }, 400); }
   const email = text(body?.email).toLowerCase();
   const password = String(body?.password || '');
-  if (!validCorporateEmail(email) || !password) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
+  if (!(await isEmailAllowed(env, email)) || !password) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
   const count = await env.DB.prepare('SELECT COUNT(*) AS total FROM cloud_users WHERE org_id=?').bind(ORG_ID).first();
   if (Number(count?.total || 0) === 0) return json({ ok: false, error: 'Diretorio corporativo ainda nao inicializado.', code: 'DIRECTORY_EMPTY' }, 409);
   const user = await env.DB.prepare('SELECT * FROM cloud_users WHERE org_id=? AND email=? AND deleted_at IS NULL').bind(ORG_ID, email).first();
@@ -269,7 +269,7 @@ async function handleUserStatus(request, env) {
   try { body = await request.json(); } catch { return json({ ok: false, error: 'JSON invalido.' }, 400); }
   const email = text(body?.email).toLowerCase();
   const active = body?.active === true ? 1 : 0;
-  if (!validCorporateEmail(email)) return json({ ok: false, error: 'E-mail invalido.' }, 400);
+  if (!(await isEmailAllowed(env, email))) return json({ ok: false, error: 'E-mail invalido.' }, 400);
   if (email === auth.user.email && active === 0) return json({ ok: false, error: 'Voce nao pode desativar o proprio acesso.' }, 400);
   const result = await env.DB.prepare('UPDATE cloud_users SET active=?,updated_at=? WHERE org_id=? AND email=? AND deleted_at IS NULL').bind(active, new Date().toISOString(), auth.user.org_id, email).run();
   if (!result.meta?.changes) return json({ ok: false, error: 'Usuario nao encontrado.' }, 404);

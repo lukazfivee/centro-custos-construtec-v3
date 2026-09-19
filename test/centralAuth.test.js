@@ -308,3 +308,84 @@ test('handleCentralAuth: excluir login marca deleted_at, nao apaga a linha, e li
   assert.equal(updateCall.args[2], admin.org_id);
   assert.equal(updateCall.args[3], 'exfuncionario@rcconstrutec.com.br');
 });
+
+// Fake de env.DB para exercitar handleLogin de ponta a ponta (via
+// handleCentralAuth, que tambem aplica o rate limit por IP antes de
+// despachar para handleLogin). Roteia por padrao no SQL, igual a
+// fakeAdminDb, para os testes poderem inspecionar exatamente quais
+// consultas foram feitas.
+function fakeLoginDb({ authorizedRow = null, userRow = null, cloudUserCount = 1 } = {}) {
+  const calls = [];
+  return {
+    calls,
+    prepare(sql) {
+      return {
+        bind(...args) {
+          const record = { sql, args };
+          return {
+            async first() {
+              calls.push({ ...record, op: 'first' });
+              if (/FROM sync_rate_limits/.test(sql)) return null;
+              if (/FROM authorized_external_emails/.test(sql)) return authorizedRow;
+              if (/COUNT\(\*\) AS total FROM cloud_users/.test(sql)) return { total: cloudUserCount };
+              if (/FROM cloud_users WHERE org_id=\? AND email=\? AND deleted_at IS NULL/.test(sql)) return userRow;
+              return null;
+            },
+            async run() {
+              calls.push({ ...record, op: 'run' });
+              return { meta: { changes: 1 } };
+            },
+            async all() {
+              calls.push({ ...record, op: 'all' });
+              return { results: [] };
+            },
+          };
+        },
+      };
+    },
+  };
+}
+
+function fakeLoginRequest(pathname, body) {
+  return {
+    url: `https://example.com${pathname}`,
+    method: 'POST',
+    headers: {
+      get(name) {
+        const key = String(name).toLowerCase();
+        if (key === 'cf-connecting-ip') return '127.0.0.1';
+        return null;
+      },
+    },
+    json: async () => body,
+  };
+}
+
+test('handleLogin nao recusa mais e-mail externo autorizado apenas pelo formato do e-mail', async () => {
+  const { handleCentralAuth } = await loadCentralAuth();
+
+  // E-mail externo (fora@gmail.com), mas presente em authorized_external_emails.
+  // Antes da correcao, `validCorporateEmail(email)` recusava direto com 401
+  // "E-mail ou senha invalidos." sem sequer consultar o banco de e-mails
+  // autorizados nem o diretorio de usuarios. Depois da correcao (uso de
+  // isEmailAllowed), o fluxo avanca: consulta authorized_external_emails e,
+  // como o e-mail e permitido, segue ate consultar cloud_users -- so entao
+  // pode recusar por senha/usuario nao encontrado (mesma mensagem generica,
+  // por design, para nao vazar quais e-mails existem).
+  const db = fakeLoginDb({ authorizedRow: { email: 'fora@gmail.com' }, userRow: null, cloudUserCount: 1 });
+  const request = fakeLoginRequest('/v1/auth/login', { email: 'Fora@Gmail.com', password: 'qualquer-senha' });
+  const response = await handleCentralAuth(request, { DB: db });
+
+  assert.equal(response.status, 401);
+  const payload = await response.json();
+  assert.equal(payload.error, 'E-mail ou senha invalidos.');
+
+  assert.ok(
+    db.calls.some((c) => /FROM authorized_external_emails/.test(c.sql)),
+    'deveria consultar a tabela de e-mails externos autorizados (isEmailAllowed), nao recusar so pelo formato',
+  );
+  assert.ok(
+    db.calls.some((c) => /COUNT\(\*\) AS total FROM cloud_users/.test(c.sql)),
+    'deveria ter avancado para checar o diretorio de usuarios, nao ter sido recusado antes disso',
+  );
+});
