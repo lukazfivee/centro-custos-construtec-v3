@@ -32,3 +32,5 @@ fix-email.js
 check-users.js
 test-bcrypt.js
 CONTINUAR-NO-OPENCODE.md
+
+.worktrees/
