@@ -500,31 +500,38 @@ async function openCenterDetail(id) {
       nfPorTipo[tipo] = await api(`/centros-custo/${id}/notas-fiscais?tipo=${tipo}`);
     }
 
-    function bindNfSection(tipo) {
+    function renderNfList(tipo) {
       const list = $(`#nf-list-${tipo}`);
-      if (list) {
-        list.innerHTML = nfCardsHtml(tipo);
-        list.querySelectorAll(`[data-nf-toggle]`).forEach(btn => btn.addEventListener('click', async () => {
-          const nf = nfPorTipo[tipo].find(item => item.id === Number(btn.dataset.nfToggle));
-          try {
-            await api(`/centros-custo/notas-fiscais/${btn.dataset.nfToggle}`, { method: 'PUT', body: JSON.stringify({ status: nf.status === 'paga' ? 'nao_paga' : 'paga' }) });
-            await loadNf(tipo);
-            bindNfSection(tipo);
-            toast('Nota fiscal atualizada.');
-          } catch (error) { toast(error.message, true); }
-        }));
-        list.querySelectorAll(`[data-nf-delete]`).forEach(btn => btn.addEventListener('click', async () => {
-          if (!confirm('Excluir esta nota fiscal?')) return;
-          try {
-            await api(`/centros-custo/notas-fiscais/${btn.dataset.nfDelete}`, { method: 'DELETE' });
-            await loadNf(tipo);
-            bindNfSection(tipo);
-            toast('Nota fiscal excluída.');
-          } catch (error) { toast(error.message, true); }
-        }));
-      }
+      if (!list) return;
+      list.innerHTML = nfCardsHtml(tipo);
+      list.querySelectorAll(`[data-nf-toggle]`).forEach(btn => btn.addEventListener('click', async () => {
+        const nf = nfPorTipo[tipo].find(item => item.id === Number(btn.dataset.nfToggle));
+        try {
+          await api(`/centros-custo/notas-fiscais/${btn.dataset.nfToggle}`, { method: 'PUT', body: JSON.stringify({ status: nf.status === 'paga' ? 'nao_paga' : 'paga' }) });
+          await loadNf(tipo);
+          renderNfList(tipo);
+          toast('Nota fiscal atualizada.');
+        } catch (error) { toast(error.message, true); }
+      }));
+      list.querySelectorAll(`[data-nf-delete]`).forEach(btn => btn.addEventListener('click', async () => {
+        if (!confirm('Excluir esta nota fiscal?')) return;
+        try {
+          await api(`/centros-custo/notas-fiscais/${btn.dataset.nfDelete}`, { method: 'DELETE' });
+          await loadNf(tipo);
+          renderNfList(tipo);
+          toast('Nota fiscal excluída.');
+        } catch (error) { toast(error.message, true); }
+      }));
+    }
+
+    // Ligado apenas uma vez por renderização fresca da aba (o <form> é recriado
+    // toda vez que a aba "Notas fiscais" é aberta via tabNotasFiscaisHtml()).
+    // Nunca chamar de novo a partir de toggle/delete/submit, senão o mesmo
+    // <form> acumula um listener de submit extra a cada ação (NF duplicada).
+    function bindNfForm(tipo) {
       const form = document.querySelector(`[data-nf-form="${tipo}"]`);
-      if (form) form.addEventListener('submit', async (event) => {
+      if (!form) return;
+      form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const errorEl = $(`#nf-erro-${tipo}`);
         errorEl.textContent = '';
@@ -547,7 +554,7 @@ async function openCenterDetail(id) {
           await api(`/centros-custo/${id}/notas-fiscais`, { method: 'POST', body: JSON.stringify(body) });
           form.reset();
           await loadNf(tipo);
-          bindNfSection(tipo);
+          renderNfList(tipo);
           toast('Nota fiscal lançada.');
         } catch (error) { errorEl.textContent = error.message; }
         finally { submitBtn.disabled = false; }
@@ -596,8 +603,10 @@ async function openCenterDetail(id) {
       } else if (activeTab === 'notas-fiscais') {
         if (!nfLoaded) { await Promise.all([loadNf('fornecedor'), loadNf('cliente')]); nfLoaded = true; }
         body.innerHTML = tabNotasFiscaisHtml();
-        bindNfSection('fornecedor');
-        bindNfSection('cliente');
+        renderNfList('fornecedor');
+        renderNfList('cliente');
+        bindNfForm('fornecedor');
+        bindNfForm('cliente');
       } else if (activeTab === 'orcado-realizado') {
         body.innerHTML = tabOrcadoRealizadoHtml();
         $('#btn-ver-detalhamento-completo')?.addEventListener('click', () => {
@@ -633,7 +642,9 @@ async function openCenterDetail(id) {
       btn.classList.add('active');
       btn.setAttribute('aria-selected', 'true');
       activeTab = btn.dataset.ccTab;
-      await renderTab();
+      try {
+        await renderTab();
+      } catch (error) { toast(error.message, true); }
     }));
 
     await renderTab();
