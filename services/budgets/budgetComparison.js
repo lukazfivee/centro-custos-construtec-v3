@@ -12,7 +12,7 @@ async function getCostCenterBudgetComparison(pool, costCenterId, options = {}) {
   let contractQuery = `
     SELECT pc.id AS contract_id, pc.number AS contract_number, pc.current_baseline_id,
            bb.id AS baseline_id, bb.version AS baseline_version,
-           bb.materials_cost, bb.labor_cost, bb.base_cost, bb.contract_value
+           bb.materials_cost, bb.labor_cost, bb.base_cost, bb.contract_value, bb.sealed_at
     FROM project_contracts pc
     LEFT JOIN budget_baselines bb ON bb.id = COALESCE($2, pc.current_baseline_id)
     WHERE pc.cost_center_id = $1 AND pc.status = 'active'
@@ -188,6 +188,7 @@ async function getCostCenterBudgetComparison(pool, costCenterId, options = {}) {
       baseCost: roundMoney(contract.base_cost),
       materialsCost: roundMoney(contract.materials_cost),
       laborCost: roundMoney(contract.labor_cost),
+      approvedAt: contract.sealed_at,
     },
     summary: {
       contractValue: roundMoney(contract.contract_value),
