@@ -143,6 +143,16 @@
           <div class="budget-burn-labels"><span>Consumo do Orçamento: <strong>${burnRate}%</strong></span><span>${summary.isOverBudget ? 'Orçamento Excedido' : 'Dentro do Previsto'}</span></div>
           <div class="budget-burn-track"><div class="budget-burn-fill ${burnClass}" style="transform: scaleX(${Math.min(burnRate, 100) / 100});"></div></div>
         </div>
+        ${(() => {
+          const naoVinculado = Math.max(0, Number(center?.total_despesas || 0) - Number(summary.realizedCost || 0));
+          if (naoVinculado <= 0.01) return '';
+          return `<div class="budget-unmapped-card">
+            <div class="budget-unmapped-header">
+              <div><strong style="color:#d97706;">Atenção: gastos do centro fora do orçamento</strong><div style="font-size:0.75rem;color:var(--muted);">Este centro tem ${fmtMoney(center.total_despesas)} em lançamentos (aba Detalhamento), mas apenas ${fmtMoney(summary.realizedCost)} foi reconhecido aqui. Registre uma apropriação para os lançamentos restantes.</div></div>
+              <strong style="color:#d97706;">${fmtMoney(naoVinculado)}</strong>
+            </div>
+          </div>`;
+        })()}
         ${unmapped.count > 0 ? `
           <div class="budget-unmapped-card">
             <div class="budget-unmapped-header">
