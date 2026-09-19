@@ -54,6 +54,14 @@ Dentro deste sub-projeto:
 - Papéis (roles) continuam **por produto**: a mesma conta pode ser "gestor"
   no Centro de Custos e "comercial" no Orçamentos; cada produto guarda e
   decide isso por conta própria.
+- Um admin pode **excluir o acesso** de alguém a partir de qualquer um dos
+  dois produtos. Confirmado com o usuário: isso significa **desativar**
+  (a pessoa não consegue mais logar em nenhum dos dois produtos), não
+  apagar de verdade — o histórico que essa pessoa criou (propostas,
+  lançamentos, auditoria) continua intacto, e um admin pode reverter
+  reativando a conta depois. O Centro de Custos já tem esse mecanismo
+  pronto (`POST /v1/users/status`); o Orçamentos passa a expor essa mesma
+  ação delegando para lá, do mesmo jeito que já faz para criar conta.
 
 Fora do escopo (fica para depois, por decisão consciente):
 
