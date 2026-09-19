@@ -32,6 +32,16 @@ export function validCorporateEmail(value) {
   return /^[^\s@]+@rcconstrutec\.com\.br$/i.test(text(value));
 }
 
+// Aceita o e-mail corporativo (@rcconstrutec.com.br) sem tocar o banco, ou
+// um e-mail externo desde que ja tenha sido autorizado explicitamente por um
+// admin (tabela authorized_external_emails, criada na migracao 006).
+export async function isEmailAllowed(env, email) {
+  const normalized = text(email).toLowerCase();
+  if (validCorporateEmail(normalized)) return true;
+  const row = await env.DB.prepare('SELECT email FROM authorized_external_emails WHERE email = ?').bind(normalized).first();
+  return Boolean(row);
+}
+
 function validRole(value) {
   return ['admin', 'gestor', 'supervisor'].includes(text(value));
 }
@@ -239,7 +249,8 @@ async function handleCreateUser(request, env) {
   const email = text(body?.email).toLowerCase();
   const password = String(body?.password || '');
   const role = text(body?.role);
-  if (!name || !validCorporateEmail(email) || password.length < 10 || !validRole(role)) return json({ ok: false, error: 'Preencha nome, e-mail corporativo, senha de 10+ caracteres e perfil valido.' }, 400);
+  if (!name || password.length < 10 || !validRole(role)) return json({ ok: false, error: 'Preencha nome, senha de 10+ caracteres e perfil valido.' }, 400);
+  if (!(await isEmailAllowed(env, email))) return json({ ok: false, error: 'E-mail nao autorizado. Peca a um administrador para liberar este e-mail antes de criar a conta.', code: 'EMAIL_NOT_AUTHORIZED' }, 403);
   if (await env.DB.prepare('SELECT id FROM cloud_users WHERE org_id=? AND email=?').bind(auth.user.org_id, email).first()) return json({ ok: false, error: 'Ja existe um usuario com este e-mail.' }, 409);
   const record = await makePasswordRecord(password);
   const id = crypto.randomUUID();
