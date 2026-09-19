@@ -277,6 +277,23 @@ async function handleUserStatus(request, env) {
   return json({ ok: true });
 }
 
+async function handleAuthorizeExternalEmail(request, env) {
+  const auth = await requireSession(request, env, ['admin']);
+  if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch { return json({ ok: false, error: 'JSON invalido.' }, 400); }
+  const email = text(body?.email).toLowerCase();
+  const note = text(body?.note).slice(0, 300) || null;
+  if (!email || !email.includes('@')) return json({ ok: false, error: 'E-mail invalido.' }, 400);
+  const now = new Date().toISOString();
+  await env.DB.prepare(`
+    INSERT INTO authorized_external_emails(email, authorized_by, authorized_at, note)
+    VALUES(?,?,?,?)
+    ON CONFLICT(email) DO UPDATE SET authorized_by=excluded.authorized_by, authorized_at=excluded.authorized_at, note=excluded.note
+  `).bind(email, auth.user.id, now, note).run();
+  return json({ ok: true, email, authorizedAt: now });
+}
+
 async function handleChangePassword(request, env) {
   const auth = await requireSession(request, env);
   if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
@@ -327,7 +344,8 @@ export async function handleCentralAuth(request, env) {
     || url.pathname === '/v1/auth/change-password'
     || url.pathname === '/v1/auth/profile-photo'
     || url.pathname === '/v1/users'
-    || url.pathname === '/v1/users/status';
+    || url.pathname === '/v1/users/status'
+    || url.pathname === '/v1/users/authorize-external';
   if (!isAuthRoute) return null;
 
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
@@ -342,5 +360,6 @@ export async function handleCentralAuth(request, env) {
   if (request.method === 'GET' && url.pathname === '/v1/users') return handleListUsers(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/users') return handleCreateUser(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/users/status') return handleUserStatus(request, env);
+  if (request.method === 'POST' && url.pathname === '/v1/users/authorize-external') return handleAuthorizeExternalEmail(request, env);
   return json({ ok: false, error: 'Rota nao encontrada.' }, 404);
 }
