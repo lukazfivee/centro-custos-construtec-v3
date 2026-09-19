@@ -356,9 +356,15 @@ function openCenter(item){modal(item?'Editar obra / centro':'Nova obra / centro 
 
 async function openCenterDetail(id) {
   try {
-    const data = await api(`/centros-custo/${id}/detalhes`);
+    const [data, orcado, propostaData] = await Promise.all([
+      api(`/centros-custo/${id}/detalhes`),
+      api(`/centros-custo/${id}/orcado-realizado`).catch(() => ({ hasBudget: false, message: 'Não foi possível carregar o orçado vs. realizado.' })),
+      api(`/centros-custo/${id}/proposta`).catch(() => ({ proposta: null })),
+    ]);
     const c = data.centro;
     const lancamentos = data.lancamentos;
+    let proposta = propostaData.proposta;
+    const canManage = ['admin', 'gestor'].includes(usuario.role);
     const statusLabel = c.ativo?(c.situacao==='execucao'?'Em aberto':c.situacao==='pausado'?'Pausado':c.situacao==='concluido'?'Concluído':'Ativo'):'Inativo';
     const statusClass = c.ativo?(c.situacao==='execucao'?'em-aberto':c.situacao==='pausado'?'pausado':c.situacao==='concluido'?'concluido':'ativo'):'inativo';
     const fmtMoney = (v) => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -368,10 +374,23 @@ async function openCenterDetail(id) {
       if (item.status_financeiro === 'liquidado') return item.tipo === 'receita' ? 'Recebido' : 'Pago';
       return item.tipo === 'receita' ? 'A receber' : 'A pagar';
     };
+    const nfTipoLabel = { fornecedor: 'Fornecedor', cliente: 'Cliente final' };
 
     const catOptions = [...new Set(lancamentos.map(l=>l.categoria))];
     let filtered = [...lancamentos];
     let sortDesc = true;
+    let activeTab = 'detalhamento';
+    let nfLoaded = false;
+    let nfPorTipo = { fornecedor: [], cliente: [] };
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+        reader.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+        reader.readAsDataURL(file);
+      });
+    }
 
     function renderList() {
       filtered.sort((a,b) => sortDesc ? Number(b.valor)-Number(a.valor) : Number(a.valor)-Number(b.valor));
@@ -386,6 +405,207 @@ async function openCenterDetail(id) {
       $('#center-detail-count').textContent = `${filtered.length} lançamento(s)`;
     }
 
+    function tabDetalhamentoHtml() {
+      const aprovacao = orcado.hasBudget && orcado.contract?.approvedAt ? fmtDate(orcado.contract.approvedAt) : '—';
+      return `
+        <div class="center-detail-fields">
+          <div><span class="center-stat-label">Cliente</span><strong>${esc(c.cliente || '—')}</strong></div>
+          <div><span class="center-stat-label">Escopo do serviço</span><strong>${esc(c.descricao || '—')}</strong></div>
+          <div><span class="center-stat-label">Data de início do serviço</span><strong>${fmtDate(c.data_inicio)}</strong></div>
+          <div><span class="center-stat-label">Data de término</span><strong>${fmtDate(c.data_fim)}</strong></div>
+          <div><span class="center-stat-label">Aprovação da proposta</span><strong>${aprovacao}</strong></div>
+        </div>
+        <div class="center-detail-proposal">
+          <div class="center-detail-proposal-info">
+            <span class="center-stat-label">Proposta comercial</span>
+            <strong>${proposta ? esc(proposta.nome) : 'Nenhuma proposta anexada'}</strong>
+          </div>
+          <div class="center-detail-proposal-actions">
+            ${proposta ? `<button type="button" class="text-btn" id="btn-baixar-proposta">Baixar</button>` : ''}
+            ${canManage ? `<label class="btn secondary" id="lbl-anexar-proposta">${proposta ? 'Substituir' : 'Anexar'} proposta<input type="file" id="input-proposta" accept="application/pdf" hidden></label>` : ''}
+            ${canManage && proposta ? `<button type="button" class="text-btn danger" id="btn-remover-proposta">Remover</button>` : ''}
+          </div>
+          <div id="proposta-erro" class="form-error"></div>
+        </div>
+        <div class="table-card"><div class="table-meta"><span id="center-detail-count">${lancamentos.length} lançamento(s)</span></div>
+          ${catOptions.length ? `<div class="center-detail-filters">
+            <select id="center-detail-cat-filter"><option value="">Todas as categorias</option>${catOptions.map(cat=>`<option value="${esc(cat)}">${esc(cat)}</option>`).join('')}</select>
+            <select id="center-detail-sort"><option value="desc">Maior para menor</option><option value="asc">Menor para maior</option></select>
+          </div>` : ''}
+          <div class="table-scroll"><table class="cc-mobile-table"><thead><tr><th>Compra</th><th>Centro de custo</th><th>Documento</th><th>Status</th><th>Valor</th></tr></thead><tbody id="center-detail-transactions"></tbody></table></div>
+        </div>
+      `;
+    }
+
+    function nfCardsHtml(tipo) {
+      const items = nfPorTipo[tipo];
+      if (!items.length) return `<div class="empty">Nenhuma nota fiscal de ${nfTipoLabel[tipo].toLowerCase()} lançada.</div>`;
+      return `<div class="table-scroll"><table class="cc-mobile-table"><thead><tr><th>Emissão</th><th>Valor</th><th>Status</th><th>Arquivo</th><th>Ações</th></tr></thead><tbody>
+        ${items.map(nf => `<tr>
+          <td>${fmtDate(nf.dataEmissao)}${nf.observacao?`<br><span class="muted">${esc(nf.observacao)}</span>`:''}</td>
+          <td data-label="Valor" class="money">${fmtMoney(nf.valor)}</td>
+          <td data-label="Status"><span class="pill ${nf.status==='paga'?'ativo':'vencido'}">${nf.status==='paga'?'Paga':'Não paga'}</span></td>
+          <td data-label="Arquivo">${nf.temArquivo ? 'PDF anexado' : '—'}</td>
+          <td data-label="Ações"><div class="row-actions">${canManage?`<button type="button" data-nf-toggle="${nf.id}" data-nf-tipo="${tipo}">${nf.status==='paga'?'Marcar não paga':'Marcar como paga'}</button><button type="button" data-nf-delete="${nf.id}" data-nf-tipo="${tipo}">Excluir</button>`:''}</div></td>
+        </tr>`).join('')}
+      </tbody></table></div>`;
+    }
+
+    function nfFormHtml(tipo) {
+      return `<form class="nf-form" data-nf-form="${tipo}">
+        <div><label>Data de emissão</label><input type="date" data-nf-field="dataEmissao"></div>
+        <div><label>Valor (R$)</label><input type="number" min="0" step="0.01" required data-nf-field="valor"></div>
+        <div><label class="check-label"><input type="checkbox" data-nf-field="paga"> Já paga</label></div>
+        <div><label>Arquivo (PDF, opcional)</label><input type="file" accept="application/pdf" data-nf-field="arquivo"></div>
+        <div id="nf-erro-${tipo}" class="form-error"></div>
+        <button class="btn secondary" type="submit">Lançar NF de ${nfTipoLabel[tipo].toLowerCase()}</button>
+      </form>`;
+    }
+
+    function tabNotasFiscaisHtml() {
+      return `
+        <div class="nf-section">
+          <div class="nf-section-head"><h3>Fornecedor</h3></div>
+          ${canManage ? nfFormHtml('fornecedor') : ''}
+          <div id="nf-list-fornecedor">${nfCardsHtml('fornecedor')}</div>
+        </div>
+        <div class="nf-section">
+          <div class="nf-section-head"><h3>Cliente final</h3></div>
+          ${canManage ? nfFormHtml('cliente') : ''}
+          <div id="nf-list-cliente">${nfCardsHtml('cliente')}</div>
+        </div>
+      `;
+    }
+
+    function tabOrcadoRealizadoHtml() {
+      if (!orcado.hasBudget) {
+        return `<div class="empty">${esc(orcado.message || 'Nenhum orçamento/baseline vigente encontrado para este centro de custo.')}</div>`;
+      }
+      const materialRealizado = orcado.items.filter(i=>i.kind==='material').reduce((s,i)=>s+Number(i.realizedCost||0),0);
+      const laborRealizado = orcado.items.filter(i=>i.kind==='labor').reduce((s,i)=>s+Number(i.realizedCost||0),0);
+      return `
+        <div class="center-detail-kpis">
+          <div class="center-detail-kpi"><span>Material estimado</span><strong>${fmtMoney(orcado.contract.materialsCost)}</strong></div>
+          <div class="center-detail-kpi"><span>Mão de obra estimado</span><strong>${fmtMoney(orcado.contract.laborCost)}</strong></div>
+          <div class="center-detail-kpi"><span>Material realizado</span><strong>${fmtMoney(materialRealizado)}</strong></div>
+          <div class="center-detail-kpi"><span>Mão de obra realizado</span><strong>${fmtMoney(laborRealizado)}</strong></div>
+        </div>
+        <div class="center-detail-actions">
+          <button type="button" class="btn primary" id="btn-ver-detalhamento-completo">Ver detalhamento completo</button>
+        </div>
+      `;
+    }
+
+    async function loadNf(tipo) {
+      nfPorTipo[tipo] = await api(`/centros-custo/${id}/notas-fiscais?tipo=${tipo}`);
+    }
+
+    function bindNfSection(tipo) {
+      const list = $(`#nf-list-${tipo}`);
+      if (list) {
+        list.innerHTML = nfCardsHtml(tipo);
+        list.querySelectorAll(`[data-nf-toggle]`).forEach(btn => btn.addEventListener('click', async () => {
+          const nf = nfPorTipo[tipo].find(item => item.id === Number(btn.dataset.nfToggle));
+          try {
+            await api(`/centros-custo/notas-fiscais/${btn.dataset.nfToggle}`, { method: 'PUT', body: JSON.stringify({ status: nf.status === 'paga' ? 'nao_paga' : 'paga' }) });
+            await loadNf(tipo);
+            bindNfSection(tipo);
+            toast('Nota fiscal atualizada.');
+          } catch (error) { toast(error.message, true); }
+        }));
+        list.querySelectorAll(`[data-nf-delete]`).forEach(btn => btn.addEventListener('click', async () => {
+          if (!confirm('Excluir esta nota fiscal?')) return;
+          try {
+            await api(`/centros-custo/notas-fiscais/${btn.dataset.nfDelete}`, { method: 'DELETE' });
+            await loadNf(tipo);
+            bindNfSection(tipo);
+            toast('Nota fiscal excluída.');
+          } catch (error) { toast(error.message, true); }
+        }));
+      }
+      const form = document.querySelector(`[data-nf-form="${tipo}"]`);
+      if (form) form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const errorEl = $(`#nf-erro-${tipo}`);
+        errorEl.textContent = '';
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        try {
+          const fileInput = form.querySelector('[data-nf-field="arquivo"]');
+          const file = fileInput.files[0] || null;
+          const body = {
+            tipo,
+            dataEmissao: form.querySelector('[data-nf-field="dataEmissao"]').value || null,
+            valor: Number(form.querySelector('[data-nf-field="valor"]').value),
+            status: form.querySelector('[data-nf-field="paga"]').checked ? 'paga' : 'nao_paga',
+          };
+          if (file) {
+            body.nome = file.name;
+            body.tipoArquivo = file.type || 'application/pdf';
+            body.conteudoBase64 = await fileToBase64(file);
+          }
+          await api(`/centros-custo/${id}/notas-fiscais`, { method: 'POST', body: JSON.stringify(body) });
+          form.reset();
+          await loadNf(tipo);
+          bindNfSection(tipo);
+          toast('Nota fiscal lançada.');
+        } catch (error) { errorEl.textContent = error.message; }
+        finally { submitBtn.disabled = false; }
+      });
+    }
+
+    async function renderTab() {
+      const body = $('#center-detail-tab-body');
+      if (activeTab === 'detalhamento') {
+        body.innerHTML = tabDetalhamentoHtml();
+        renderList();
+        const catFilter = $('#center-detail-cat-filter');
+        const sortSelect = $('#center-detail-sort');
+        if (catFilter) catFilter.addEventListener('change', () => {
+          const val = catFilter.value;
+          filtered = val ? lancamentos.filter(l => l.categoria === val) : [...lancamentos];
+          renderList();
+        });
+        if (sortSelect) sortSelect.addEventListener('change', () => {
+          sortDesc = sortSelect.value === 'desc';
+          renderList();
+        });
+        $('#btn-baixar-proposta')?.addEventListener('click', () => download(`/centros-custo/${id}/proposta/arquivo`, proposta.nome));
+        $('#input-proposta')?.addEventListener('change', async (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+          const errorEl = $('#proposta-erro');
+          errorEl.textContent = '';
+          try {
+            const conteudoBase64 = await fileToBase64(file);
+            const result = await api(`/centros-custo/${id}/proposta`, { method: 'POST', body: JSON.stringify({ nome: file.name, tipo: file.type || 'application/pdf', conteudoBase64 }) });
+            proposta = result.proposta;
+            toast('Proposta anexada.');
+            await renderTab();
+          } catch (error) { errorEl.textContent = error.message; }
+        });
+        $('#btn-remover-proposta')?.addEventListener('click', async () => {
+          if (!confirm('Remover a proposta anexada a este centro?')) return;
+          try {
+            await api(`/centros-custo/${id}/proposta`, { method: 'DELETE' });
+            proposta = null;
+            toast('Proposta removida.');
+            await renderTab();
+          } catch (error) { toast(error.message, true); }
+        });
+      } else if (activeTab === 'notas-fiscais') {
+        if (!nfLoaded) { await Promise.all([loadNf('fornecedor'), loadNf('cliente')]); nfLoaded = true; }
+        body.innerHTML = tabNotasFiscaisHtml();
+        bindNfSection('fornecedor');
+        bindNfSection('cliente');
+      } else if (activeTab === 'orcado-realizado') {
+        body.innerHTML = tabOrcadoRealizadoHtml();
+        $('#btn-ver-detalhamento-completo')?.addEventListener('click', () => {
+          document.getElementById('btn-ver-orcado-realizado')?.click();
+        });
+      }
+    }
+
     modal('Centro de custo', `
       <div class="center-detail-header">
         <div><p class="eyebrow">Centro de custo</p><h2>${esc(c.codigo)} — ${esc(c.nome)}</h2><p class="muted">${esc(c.cliente||c.contrato||'—')}</p></div>
@@ -397,29 +617,26 @@ async function openCenterDetail(id) {
         <div class="center-detail-kpi"><span>Orçamento</span><strong>${fmtMoney(c.orcamento)}</strong></div>
       </div>
       ${Number(c.orcamento)>0?`<div class="center-detail-budget"><div class="center-budget-header"><span>Uso do orçamento</span><strong>${Math.min(100,Math.round(Number(c.total_despesas)/Number(c.orcamento)*100))}%</strong></div><div class="center-progress"><div class="center-progress-bar" style="width:${Math.min(100,Number(c.total_despesas)/Number(c.orcamento)*100)}%"></div></div></div>`:''}
-      ${catOptions.length ? `<div class="center-detail-filters">
-        <select id="center-detail-cat-filter"><option value="">Todas as categorias</option>${catOptions.map(cat=>`<option value="${esc(cat)}">${esc(cat)}</option>`).join('')}</select>
-        <select id="center-detail-sort"><option value="desc">Maior para menor</option><option value="asc">Menor para maior</option></select>
-      </div>` : ''}
       <div class="center-detail-actions">
-        ${['admin','gestor'].includes(usuario.role)?`<button class="btn secondary" onclick="closeModal();openCenter(centros.find(x=>x.id===${c.id}))">Editar centro e status</button>`:''}
+        ${canManage?`<button class="btn secondary" onclick="closeModal();openCenter(centros.find(x=>x.id===${c.id}))">Editar centro e status</button>`:''}
       </div>
-      <div class="table-card"><div class="table-meta"><span id="center-detail-count">${lancamentos.length} lançamento(s)</span></div><div class="table-scroll"><table class="cc-mobile-table"><thead><tr><th>Compra</th><th>Centro de custo</th><th>Documento</th><th>Status</th><th>Valor</th></tr></thead><tbody id="center-detail-transactions"></tbody></table></div></div>
+      <nav class="measurements-tabs" role="tablist" aria-label="Detalhamento do centro de custo">
+        <button type="button" role="tab" class="measurements-tab-btn active" data-cc-tab="detalhamento" aria-selected="true">Detalhamento</button>
+        <button type="button" role="tab" class="measurements-tab-btn" data-cc-tab="notas-fiscais" aria-selected="false">Notas fiscais</button>
+        <button type="button" role="tab" class="measurements-tab-btn" data-cc-tab="orcado-realizado" aria-selected="false">Orçado x Realizado</button>
+      </nav>
+      <div id="center-detail-tab-body"></div>
     `);
 
-    renderList();
+    document.querySelectorAll('[data-cc-tab]').forEach(btn => btn.addEventListener('click', async () => {
+      document.querySelectorAll('[data-cc-tab]').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      activeTab = btn.dataset.ccTab;
+      await renderTab();
+    }));
 
-    const catFilter = $('#center-detail-cat-filter');
-    const sortSelect = $('#center-detail-sort');
-    if (catFilter) catFilter.addEventListener('change', () => {
-      const val = catFilter.value;
-      filtered = val ? lancamentos.filter(l => l.categoria === val) : [...lancamentos];
-      renderList();
-    });
-    if (sortSelect) sortSelect.addEventListener('change', () => {
-      sortDesc = sortSelect.value === 'desc';
-      renderList();
-    });
+    await renderTab();
   } catch (error) { toast(error.message, true); }
 }
 
