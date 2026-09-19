@@ -421,19 +421,19 @@ test('Notas fiscais do centro de custo: lança, lista, atualiza status e remove'
   const listaCompleta = await request(`/centros-custo/${centerId}/notas-fiscais`, { token });
   assert.equal(listaCompleta.data.length, 2);
 
-  const atualizado = await request(`/notas-fiscais/${fornecedor.data.id}`, { method: 'PUT', token, body: { status: 'paga' } });
+  const atualizado = await request(`/centros-custo/notas-fiscais/${fornecedor.data.id}`, { method: 'PUT', token, body: { status: 'paga' } });
   assert.equal(atualizado.response.status, 200);
   assert.equal(atualizado.data.status, 'paga');
   assert.equal(atualizado.data.valor, 1500.5);
 
-  const removido = await request(`/notas-fiscais/${cliente.data.id}`, { method: 'DELETE', token });
+  const removido = await request(`/centros-custo/notas-fiscais/${cliente.data.id}`, { method: 'DELETE', token });
   assert.equal(removido.response.status, 200);
   const listaFinal = await request(`/centros-custo/${centerId}/notas-fiscais`, { token });
   assert.equal(listaFinal.data.length, 1);
 });
 ```
 
-Note: as rotas de mutação `PUT`/`DELETE` são montadas em `/api/centros-custo/notas-fiscais/:nfId` — por isso o teste chama `request('/notas-fiscais/...')` (a base já inclui `/api`).
+Note: as rotas de mutação `PUT`/`DELETE` são montadas em `/api/centros-custo/notas-fiscais/:nfId` (o router é montado em `/api/centros-custo`, e a rota interna é `/notas-fiscais/:nfId`) — por isso o teste chama `request('/centros-custo/notas-fiscais/...')` (a base já inclui só `/api`).
 
 Run: `node --test test/cost-center-invoices-ledger.integration.test.js`
 Expected: FAIL (rota ainda não existe)
@@ -950,7 +950,7 @@ async function openCenterDetail(id) {
         list.querySelectorAll(`[data-nf-toggle]`).forEach(btn => btn.addEventListener('click', async () => {
           const nf = nfPorTipo[tipo].find(item => item.id === Number(btn.dataset.nfToggle));
           try {
-            await api(`/notas-fiscais/${btn.dataset.nfToggle}`, { method: 'PUT', body: JSON.stringify({ status: nf.status === 'paga' ? 'nao_paga' : 'paga' }) });
+            await api(`/centros-custo/notas-fiscais/${btn.dataset.nfToggle}`, { method: 'PUT', body: JSON.stringify({ status: nf.status === 'paga' ? 'nao_paga' : 'paga' }) });
             await loadNf(tipo);
             bindNfSection(tipo);
             toast('Nota fiscal atualizada.');
@@ -959,7 +959,7 @@ async function openCenterDetail(id) {
         list.querySelectorAll(`[data-nf-delete]`).forEach(btn => btn.addEventListener('click', async () => {
           if (!confirm('Excluir esta nota fiscal?')) return;
           try {
-            await api(`/notas-fiscais/${btn.dataset.nfDelete}`, { method: 'DELETE' });
+            await api(`/centros-custo/notas-fiscais/${btn.dataset.nfDelete}`, { method: 'DELETE' });
             await loadNf(tipo);
             bindNfSection(tipo);
             toast('Nota fiscal excluída.');
