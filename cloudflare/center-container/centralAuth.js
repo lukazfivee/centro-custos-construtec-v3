@@ -352,6 +352,41 @@ async function handleProfilePhoto(request, env) {
   return json({ ok: true, mime: photo.mime, contentBase64: photo.contentBase64 });
 }
 
+// Formato "publico" (para o consumidor externo autenticado por x-sync-key)
+// de uma linha de cloud_users no diretorio de identidade. Ao contrario de
+// publicUser(), inclui deliberadamente o hash/salt/iteracoes de senha —
+// quem consome este endpoint precisa deles para permitir login offline.
+function publicDirectoryUser(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    passwordSalt: row.password_salt,
+    passwordHash: row.password_hash,
+    passwordIterations: row.password_iterations,
+    active: Boolean(row.active),
+    updatedAt: row.updated_at,
+  };
+}
+
+// Diretorio de identidade para sincronizacao externa (Construtec Orcamentos).
+// Autenticado por segredo compartilhado (x-sync-key === env.SYNC_SHARED_KEY),
+// nao por sessao de usuario. Proposital: NAO filtra deleted_at — contas
+// excluidas (Task 3) continuam aparecendo aqui com active:false e o e-mail
+// real preservado, para quem consome o diretorio saber que a conta foi
+// desativada sem perder nome/e-mail para exibicao em historico.
+async function handleIdentityDirectory(request, env) {
+  const key = request.headers.get('x-sync-key') || '';
+  if (!env.SYNC_SHARED_KEY || key !== env.SYNC_SHARED_KEY) return json({ ok: false, error: 'Nao autorizado.' }, 401);
+  const url = new URL(request.url);
+  const since = text(url.searchParams.get('since'));
+  const cursor = new Date().toISOString();
+  const rows = since
+    ? (await env.DB.prepare('SELECT * FROM cloud_users WHERE updated_at > ? ORDER BY updated_at').bind(since).all()).results || []
+    : (await env.DB.prepare('SELECT * FROM cloud_users ORDER BY updated_at').all()).results || [];
+  return json({ ok: true, users: rows.map(publicDirectoryUser), cursor });
+}
+
 // Retorna uma Response quando a rota é de identidade central (/v1/auth/*,
 // /v1/users*), ou null quando o caminho não pertence a este escopo — nesse
 // caso o chamador segue para o roteamento normal (Container).
@@ -364,14 +399,23 @@ export async function handleCentralAuth(request, env) {
     || url.pathname === '/v1/users'
     || url.pathname === '/v1/users/status'
     || url.pathname === '/v1/users/authorize-external'
-    || url.pathname === '/v1/users/delete';
+    || url.pathname === '/v1/users/delete'
+    || url.pathname === '/v1/identity/directory';
   if (!isAuthRoute) return null;
 
-  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-  const isLogin = request.method === 'POST' && url.pathname === '/v1/auth/login';
-  const allowed = await consumeRate(env.DB, ip, isLogin ? 'login' : 'api', isLogin ? 60 : 5000);
-  if (!allowed) return json({ ok: false, error: 'Limite temporario de requisicoes atingido.' }, 429);
+  // A sincronizacao de diretorio e servidor-a-servidor (autenticada por
+  // x-sync-key), nao um usuario final por tras de um IP/navegador — isenta
+  // do rate limit por IP para nao estourar o limite em sincronizacoes
+  // periodicas de intervalo curto.
+  const isDirectorySync = url.pathname === '/v1/identity/directory';
+  if (!isDirectorySync) {
+    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+    const isLogin = request.method === 'POST' && url.pathname === '/v1/auth/login';
+    const allowed = await consumeRate(env.DB, ip, isLogin ? 'login' : 'api', isLogin ? 60 : 5000);
+    if (!allowed) return json({ ok: false, error: 'Limite temporario de requisicoes atingido.' }, 429);
+  }
 
+  if (request.method === 'GET' && url.pathname === '/v1/identity/directory') return handleIdentityDirectory(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/auth/login') return handleLogin(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/auth/bootstrap') return handleBootstrap(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/auth/change-password') return handleChangePassword(request, env);

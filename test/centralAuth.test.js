@@ -142,6 +142,133 @@ test('handleCentralAuth: autorizar e-mail externo grava na tabela e exige admin'
   assert.ok(!dbSemSessao.calls.some((c) => /INSERT INTO authorized_external_emails/.test(c.sql)));
 });
 
+// Fake de env.DB para o endpoint de diretorio (autenticado por x-sync-key,
+// nao por sessao): so precisa suportar `.prepare(sql).all()` (sem since) e
+// `.prepare(sql).bind(since).all()` (com since), e gravar cada chamada em
+// `calls` para os testes inspecionarem o SQL/args exatos.
+function fakeDirectoryDb(rows) {
+  const calls = [];
+  return {
+    calls,
+    prepare(sql) {
+      const exec = async () => {
+        calls.push({ sql });
+        return { results: rows };
+      };
+      return {
+        bind(...args) {
+          calls.push({ sql, args });
+          return { all: async () => ({ results: rows }) };
+        },
+        all: exec,
+      };
+    },
+  };
+}
+
+function fakeSyncRequest(pathname, { syncKey = 'segredo-compartilhado' } = {}) {
+  return {
+    url: `https://example.com${pathname}`,
+    method: 'GET',
+    headers: {
+      get(name) {
+        const key = String(name).toLowerCase();
+        if (key === 'x-sync-key') return syncKey;
+        if (key === 'cf-connecting-ip') return '127.0.0.1';
+        return null;
+      },
+    },
+  };
+}
+
+function directoryUserRow(overrides = {}) {
+  return {
+    id: 'u1',
+    name: 'Pessoa',
+    email: 'pessoa@rcconstrutec.com.br',
+    password_salt: 'c2FsdA==',
+    password_hash: 'aGFzaA==',
+    password_iterations: 10000,
+    active: 1,
+    deleted_at: null,
+    updated_at: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+test('handleCentralAuth: diretorio exige x-sync-key e devolve usuarios com hash', async () => {
+  const { handleCentralAuth } = await loadCentralAuth();
+  const sharedKey = 'segredo-compartilhado';
+
+  // 1. Sem header x-sync-key -> 401, sem tocar o banco.
+  const dbSemChave = fakeDirectoryDb([]);
+  const responseSemChave = await handleCentralAuth(
+    fakeSyncRequest('/v1/identity/directory', { syncKey: null }),
+    { DB: dbSemChave, SYNC_SHARED_KEY: sharedKey },
+  );
+  assert.equal(responseSemChave.status, 401);
+  assert.equal(dbSemChave.calls.length, 0, 'nao deveria consultar o banco sem a chave');
+
+  // 2. Header com chave errada -> 401.
+  const responseChaveErrada = await handleCentralAuth(
+    fakeSyncRequest('/v1/identity/directory', { syncKey: 'chave-errada' }),
+    { DB: fakeDirectoryDb([]), SYNC_SHARED_KEY: sharedKey },
+  );
+  assert.equal(responseChaveErrada.status, 401);
+
+  // 3. Header correto -> 200, body.users e array, cada item tem
+  //    passwordHash/passwordSalt/passwordIterations. Inclui uma conta
+  //    excluida (deleted_at preenchido) para confirmar que o diretorio NAO
+  //    filtra deleted_at (ao contrario de handleLogin/handleListUsers).
+  const rows = [
+    directoryUserRow(),
+    directoryUserRow({
+      id: 'u2',
+      name: 'Ex Funcionario',
+      email: 'exfuncionario@rcconstrutec.com.br',
+      active: 0,
+      deleted_at: '2026-02-01T00:00:00.000Z',
+      updated_at: '2026-02-01T00:00:00.000Z',
+    }),
+  ];
+  const db = fakeDirectoryDb(rows);
+  const response = await handleCentralAuth(
+    fakeSyncRequest('/v1/identity/directory', { syncKey: sharedKey }),
+    { DB: db, SYNC_SHARED_KEY: sharedKey },
+  );
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.ok, true);
+  assert.ok(Array.isArray(payload.users));
+  assert.equal(payload.users.length, 2);
+  assert.ok(payload.cursor);
+
+  for (const user of payload.users) {
+    assert.ok('passwordHash' in user);
+    assert.ok('passwordSalt' in user);
+    assert.ok('passwordIterations' in user);
+  }
+
+  // Confirmacao explicita exigida pelo brief: a conta excluida (deleted_at
+  // preenchido) aparece no diretorio, com active:false e e-mail real
+  // preservado — nao e filtrada.
+  const excluida = payload.users.find((u) => u.email === 'exfuncionario@rcconstrutec.com.br');
+  assert.ok(excluida, 'conta excluida deveria aparecer no diretorio');
+  assert.equal(excluida.active, false);
+  assert.ok(!db.calls.some((c) => /deleted_at IS NULL/.test(c.sql)), 'a query do diretorio nao deve filtrar deleted_at');
+
+  // 4. Com "since", usa WHERE updated_at > ? com bind do valor.
+  const dbSince = fakeDirectoryDb(rows);
+  const responseSince = await handleCentralAuth(
+    fakeSyncRequest('/v1/identity/directory?since=2026-01-15T00:00:00.000Z', { syncKey: sharedKey }),
+    { DB: dbSince, SYNC_SHARED_KEY: sharedKey },
+  );
+  assert.equal(responseSince.status, 200);
+  const sinceCall = dbSince.calls.find((c) => /WHERE updated_at > \?/.test(c.sql));
+  assert.ok(sinceCall, 'deveria usar WHERE updated_at > ? quando "since" e informado');
+  assert.equal(sinceCall.args[0], '2026-01-15T00:00:00.000Z');
+});
+
 test('handleCentralAuth: excluir login marca deleted_at, nao apaga a linha, e libera o e-mail', async () => {
   const { handleCentralAuth } = await loadCentralAuth();
 
