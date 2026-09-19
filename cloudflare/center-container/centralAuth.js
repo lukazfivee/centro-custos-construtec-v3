@@ -195,7 +195,7 @@ async function handleLogin(request, env) {
   if (!validCorporateEmail(email) || !password) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
   const count = await env.DB.prepare('SELECT COUNT(*) AS total FROM cloud_users WHERE org_id=?').bind(ORG_ID).first();
   if (Number(count?.total || 0) === 0) return json({ ok: false, error: 'Diretorio corporativo ainda nao inicializado.', code: 'DIRECTORY_EMPTY' }, 409);
-  const user = await env.DB.prepare('SELECT * FROM cloud_users WHERE org_id=? AND email=?').bind(ORG_ID, email).first();
+  const user = await env.DB.prepare('SELECT * FROM cloud_users WHERE org_id=? AND email=? AND deleted_at IS NULL').bind(ORG_ID, email).first();
   if (!user || !user.active) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
   const iterations = Number(user.password_iterations || PASSWORD_ITERATIONS);
   if (iterations > PASSWORD_ITERATIONS) return json({ ok: false, error: 'Credencial central precisa ser reinicializada para o Workers Free.', code: 'PASSWORD_PROFILE_LEGACY' }, 409);
@@ -235,7 +235,7 @@ async function handleListUsers(request, env) {
   if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
   const rows = (await env.DB.prepare(`
     SELECT id,name,email,role,active,created_at,updated_at,last_login_at
-    FROM cloud_users WHERE org_id=? ORDER BY active DESC,name,email
+    FROM cloud_users WHERE org_id=? AND deleted_at IS NULL ORDER BY active DESC,name,email
   `).bind(auth.user.org_id).all()).results || [];
   return json({ ok: true, users: rows.map(publicUser) });
 }
@@ -251,7 +251,7 @@ async function handleCreateUser(request, env) {
   const role = text(body?.role);
   if (!name || password.length < 10 || !validRole(role)) return json({ ok: false, error: 'Preencha nome, senha de 10+ caracteres e perfil valido.' }, 400);
   if (!(await isEmailAllowed(env, email))) return json({ ok: false, error: 'E-mail nao autorizado. Peca a um administrador para liberar este e-mail antes de criar a conta.', code: 'EMAIL_NOT_AUTHORIZED' }, 403);
-  if (await env.DB.prepare('SELECT id FROM cloud_users WHERE org_id=? AND email=?').bind(auth.user.org_id, email).first()) return json({ ok: false, error: 'Ja existe um usuario com este e-mail.' }, 409);
+  if (await env.DB.prepare('SELECT id FROM cloud_users WHERE org_id=? AND email=? AND deleted_at IS NULL').bind(auth.user.org_id, email).first()) return json({ ok: false, error: 'Ja existe um usuario com este e-mail.' }, 409);
   const record = await makePasswordRecord(password);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -271,9 +271,9 @@ async function handleUserStatus(request, env) {
   const active = body?.active === true ? 1 : 0;
   if (!validCorporateEmail(email)) return json({ ok: false, error: 'E-mail invalido.' }, 400);
   if (email === auth.user.email && active === 0) return json({ ok: false, error: 'Voce nao pode desativar o proprio acesso.' }, 400);
-  const result = await env.DB.prepare('UPDATE cloud_users SET active=?,updated_at=? WHERE org_id=? AND email=?').bind(active, new Date().toISOString(), auth.user.org_id, email).run();
+  const result = await env.DB.prepare('UPDATE cloud_users SET active=?,updated_at=? WHERE org_id=? AND email=? AND deleted_at IS NULL').bind(active, new Date().toISOString(), auth.user.org_id, email).run();
   if (!result.meta?.changes) return json({ ok: false, error: 'Usuario nao encontrado.' }, 404);
-  if (!active) await env.DB.prepare('DELETE FROM cloud_sessions WHERE user_id IN (SELECT id FROM cloud_users WHERE org_id=? AND email=?)').bind(auth.user.org_id, email).run();
+  if (!active) await env.DB.prepare('DELETE FROM cloud_sessions WHERE user_id IN (SELECT id FROM cloud_users WHERE org_id=? AND email=? AND deleted_at IS NULL)').bind(auth.user.org_id, email).run();
   return json({ ok: true });
 }
 
@@ -292,6 +292,24 @@ async function handleAuthorizeExternalEmail(request, env) {
     ON CONFLICT(email) DO UPDATE SET authorized_by=excluded.authorized_by, authorized_at=excluded.authorized_at, note=excluded.note
   `).bind(email, auth.user.id, now, note).run();
   return json({ ok: true, email, authorizedAt: now });
+}
+
+async function handleDeleteUser(request, env) {
+  const auth = await requireSession(request, env, ['admin']);
+  if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
+  let body;
+  try { body = await request.json(); } catch { return json({ ok: false, error: 'JSON invalido.' }, 400); }
+  const email = text(body?.email).toLowerCase();
+  if (!validCorporateEmail(email) && !(await isEmailAllowed(env, email))) return json({ ok: false, error: 'E-mail invalido.' }, 400);
+  if (email === auth.user.email) return json({ ok: false, error: 'Voce nao pode excluir o proprio acesso.' }, 400);
+  const now = new Date().toISOString();
+  const result = await env.DB.prepare(`
+    UPDATE cloud_users SET active=0, deleted_at=?, updated_at=?
+    WHERE org_id=? AND email=? AND deleted_at IS NULL
+  `).bind(now, now, auth.user.org_id, email).run();
+  if (!result.meta?.changes) return json({ ok: false, error: 'Usuario nao encontrado.' }, 404);
+  await env.DB.prepare('DELETE FROM cloud_sessions WHERE user_id IN (SELECT id FROM cloud_users WHERE org_id=? AND email=?)').bind(auth.user.org_id, email).run();
+  return json({ ok: true });
 }
 
 async function handleChangePassword(request, env) {
@@ -345,7 +363,8 @@ export async function handleCentralAuth(request, env) {
     || url.pathname === '/v1/auth/profile-photo'
     || url.pathname === '/v1/users'
     || url.pathname === '/v1/users/status'
-    || url.pathname === '/v1/users/authorize-external';
+    || url.pathname === '/v1/users/authorize-external'
+    || url.pathname === '/v1/users/delete';
   if (!isAuthRoute) return null;
 
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
@@ -361,5 +380,6 @@ export async function handleCentralAuth(request, env) {
   if (request.method === 'POST' && url.pathname === '/v1/users') return handleCreateUser(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/users/status') return handleUserStatus(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/users/authorize-external') return handleAuthorizeExternalEmail(request, env);
+  if (request.method === 'POST' && url.pathname === '/v1/users/delete') return handleDeleteUser(request, env);
   return json({ ok: false, error: 'Rota nao encontrada.' }, 404);
 }

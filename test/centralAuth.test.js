@@ -141,3 +141,43 @@ test('handleCentralAuth: autorizar e-mail externo grava na tabela e exige admin'
   assert.equal(responseSemSessao.status, 401);
   assert.ok(!dbSemSessao.calls.some((c) => /INSERT INTO authorized_external_emails/.test(c.sql)));
 });
+
+test('handleCentralAuth: excluir login marca deleted_at, nao apaga a linha, e libera o e-mail', async () => {
+  const { handleCentralAuth } = await loadCentralAuth();
+
+  // 1. Sem sessao de admin -> 401.
+  const dbSemSessao = fakeAdminDb({ sessionUserRow: null });
+  const responseSemSessao = await handleCentralAuth(
+    fakeAdminRequest('/v1/users/delete', { email: 'pessoa@rcconstrutec.com.br' }),
+    { DB: dbSemSessao },
+  );
+  assert.equal(responseSemSessao.status, 401);
+  assert.ok(!dbSemSessao.calls.some((c) => /UPDATE cloud_users/.test(c.sql)));
+
+  // 2. Admin tentando excluir a propria conta -> 400.
+  const admin = adminUserRow();
+  const dbAutoExclusao = fakeAdminDb({ sessionUserRow: admin });
+  const responseAutoExclusao = await handleCentralAuth(
+    fakeAdminRequest('/v1/users/delete', { email: admin.email }),
+    { DB: dbAutoExclusao },
+  );
+  assert.equal(responseAutoExclusao.status, 400);
+  assert.ok(!dbAutoExclusao.calls.some((c) => /UPDATE cloud_users/.test(c.sql)));
+
+  // 3. Exclusao bem sucedida: UPDATE grava deleted_at e active=0, nunca um DELETE FROM cloud_users.
+  const dbSucesso = fakeAdminDb({ sessionUserRow: admin });
+  const responseSucesso = await handleCentralAuth(
+    fakeAdminRequest('/v1/users/delete', { email: 'exfuncionario@rcconstrutec.com.br' }),
+    { DB: dbSucesso },
+  );
+  assert.equal(responseSucesso.status, 200);
+  const payloadSucesso = await responseSucesso.json();
+  assert.equal(payloadSucesso.ok, true);
+
+  assert.ok(!dbSucesso.calls.some((c) => /DELETE\s+FROM\s+cloud_users/i.test(c.sql)), 'nao deve apagar a linha de cloud_users');
+  const updateCall = dbSucesso.calls.find((c) => /UPDATE cloud_users SET active=0, deleted_at=/.test(c.sql));
+  assert.ok(updateCall, 'deveria fazer UPDATE cloud_users SET active=0, deleted_at=...');
+  assert.match(updateCall.sql, /WHERE org_id=\? AND email=\? AND deleted_at IS NULL/);
+  assert.equal(updateCall.args[2], admin.org_id);
+  assert.equal(updateCall.args[3], 'exfuncionario@rcconstrutec.com.br');
+});
