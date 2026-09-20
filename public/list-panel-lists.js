@@ -105,21 +105,11 @@
     render: (items) => items.map((item) => {
       const statusLabel = item.ativo?(item.situacao==='execucao'?'Em aberto':item.situacao==='pausado'?'Pausado':item.situacao==='concluido'?'Concluído':'Ativo'):'Inativo';
       const statusClass = item.ativo?(item.situacao==='execucao'?'em-aberto':item.situacao==='pausado'?'pausado':item.situacao==='concluido'?'concluido':'ativo'):'inativo';
-      const orcamento = Number(item.orcamento) || 0;
-      const comprometido = Number(item.total_comprometido_mes) || 0;
-      const semOrcamento = orcamento <= 0;
-      const rawPercent = semOrcamento ? 0 : Math.round(comprometido / orcamento * 100);
-      const percent = Math.min(100, rawPercent);
-      const isOverBudget = rawPercent > 100;
       return `<article class="center-card" data-center-id="${item.id}">
       <div class="center-card-head"><div class="center-card-icon">◫</div><span class="pill center-status-pill ${statusClass}">${statusLabel}</span></div>
       <h3 class="center-card-title">${esc(item.codigo)} — ${esc(item.nome)}</h3>
       <p class="center-card-client">${esc(item.cliente || 'Sem cliente informado')}</p>
-      <div class="center-card-stats"><div><span class="center-stat-label">Orçamento mensal</span><strong>${money(item.orcamento)}</strong></div><div><span class="center-stat-label">Comprometido no mês</span><strong>${money(item.total_comprometido_mes)}</strong></div></div>
-      <div class="center-card-budget">
-        <div class="center-budget-header"><span>Uso do orçamento</span><strong${isOverBudget?' style="color:#dc2626;"':''}>${semOrcamento?'A definir':rawPercent+'%'}</strong></div>
-        <div class="center-progress"><div class="center-progress-bar${isOverBudget?' over':''}" style="width:${semOrcamento?0:percent}%"></div></div>
-      </div>
+      <div class="center-card-stats"><div><span class="center-stat-label">Realizado</span><strong>${money(item.total_despesas)}</strong></div><div><span class="center-stat-label">Valor contratado</span><strong>${money(item.valor_contrato)}</strong></div></div>
       <div class="center-card-footer"><button class="text-btn" data-center-detail="${item.id}" aria-label="Abrir detalhes da obra ${esc(item.nome)}" title="Abrir detalhes">Detalhes</button>${canEdit() ? `<button class="text-btn" data-edit-center="${item.id}" aria-label="Editar obra ${esc(item.nome)}" title="Editar obra">Editar</button>` : ''}</div>
     </article>`;
     }).join(''),

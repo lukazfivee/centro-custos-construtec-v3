@@ -320,12 +320,7 @@ async function deleteTransaction(id) {
 async function loadCenters() {
   centros=await api('/centros-custo');
   $('#lista-centros-cards').innerHTML=centros.length ? centros.map((item)=>{
-    const orcamento=Number(item.orcamento)||0;
     const realizado=Number(item.total_despesas)||0;
-    const rawPercent=orcamento>0?Math.round(realizado/orcamento*100):0;
-    const percent=Math.min(100,rawPercent);
-    const isOverBudget=rawPercent>100;
-    const semOrcamento=orcamento<=0;
     const statusLabel=item.ativo?(item.situacao==='execucao'?'Em aberto':item.situacao==='pausado'?'Pausado':item.situacao==='concluido'?'Concluído':'Ativo'):'Inativo';
     const statusClass=item.ativo?(item.situacao==='execucao'?'em-aberto':item.situacao==='pausado'?'pausado':item.situacao==='concluido'?'concluido':'ativo'):'inativo';
     const desc=item.descricao?`<p class="center-card-desc">${esc(item.descricao)}</p>`:'';
@@ -336,10 +331,6 @@ async function loadCenters() {
       <div class="center-card-stats">
         <div><span class="center-stat-label">Responsável</span><strong>${esc(item.responsavel||'—')}</strong></div>
         <div><span class="center-stat-label">Realizado</span><strong>${money(realizado)}</strong></div>
-      </div>
-      <div class="center-card-budget">
-        <div class="center-budget-header"><span>Uso do orçamento</span><strong${isOverBudget?' style="color:#dc2626;"':''}>${semOrcamento?'A definir':rawPercent+'%'}</strong></div>
-        <div class="center-progress"><div class="center-progress-bar${isOverBudget?' over':''}" style="width:${semOrcamento?0:percent}%"></div></div>
       </div>
       ${desc}
       <div class="center-card-footer">
@@ -354,7 +345,7 @@ async function loadCenters() {
 }
 $('#btn-exportar-centros')?.addEventListener('click',()=>download('/centros-custo/exportar.csv','centros-de-custo.csv'));
 $('#btn-novo-centro').addEventListener('click',()=>openCenter(null));
-function openCenter(item){modal(item?'Editar obra / centro':'Nova obra / centro de custo',`<form id="center-form"><div class="form-grid"><div><label for="cc-codigo">Código</label><input id="cc-codigo" required maxlength="40" value="${esc(item?.codigo||'')}"></div><div><label for="cc-situacao">Situação</label><select id="cc-situacao">${Object.entries(projectStatusName).map(([value,label])=>`<option value="${value}" ${(item?.situacao||'planejamento')===value?'selected':''}>${label}</option>`).join('')}</select></div></div><label for="cc-nome">Nome da obra / centro</label><input id="cc-nome" required maxlength="140" value="${esc(item?.nome||'')}"><div class="form-grid"><div><label for="cc-cliente">Cliente</label><input id="cc-cliente" maxlength="160" value="${esc(item?.cliente||'')}"></div><div><label for="cc-contrato">Número do contrato</label><input id="cc-contrato" maxlength="80" value="${esc(item?.contrato||'')}"></div></div><div class="form-grid"><div><label for="cc-responsavel">Responsável</label><input id="cc-responsavel" maxlength="120" value="${esc(item?.responsavel||'')}"></div><div><label for="cc-orcamento">Orçamento mensal</label><input id="cc-orcamento" type="number" min="0" step="0.01" value="${esc(item?.orcamento||0)}"></div></div><div class="form-grid"><div><label for="cc-inicio">Data de início</label><input id="cc-inicio" type="date" value="${esc(item?.data_inicio||'')}"></div><div><label for="cc-fim">Previsão de término</label><input id="cc-fim" type="date" value="${esc(item?.data_fim||'')}"></div></div><label for="cc-valor-contrato">Valor contratado (R$)</label><input id="cc-valor-contrato" type="number" min="0" step="0.01" value="${esc(item?.valor_contrato||0)}"><label for="cc-descricao">Descrição</label><textarea id="cc-descricao" maxlength="500" rows="2">${esc(item?.descricao||'')}</textarea>${item?`<label class="check-label"><input id="cc-ativo" type="checkbox" ${item.ativo?'checked':''}> Obra / centro ativo</label>`:''}<div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Salvar obra / centro</button></form>`);$('#center-form').addEventListener('submit',async(event)=>{event.preventDefault();try{const body={codigo:$('#cc-codigo').value,nome:$('#cc-nome').value,cliente:$('#cc-cliente').value,contrato:$('#cc-contrato').value,responsavel:$('#cc-responsavel').value,orcamento:Number($('#cc-orcamento').value),data_inicio:$('#cc-inicio').value,data_fim:$('#cc-fim').value,valor_contrato:Number($('#cc-valor-contrato').value),situacao:$('#cc-situacao').value,descricao:$('#cc-descricao').value,ativo:item?$('#cc-ativo').checked:true};await api(item?`/centros-custo/${item.id}`:'/centros-custo',{method:item?'PUT':'POST',body:JSON.stringify(body)});closeModal();toast('Obra / centro salvo.');await Promise.all([loadCenters(),loadDashboard()]);}catch(error){$('#modal-error').textContent=error.message;}});}
+function openCenter(item){modal(item?'Editar obra / centro':'Nova obra / centro de custo',`<form id="center-form"><div class="form-grid"><div><label for="cc-codigo">Código</label><input id="cc-codigo" required maxlength="40" value="${esc(item?.codigo||'')}"></div><div><label for="cc-situacao">Situação</label><select id="cc-situacao">${Object.entries(projectStatusName).map(([value,label])=>`<option value="${value}" ${(item?.situacao||'planejamento')===value?'selected':''}>${label}</option>`).join('')}</select></div></div><label for="cc-nome">Nome da obra / centro</label><input id="cc-nome" required maxlength="140" value="${esc(item?.nome||'')}"><div class="form-grid"><div><label for="cc-cliente">Cliente</label><input id="cc-cliente" maxlength="160" value="${esc(item?.cliente||'')}"></div><div><label for="cc-contrato">Número do contrato</label><input id="cc-contrato" maxlength="80" value="${esc(item?.contrato||'')}"></div></div><label for="cc-responsavel">Responsável</label><input id="cc-responsavel" maxlength="120" value="${esc(item?.responsavel||'')}"><div class="form-grid"><div><label for="cc-inicio">Data de início</label><input id="cc-inicio" type="date" value="${esc(item?.data_inicio||'')}"></div><div><label for="cc-fim">Previsão de término</label><input id="cc-fim" type="date" value="${esc(item?.data_fim||'')}"></div></div><label for="cc-valor-contrato">Valor contratado (R$)</label><input id="cc-valor-contrato" type="number" min="0" step="0.01" value="${esc(item?.valor_contrato||0)}"><label for="cc-descricao">Descrição</label><textarea id="cc-descricao" maxlength="500" rows="2">${esc(item?.descricao||'')}</textarea>${item?`<label class="check-label"><input id="cc-ativo" type="checkbox" ${item.ativo?'checked':''}> Obra / centro ativo</label>`:''}<div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Salvar obra / centro</button></form>`);$('#center-form').addEventListener('submit',async(event)=>{event.preventDefault();try{const body={codigo:$('#cc-codigo').value,nome:$('#cc-nome').value,cliente:$('#cc-cliente').value,contrato:$('#cc-contrato').value,responsavel:$('#cc-responsavel').value,data_inicio:$('#cc-inicio').value,data_fim:$('#cc-fim').value,valor_contrato:Number($('#cc-valor-contrato').value),situacao:$('#cc-situacao').value,descricao:$('#cc-descricao').value,ativo:item?$('#cc-ativo').checked:true};await api(item?`/centros-custo/${item.id}`:'/centros-custo',{method:item?'PUT':'POST',body:JSON.stringify(body)});closeModal();toast('Obra / centro salvo.');await Promise.all([loadCenters(),loadDashboard()]);}catch(error){$('#modal-error').textContent=error.message;}});}
 
 function syncCenterCardFromDetail(c) {
   const idx = centros.findIndex((x) => x.id === c.id);
@@ -638,7 +629,6 @@ async function openCenterDetail(id) {
       }
     }
 
-    const detailRawPercent = Number(c.orcamento)>0 ? Math.round(Number(c.total_despesas)/Number(c.orcamento)*100) : 0;
     modal('Centro de custo', `
       <div class="center-detail-header">
         <div><p class="eyebrow">Centro de custo</p><h2>${esc(c.codigo)} — ${esc(c.nome)}</h2><p class="muted">${esc(c.cliente||c.contrato||'—')}</p></div>
@@ -647,9 +637,8 @@ async function openCenterDetail(id) {
       <div class="center-detail-kpis">
         <div class="center-detail-kpi"><span>Total do centro</span><strong>${fmtMoney(c.total_despesas)}</strong></div>
         <div class="center-detail-kpi"><span>Compras registradas</span><strong>${c.total_lancamentos}</strong></div>
-        <div class="center-detail-kpi"><span>Orçamento</span><strong>${fmtMoney(c.orcamento)}</strong></div>
+        <div class="center-detail-kpi"><span>Valor contratado</span><strong>${fmtMoney(c.valor_contrato)}</strong></div>
       </div>
-      ${Number(c.orcamento)>0?`<div class="center-detail-budget"><div class="center-budget-header"><span>Uso do orçamento</span><strong${detailRawPercent>100?' style="color:#dc2626;"':''}>${detailRawPercent}%</strong></div><div class="center-progress"><div class="center-progress-bar${detailRawPercent>100?' over':''}" style="width:${Math.min(100,Number(c.total_despesas)/Number(c.orcamento)*100)}%"></div></div></div>`:''}
       <div class="center-detail-actions">
         ${canManage?`<button class="btn secondary" onclick="closeModal();openCenter(centros.find(x=>x.id===${c.id}))">Editar centro e status</button>`:''}
       </div>
