@@ -21,6 +21,23 @@ async function recordExpenseAllocation(pool, params) {
     throw new Error('PARAMETROS_INVALIDOS: transactionId, costCenterId e amount são obrigatórios');
   }
 
+  // Reuso idempotente: se já existe alocação unmapped da transação (ex.: criada automaticamente),
+  // mapeia/reutiliza em vez de duplicar.
+  const prev = await pool.query(
+    `SELECT id FROM expense_allocations
+     WHERE transaction_id = $1 AND mapping_status = 'unmapped'
+     ORDER BY created_at LIMIT 1`,
+    [transactionId]
+  );
+  if (prev.rows[0]) {
+    if (!controlItemId) return { id: prev.rows[0].id, mappingStatus: 'unmapped' };
+    await mapExistingAllocation(pool, {
+      allocationId: prev.rows[0].id, contractId, controlItemId,
+      materialLineId, laborLineId, quantity, unit, notes,
+    });
+    return { id: prev.rows[0].id, mappingStatus: 'mapped' };
+  }
+
   const mappingStatus = controlItemId ? 'mapped' : 'unmapped';
   const id = crypto.randomUUID();
 

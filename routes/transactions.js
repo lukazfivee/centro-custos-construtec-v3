@@ -9,6 +9,7 @@ const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pag
 const { validDate } = require('../lib/dates');
 const { csvLine, decimalBr } = require('../lib/csv');
 const { recordAudit } = require('../services/audit');
+const { recordExpenseAllocation } = require('../services/budgets/budgetAllocations');
 
 const router = express.Router();
 router.use(autenticar);
@@ -97,6 +98,7 @@ router.post('/', asyncRoute(async (req, res) => {
     entityType:'lancamento',entityId:rows[0].public_id,action:'criado',
     summary:`Lançamento criado: ${data.description}`,data,user:req.usuario,
   });
+  await maybeAutoAllocateExpense(data, rows[0].id);
   res.status(201).json(rows[0]);
 }));
 
@@ -217,6 +219,7 @@ router.put('/:id', asyncRoute(async (req, res) => {
     entityType:'lancamento',entityId:existing.public_id,action:'atualizado',
     summary:`Lançamento atualizado: ${data.description}`,data,user:req.usuario,
   });
+  await maybeAutoAllocateExpense(data, id);
   res.json({ ok:true, revisao:result.rows[0].revision });
 }));
 
@@ -249,6 +252,24 @@ router.delete('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res)
   });
   res.json({ ok:true });
 }));
+
+// Cria allocation 'unmapped' automática p/ despesa liquidada em centro com contrato ativo e baseline vigente.
+// Idempotente: não cria se já existir allocation para a transação.
+async function maybeAutoAllocateExpense(data, transactionId) {
+  if (data.type !== 'despesa' || data.financialStatus !== 'liquidado') return;
+  const db = getDb();
+  const contract = await db.query(
+    `SELECT id FROM project_contracts
+     WHERE cost_center_id=$1 AND status='active' AND current_baseline_id IS NOT NULL LIMIT 1`,
+    [data.costCenterId]
+  );
+  if (!contract.rows[0]) return;
+  const existing = await db.query('SELECT 1 FROM expense_allocations WHERE transaction_id=$1 LIMIT 1', [transactionId]);
+  if (existing.rowCount) return;
+  await recordExpenseAllocation(db, {
+    transactionId, costCenterId:data.costCenterId, amount:data.amount, contractId:contract.rows[0].id,
+  });
+}
 
 function transactionOrder(query) {
   const fields = {
