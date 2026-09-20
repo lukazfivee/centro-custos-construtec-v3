@@ -112,7 +112,7 @@
         <div class="budget-view-container" style="padding:24px;text-align:center;">
           <h3 style="margin-bottom:8px;">Nenhum Orçamento Integrado</h3>
           <p class="muted" style="max-width:500px;margin:0 auto 20px auto;">Esta obra ainda não possui uma baseline orçamentária importada do <strong>Construtec Orçamentos</strong>.</p>
-          <div><button type="button" class="btn primary" id="btn-importar-neste-centro" title="Selecionar e importar o pacote JSON da proposta aprovada" style="background:#0284c7;">Importar Pacote de Proposta Aprovada</button></div>
+          <div><button type="button" class="btn primary budget-accent" id="btn-importar-neste-centro" title="Selecionar e importar o pacote JSON da proposta aprovada">Importar Pacote de Proposta Aprovada</button></div>
         </div>`;
       document.getElementById('btn-importar-neste-centro')?.addEventListener('click', () => openImportBudgetDialog(costCenterId));
       return;
@@ -132,16 +132,22 @@
           <div><button type="button" class="btn secondary" id="btn-atualizar-revisao-btn" title="Selecionar uma nova revisão aprovada do orçamento para importar" style="font-size:0.8rem;">Atualizar Revisão / Importar</button></div>
         </div>
         <div class="budget-kpis-grid">
-          <div class="budget-kpi-card"><span>Valor Contratual</span><strong>${fmtMoney(summary.contractValue)}</strong></div>
-          <div class="budget-kpi-card"><span>Custo Base Orçado</span><strong>${fmtMoney(summary.baseCost)}</strong></div>
+          <div class="budget-kpi-card ${summary.isOverBudget ? 'danger' : 'highlight'} hero"><span>Saldo Disponível</span><strong>${fmtMoney(summary.balance)}</strong></div>
           <div class="budget-kpi-card"><span>Realizado Líquido</span><strong style="color:#0284c7;">${fmtMoney(summary.realizedCost)}</strong></div>
-          <div class="budget-kpi-card"><span>Exposição Total</span><strong>${fmtMoney(summary.exposure)}</strong></div>
-          <div class="budget-kpi-card ${summary.isOverBudget ? 'danger' : 'highlight'}"><span>Saldo Disponível</span><strong>${fmtMoney(summary.balance)}</strong></div>
           <button type="button" class="budget-kpi-card budget-kpi-action" id="btn-kpi-labor-hours" aria-label="Abrir medições de mão de obra: ${laborHours.consumed} de ${laborHours.planned} horas utilizadas" title="Abrir medições de mão de obra"><span>Horas da Equipe</span><strong>${laborHours.consumed}h / ${laborHours.planned}h</strong></button>
+          <div class="budget-kpi-card reference"><span>Valor Contratual</span><strong>${fmtMoney(summary.contractValue)}</strong></div>
+          <div class="budget-kpi-card reference"><span>Custo Base Orçado</span><strong>${fmtMoney(summary.baseCost)}</strong></div>
+          <div class="budget-kpi-card reference"><span>Exposição Total</span><strong>${fmtMoney(summary.exposure)}</strong></div>
         </div>
         <div class="budget-burn-bar-container">
           <div class="budget-burn-labels"><span>Consumo do Orçamento: <strong>${burnRate}%</strong></span><span>${summary.isOverBudget ? 'Orçamento Excedido' : 'Dentro do Previsto'}</span></div>
           <div class="budget-burn-track"><div class="budget-burn-fill ${burnClass}" style="transform: scaleX(${Math.min(burnRate, 100) / 100});"></div></div>
+          ${(() => {
+            if (!summary.isOverBudget) return '';
+            const worst = [...items].filter(i => i.isOverBudget).sort((a, b) => a.balance - b.balance)[0];
+            if (!worst) return '';
+            return `<div class="budget-burn-hint">Maior desvio: <strong>${esc(worst.name)}</strong> (saldo ${fmtMoney(worst.balance)}) — confira a Planilha Analítica abaixo.</div>`;
+          })()}
         </div>
         ${(() => {
           const naoVinculado = Math.max(0, Number(center?.total_despesas || 0) - Number(summary.realizedCost || 0));
@@ -169,11 +175,11 @@
           <div class="budget-table-header">
             <h4>Planilha Analítica de Itens Orçados</h4>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <select id="budget-filter-kind" style="padding:4px 8px;border-radius:6px;font-size:0.8rem;border:1px solid var(--line);"><option value="">Todos os insumos</option><option value="material">Materiais</option><option value="labor">Mão de Obra</option></select>
+              <select id="budget-filter-kind" aria-label="Filtrar por tipo de insumo" style="padding:4px 8px;border-radius:6px;font-size:0.8rem;border:1px solid var(--line);"><option value="">Todos os insumos</option><option value="material">Materiais</option><option value="labor">Mão de Obra</option></select>
               <button type="button" class="btn secondary" id="btn-budget-measurements" title="Abrir medições de mão de obra e contrato" style="font-size:0.75rem;padding:4px 10px;">Medições</button>
               <button type="button" class="btn secondary" id="btn-budget-curves" title="Abrir a Curva S físico-financeira" style="font-size:0.75rem;padding:4px 10px;">Curva S</button>
               <button type="button" class="btn secondary" id="btn-budget-export-csv" aria-label="Exportar comparação entre orçado e realizado em CSV" title="Baixar a comparação entre orçado e realizado em CSV" style="font-size:0.75rem;padding:4px 10px;">Exportar CSV</button>
-              <button type="button" class="btn primary" id="btn-budget-open-report" title="Abrir o relatório executivo desta obra" style="font-size:0.75rem;padding:4px 10px;background:#0284c7;">Relatório Executivo</button>
+              <button type="button" class="btn primary budget-accent" id="btn-budget-open-report" title="Abrir o relatório executivo desta obra" style="font-size:0.75rem;padding:4px 10px;">Relatório Executivo</button>
             </div>
           </div>
           <div class="budget-table-scroll">
@@ -233,11 +239,11 @@
     const formHtml = `
       <div style="padding:10px;">
         <p>Selecione a linha orçamentária correspondente para este lançamento:</p>
-        <label style="display:block;margin-bottom:6px;font-weight:600;">Item de Controle:</label>
+        <label for="select-quick-map-item" style="display:block;margin-bottom:6px;font-weight:600;">Item de Controle:</label>
         <select id="select-quick-map-item" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);margin-bottom:16px;">${options}</select>
         <div style="display:flex;justify-content:flex-end;gap:10px;">
           <button type="button" class="btn secondary" onclick="closeModal();" title="Cancelar a vinculação deste lançamento">Cancelar</button>
-          <button type="button" class="btn primary" id="btn-salvar-vinculo-quick" title="Vincular o lançamento ao item selecionado" style="background:#0284c7;">Confirmar Vínculo</button>
+          <button type="button" class="btn primary budget-accent" id="btn-salvar-vinculo-quick" title="Vincular o lançamento ao item selecionado">Confirmar Vínculo</button>
         </div>
       </div>`;
     window.modal('Vincular Lançamento a Item de Orçamento', formHtml);
@@ -267,13 +273,13 @@
         <p class="muted">Selecione o arquivo de envelope canônico <code>.json</code> exportado do <strong>Construtec Orçamentos</strong>:</p>
         <div style="border:2px dashed #0284c7;border-radius:12px;padding:30px;text-align:center;background:rgba(2,132,199,0.04);margin-bottom:16px;">
           <input type="file" id="budget-file-input" accept=".json" style="display:none;" />
-          <button type="button" class="btn primary" onclick="document.getElementById('budget-file-input').click();" title="Escolher o arquivo JSON da proposta aprovada" style="background:#0284c7;">Selecionar Arquivo JSON</button>
+          <button type="button" class="btn primary budget-accent" onclick="document.getElementById('budget-file-input').click();" title="Escolher o arquivo JSON da proposta aprovada">Selecionar Arquivo JSON</button>
           <div id="budget-file-name" style="margin-top:10px;font-size:0.85rem;color:var(--muted);">Nenhum arquivo selecionado</div>
         </div>
         <div id="budget-preview-box" style="display:none;margin-bottom:16px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--card-bg);"></div>
         <div style="display:flex;justify-content:flex-end;gap:10px;">
           <button type="button" class="btn secondary" onclick="closeModal();" title="Fechar a janela de importação">Fechar</button>
-          <button type="button" class="btn primary" id="btn-confirmar-importacao-budget" aria-label="Confirmar importação do orçamento após validação" title="Importar o orçamento validado para esta obra" style="display:none;background:#10b981;">Confirmar Ingestão</button>
+          <button type="button" class="btn primary budget-success" id="btn-confirmar-importacao-budget" aria-label="Confirmar importação do orçamento após validação" title="Importar o orçamento validado para esta obra" style="display:none;">Confirmar Ingestão</button>
         </div>
       </div>`;
     window.modal('Importar Orçamento / Proposta Aprovada', html);
@@ -340,7 +346,7 @@
         <div id="direct-preview-box" style="margin-bottom:16px;">Validando proposta...</div>
         <div style="display:flex;justify-content:flex-end;gap:10px;">
           <button type="button" class="btn secondary" onclick="closeModal()" title="Cancelar a integração da proposta">Cancelar</button>
-          <button type="button" class="btn primary" id="btn-confirmar-importacao-direta" aria-label="Confirmar integração da proposta aprovada" title="Integrar a proposta aprovada ao orçamento" style="display:none;background:#0284c7;">Confirmar integração</button>
+          <button type="button" class="btn primary budget-accent" id="btn-confirmar-importacao-direta" aria-label="Confirmar integração da proposta aprovada" title="Integrar a proposta aprovada ao orçamento" style="display:none;">Confirmar integração</button>
         </div>
       </div>`);
     renderPreviewAndConfirm(envelope, 'direct-preview-box', 'btn-confirmar-importacao-direta', null);
