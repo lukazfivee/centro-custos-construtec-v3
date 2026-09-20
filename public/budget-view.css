@@ -117,48 +117,119 @@ html.dark .budget-kpi-card strong {
   color: #f8fafc;
 }
 
-.budget-kpi-card.highlight {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.15) 100%);
-  border-color: rgba(16, 185, 129, 0.3);
-}
-
-.budget-kpi-card.highlight strong {
-  color: #059669;
-}
-
-.budget-kpi-card.danger {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.15) 100%);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.budget-kpi-card.danger strong {
-  color: #dc2626;
-}
-
-/* Hierarquia: a metrica acionavel (Saldo Disponivel) se destaca; as puramente
-   de referencia (Valor Contratual, Custo Base, Exposicao) ficam mais discretas -
-   nenhuma informacao removida, so o peso visual redistribuido. */
-.budget-kpi-card.hero strong {
-  font-size: 1.5rem;
-}
-
+/* Hierarquia: as metricas puramente de referencia (Valor Contratual, Custo
+   Base, Exposicao) ficam mais discretas - nenhuma informacao removida, so o
+   peso visual redistribuido. */
 .budget-kpi-card.reference strong {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--muted, #64748b);
 }
 
-.budget-burn-bar-container {
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--line, #e2e8f0);
-  border-radius: 12px;
-  padding: 14px 18px;
+/* Bolder pass (impeccable bolder, 2026-09-20): o momento de maior risco
+   financeiro da tela - saldo disponivel + consumo do orcamento - vira um
+   painel proprio, fora da grade uniforme de KPIs, amplificando as mesmas
+   cores/formas que o sistema ja usa (danger/success, raio 12-14px, sombra
+   com cor e blur) em vez de inventar vocabulario novo. Tudo o mais na tela
+   permanece intocado. */
+.budget-health-panel {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  border-radius: 14px;
+  padding: 20px 24px;
+  border: 1px solid;
 }
 
-html.dark .budget-burn-bar-container {
-  background: rgba(30, 41, 59, 0.4);
-  border-color: rgba(255, 255, 255, 0.06);
+.budget-health-panel.ok {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.18) 100%);
+  border-color: rgba(5, 150, 105, 0.35);
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.12);
 }
+
+.budget-health-panel.danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.18) 100%);
+  border-color: rgba(220, 38, 38, 0.35);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.12);
+}
+
+html.dark .budget-health-panel.ok {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(5, 150, 105, 0.26) 100%);
+}
+
+html.dark .budget-health-panel.danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.14) 0%, rgba(220, 38, 38, 0.26) 100%);
+}
+
+.budget-health-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 170px;
+  padding-right: 24px;
+  border-right: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+html.dark .budget-health-main {
+  border-right-color: rgba(255, 255, 255, 0.12);
+}
+
+.budget-health-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.budget-health-panel.ok .budget-health-label { color: #047857; }
+.budget-health-panel.danger .budget-health-label { color: #b91c1c; }
+html.dark .budget-health-panel.ok .budget-health-label { color: #6ee7b7; }
+html.dark .budget-health-panel.danger .budget-health-label { color: #fca5a5; }
+
+.budget-health-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.budget-health-panel.ok .budget-health-value { color: #059669; }
+.budget-health-panel.danger .budget-health-value { color: #dc2626; }
+html.dark .budget-health-panel.ok .budget-health-value { color: #34d399; }
+html.dark .budget-health-panel.danger .budget-health-value { color: #f87171; }
+
+.budget-health-burn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.budget-health-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #fff;
+}
+
+.budget-health-panel.ok .budget-health-pill { background: #059669; }
+.budget-health-panel.danger .budget-health-pill { background: #dc2626; }
+
+.budget-health-panel .budget-burn-hint {
+  color: inherit;
+}
+
+.budget-health-panel.ok .budget-burn-hint { color: #065f46; }
+.budget-health-panel.danger .budget-burn-hint { color: #991b1b; }
+html.dark .budget-health-panel.ok .budget-burn-hint { color: #a7f3d0; }
+html.dark .budget-health-panel.danger .budget-burn-hint { color: #fecaca; }
 
 .budget-burn-labels {
   display: flex;
@@ -170,14 +241,14 @@ html.dark .budget-burn-bar-container {
 
 .budget-burn-track {
   width: 100%;
-  height: 12px;
+  height: 16px;
   border-radius: 9999px;
-  background: rgba(0,0,0,0.06);
+  background: rgba(15, 23, 42, 0.1);
   overflow: hidden;
 }
 
 html.dark .budget-burn-track {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.14);
 }
 
 .budget-burn-fill {
@@ -186,6 +257,22 @@ html.dark .budget-burn-track {
   border-radius: 9999px;
   transform-origin: left center;
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 640px) {
+  .budget-health-panel {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .budget-health-main {
+    border-right: none;
+    padding-right: 0;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    padding-bottom: 16px;
+  }
+  html.dark .budget-health-main {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
 }
 
 .budget-burn-fill.ok {

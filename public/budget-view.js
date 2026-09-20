@@ -131,23 +131,31 @@
           </div>
           <div><button type="button" class="btn secondary" id="btn-atualizar-revisao-btn" title="Selecionar uma nova revisão aprovada do orçamento para importar" style="font-size:0.8rem;">Atualizar Revisão / Importar</button></div>
         </div>
+        <div class="budget-health-panel ${summary.isOverBudget ? 'danger' : 'ok'}">
+          <div class="budget-health-main">
+            <span class="budget-health-label">Saldo Disponível</span>
+            <strong class="budget-health-value">${fmtMoney(summary.balance)}</strong>
+          </div>
+          <div class="budget-health-burn">
+            <div class="budget-burn-labels">
+              <span>Consumo do Orçamento: <strong>${burnRate}%</strong></span>
+              <span class="budget-health-pill">${summary.isOverBudget ? 'Orçamento Excedido' : 'Dentro do Previsto'}</span>
+            </div>
+            <div class="budget-burn-track"><div class="budget-burn-fill ${burnClass}" style="transform: scaleX(${Math.min(burnRate, 100) / 100});"></div></div>
+            ${(() => {
+              if (!summary.isOverBudget) return '';
+              const worst = [...items].filter(i => i.isOverBudget).sort((a, b) => a.balance - b.balance)[0];
+              if (!worst) return '';
+              return `<div class="budget-burn-hint">Maior desvio: <strong>${esc(worst.name)}</strong> (saldo ${fmtMoney(worst.balance)}) — confira a Planilha Analítica abaixo.</div>`;
+            })()}
+          </div>
+        </div>
         <div class="budget-kpis-grid">
-          <div class="budget-kpi-card ${summary.isOverBudget ? 'danger' : 'highlight'} hero"><span>Saldo Disponível</span><strong>${fmtMoney(summary.balance)}</strong></div>
           <div class="budget-kpi-card"><span>Realizado Líquido</span><strong style="color:#0284c7;">${fmtMoney(summary.realizedCost)}</strong></div>
           <button type="button" class="budget-kpi-card budget-kpi-action" id="btn-kpi-labor-hours" aria-label="Abrir medições de mão de obra: ${laborHours.consumed} de ${laborHours.planned} horas utilizadas" title="Abrir medições de mão de obra"><span>Horas da Equipe</span><strong>${laborHours.consumed}h / ${laborHours.planned}h</strong></button>
           <div class="budget-kpi-card reference"><span>Valor Contratual</span><strong>${fmtMoney(summary.contractValue)}</strong></div>
           <div class="budget-kpi-card reference"><span>Custo Base Orçado</span><strong>${fmtMoney(summary.baseCost)}</strong></div>
           <div class="budget-kpi-card reference"><span>Exposição Total</span><strong>${fmtMoney(summary.exposure)}</strong></div>
-        </div>
-        <div class="budget-burn-bar-container">
-          <div class="budget-burn-labels"><span>Consumo do Orçamento: <strong>${burnRate}%</strong></span><span>${summary.isOverBudget ? 'Orçamento Excedido' : 'Dentro do Previsto'}</span></div>
-          <div class="budget-burn-track"><div class="budget-burn-fill ${burnClass}" style="transform: scaleX(${Math.min(burnRate, 100) / 100});"></div></div>
-          ${(() => {
-            if (!summary.isOverBudget) return '';
-            const worst = [...items].filter(i => i.isOverBudget).sort((a, b) => a.balance - b.balance)[0];
-            if (!worst) return '';
-            return `<div class="budget-burn-hint">Maior desvio: <strong>${esc(worst.name)}</strong> (saldo ${fmtMoney(worst.balance)}) — confira a Planilha Analítica abaixo.</div>`;
-          })()}
         </div>
         ${(() => {
           const naoVinculado = Math.max(0, Number(center?.total_despesas || 0) - Number(summary.realizedCost || 0));
