@@ -64,7 +64,8 @@
       </div>
       <span id="instancia-nome" class="instance-name"></span>
       <div class="topbar-status" aria-label="Status da conexão"><span class="status-dot"></span><span>Offline</span><span>Dados locais</span><span class="status-caret">⌄</span></div>
-      <label class="topbar-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" placeholder="Busca disponível no Centro de Custos" aria-label="Buscar no Centro de Custos" disabled></label>
+      <label class="topbar-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="busca-global" type="search" placeholder="Busca disponível no Centro de Custos" aria-label="Buscar no Centro de Custos" autocomplete="off"></label>
+      <div id="busca-resultados" class="busca-resultados oculto" role="listbox" aria-label="Resultados da busca"></div>
       <div class="topbar-actions">
         <!-- Botão Suíte Construtec / App Switcher -->
         <div class="suite-switcher-container" id="suite-switcher-container">
@@ -375,5 +376,6 @@
    <script src="v3-1-enhancements.js"></script>
    <script src="report-v2.js"></script>
    <script src="cloud-sync.js"></script>
+   <script src="global-search.js"></script>
   </body>
 </html>
