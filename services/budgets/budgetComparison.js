@@ -121,10 +121,17 @@ async function getCostCenterBudgetComparison(pool, costCenterId, options = {}) {
   const combinedLines = [...matRes.rows, ...labRes.rows];
   let totalBudgeted = 0;
   let totalRealized = 0;
+  // O total realizado de um control_item_id é aplicado UMA única vez (1ª linha),
+  // mesmo que várias linhas de orçamento compartilhem o mesmo control_item_id.
+  const realizedAssigned = new Set();
 
   const items = combinedLines.map(line => {
     const budgeted = roundMoney(line.total_cost);
-    const realized = roundMoney(realizedMap.get(line.control_item_id) || 0);
+    let realized = 0;
+    if (!realizedAssigned.has(line.control_item_id)) {
+      realized = roundMoney(realizedMap.get(line.control_item_id) || 0);
+      realizedAssigned.add(line.control_item_id);
+    }
     const variance = roundMoney(realized - budgeted);
     const variancePercent = budgeted > 0 ? roundMoney(((realized - budgeted) / budgeted) * 100) : null;
     const balance = roundMoney(budgeted - realized);
