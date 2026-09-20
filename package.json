@@ -43,6 +43,7 @@
     "@cloudflare/containers": "^0.3.7",
     "electron": "^41.7.1",
     "electron-builder": "^26.15.3",
+    "impeccable": "^4.1.0",
     "selenium-webdriver": "^4.49.0",
     "wrangler": "^4.131.2"
   },
