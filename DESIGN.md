@@ -16,6 +16,13 @@ colors:
   green: "#14783c"
   red: "#b62e38"
   focus-ring: "#085ce5"
+  budget-ink: "#0f172a"
+  budget-slate: "#64748b"
+  budget-slate-light: "#cbd5e1"
+  budget-danger: "#dc2626"
+  budget-success: "#059669"
+  budget-info: "#0284c7"
+  budget-warning: "#d97706"
 typography:
   headline:
     fontFamily: '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif'
@@ -109,8 +116,17 @@ A interface é um painel de gestão denso, orientado a tabelas e KPIs: navegaç�
 - **Linha** (`#e4e6ea`) / **Borda de controle** (`#8b96a7`): divisores e bordas de input.
 - **Papel** (`#f7f8fa`) / **Branco** (`#fefefe`): fundo de app e superfícies elevadas (cards, tabelas, painéis).
 
+### Extensão: Módulo de Orçamento (paleta própria, documentada em 2026-09-20)
+As telas do módulo de Orçamento (`budget-curves.css`, `budget-measurements.css`, `budget-portfolio.css`, `budget-reports.css`, `budget-view.css` — Curva S, Medições, Portfólio, Boletim/Relatório e Análise de Orçamento) usam uma paleta Tailwind própria, consistente entre si mas independente do sistema petróleo/azul acima. Auditoria de 2026-09-20 confirmou: não é bagunça de valores soltos, é um segundo sistema coerente, só que nunca documentado até agora.
+- **Ardósia** (`#0f172a` escuro / `#64748b` médio / `#cbd5e1` claro): texto, ícones e bordas neutras dessas telas — equivalente funcional ao Tinta/Cinza de Apoio/Linha do sistema principal, mas em outra escala de cor.
+- **Vermelho de Orçamento** (`#dc2626`): estouro de orçamento, variação negativa, exclusão.
+- **Verde de Orçamento** (`#059669`): dentro do orçamento, variação positiva, curva ABC "C".
+- **Azul de Orçamento** (`#0284c7`): informação neutra, curva ABC "A", medições em andamento.
+- **Âmbar de Orçamento** (`#d97706`): atenção, curva ABC "B", pendências.
+
 ### Named Rules
 **The One Action Rule.** O azul de ação aparece só em botão primário, seleção, foco e item de navegação ativo — nunca como preenchimento decorativo.
+**The Budget Module Exception Rule.** A paleta "de Orçamento" acima só vale dentro dos arquivos `budget-*`. Nunca usar essas cores em telas do app principal, e nunca "corrigir" os arquivos `budget-*` para a paleta petróleo/azul sem uma decisão de design explícita — são dois sistemas cônscios coexistindo, não um erro a unificar por padrão.
 
 ## Typography
 
@@ -121,6 +137,10 @@ A interface é um painel de gestão denso, orientado a tabelas e KPIs: navegaç�
 - **Title** (700, 14px): títulos de painel e cartão.
 - **Body** (400, 12px): tabelas, formulários, navegação.
 - **Label** (700, 11px, uppercase): cabeçalho de tabela, rótulos de cartão mobile.
+
+**Fontes fora do IBM Plex Sans (auditoria 2026-09-20):**
+- `budget-reports.css` (Relatório Executivo/Boletim, documento de impressão — já fora de escopo operacional, ver Layout): usa pilha de fonte de sistema (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`) e monoespaçada (`ui-monospace, SFMono-Regular, ...`) para colunas numéricas/código — **intencional**, no espírito de um PDF exportado.
+- `budget-measurements.css:28` (modal "Medições", tela operacional ao vivo, **não** é impressão): usa a mesma pilha de fonte de sistema em vez de IBM Plex Sans — **isso é deriva real, não uma exceção documentada**. Foi encontrado na auditoria de 2026-09-20 e ainda não corrigido; ver `docs/notas-desenvolvimento` para tratar como item de `/impeccable harden` ou `/impeccable typeset` numa próxima passada.
 
 ## Layout
 
@@ -140,9 +160,13 @@ Fora de escopo (documento de impressão/exportação, não tela operacional): Re
 
 Plano por padrão, igual ao Orçamentos: sem `box-shadow` em painéis, tabelas ou cartões permanentes. Os únicos elementos com sombra real são popover de perfil e menus flutuantes.
 
+**Exceção do Módulo de Orçamento (2026-09-20):** os modais `budget-*` (Curva S, Medições, Portfólio, Relatório, Análise de Orçamento) usam sombras reais e pronunciadas nos seus cartões flutuantes (ex.: `0 25px 50px -12px rgba(0,0,0,.25)` em `budget-measurements.css`/`budget-reports.css`, `0 16px 40px rgba(0,0,0,.25)` em `budget-curves.css`) — consistente com a paleta e tipografia próprias desse módulo, tratado como overlay/modal (não superfície permanente), então não viola a regra acima, mas está fora da lista "popover/menu" já documentada; adicionado aqui para não ser confundido com deriva.
+
 ## Shapes
 
 Raios discretos: `6px` em botões, inputs e cabeçalho de tabela; `8–10px` em painéis, KPIs, cartões de centro de custo e nos novos cartões de lista mobile; `50%` em avatares.
+
+**Exceção do Módulo de Orçamento (2026-09-20):** os modais `budget-*` usam raios maiores e mais variados — `12px`/`14px` no contêiner do modal e cartões internos, até `9999px` (pill) em badges e chips de status (`budget-view.css`, `budget-portfolio.css`). Escopo isolado aos próprios arquivos `budget-*`, mesma regra do Módulo de Orçamento em Colors.
 
 ## Components
 
@@ -178,3 +202,4 @@ Raios discretos: `6px` em botões, inputs e cabeçalho de tabela; `8–10px` em 
 - **Don't** introduzir sombra em superfícies permanentes.
 - **Don't** usar verde/vermelho fora do contexto semântico (receita/despesa, ativo/inativo).
 - **Don't** aplicar a classe `cc-mobile-table` a tabelas ainda não revisadas linha a linha (módulo de orçamento/medições/contratos) sem antes conferir a estrutura de cada `<td>`.
+- **Don't** misturar a paleta/tipografia/raios do Módulo de Orçamento (`budget-*`) com o resto do app, nem o contrário — são dois sistemas documentados, não uma inconsistência a resolver.

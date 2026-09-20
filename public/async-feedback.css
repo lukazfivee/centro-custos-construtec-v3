@@ -93,8 +93,8 @@
 }
 
 .cc-retry-toast button.cc-retry-primary {
-  background: var(--orange, #f97316);
-  border-color: var(--orange, #f97316);
+  background: var(--accent, #f97316);
+  border-color: var(--accent, #f97316);
 }
 
 .cc-retry-toast button:disabled {

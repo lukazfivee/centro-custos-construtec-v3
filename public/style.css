@@ -12,8 +12,8 @@
   --white: #fefefe;
   --surface-raised: var(--white);
   --surface-muted: #f7f8fa;
-  --orange: #085ce5;
-  --orange-dark: #064bbd;
+  --accent: #085ce5;
+  --accent-dark: #064bbd;
   --blue: #085ce5;
   --green: #14783c;
   --red: #b62e38;
@@ -54,12 +54,12 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 html.dark :focus-visible { border-width: 1px !important; box-shadow: none !important; }
 .topbar :focus-visible, .sidebar :focus-visible { outline-color: #9bc1ff !important; outline-offset: -3px; }
 .btn.primary, .btn.primary:hover {
-  background: var(--orange);
+  background: var(--accent);
   color: #fff;
   box-shadow: none;
   transform: none;
 }
-.btn.primary:hover { background: var(--orange-dark); }
+.btn.primary:hover { background: var(--accent-dark); }
 .btn.secondary, html.dark .btn.secondary { background: var(--white); border-color: var(--control-border); color: var(--ink); }
 .btn.secondary:hover, html.dark .btn.secondary:hover { background: var(--surface-muted); border-color: var(--blue); }
 .text-btn, .row-actions button, .password-toggle { color: var(--blue); }
@@ -92,7 +92,7 @@ tbody tr:hover, html.dark tbody tr:hover { background: var(--surface-muted); }
 .sidebar { background: var(--navy) !important; }
 .sidebar nav { scrollbar-width: thin; }
 .sidebar nav .nav-item span { white-space: normal !important; overflow: visible !important; }
-.sidebar nav .nav-item.ativo::before { background: var(--orange) !important; }
+.sidebar nav .nav-item.ativo::before { background: var(--accent) !important; }
 .topbar { background: var(--navy) !important; }
 .topbar .brand { flex-shrink: 0; }
 .topbar .brand-logo { display: block !important; }
@@ -209,11 +209,11 @@ html.dark .profile-menu button { background: rgba(182,46,56,.12); border-color: 
 .modal-head .icon-btn { min-width: 44px; min-height: 44px; }
 
 /* Construtec workbench: keep legacy modules on the shared flat visual system. */
-.nav-item.ativo { background: var(--orange) !important; box-shadow: none !important; }
+.nav-item.ativo { background: var(--accent) !important; box-shadow: none !important; }
 .trend-month .bar { border-radius: 3px 3px 0 0; }
 .modal { border-radius: 7px !important; box-shadow: 0 14px 34px rgba(18,32,54,.18) !important; }
 .login-about { background: var(--navy) !important; }
-.btn.primary { background: var(--orange); }
+.btn.primary { background: var(--accent); }
 .pill.success { background: #eaf7ef; color: var(--green); }
 .pill.warning { background: #fff5d9; color: #9a5b00; }
 .pill.danger { background: #fdeeee; color: var(--red); }
@@ -242,7 +242,7 @@ html.dark .profile-menu button { background: rgba(182,46,56,.12); border-color: 
   .sync-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(18,32,54,.10); border-color: var(--line-strong); }
   .filter-bar:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(8,92,229,.10); }
   tbody tr, tbody tr td { transition: background-color .16s ease; }
-  tbody tr:hover td:first-child { box-shadow: inset 3px 0 var(--orange); }
+  tbody tr:hover td:first-child { box-shadow: inset 3px 0 var(--accent); }
   .trend-month .bar { transform-origin: bottom; animation: cc-bar-reveal .6s cubic-bezier(.22,1,.36,1) both; }
   .trend-month .bar:nth-child(2) { animation-delay: .08s; }
   .trend-month:nth-child(2) .bar { animation-delay: .12s; }

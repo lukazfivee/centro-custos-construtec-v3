@@ -799,7 +799,7 @@ function renderUpdateStatus(status) {
   } else if (status.status === 'not-available') {
     msg.style.color = 'var(--green)'; msg.textContent = 'Você já está na versão mais recente.';
   } else if (status.status === 'available') {
-    msg.style.color = 'var(--orange)';
+    msg.style.color = 'var(--accent)';
     const version=String(status.info?.version || '').trim();
     const notes=String(status.info?.releaseNotes || '').trim();
     msg.textContent=`Nova versão disponível: ${version}${notes?`\n\nO que mudou:\n${notes}`:''}\n\nRecomendamos atualizar para ter acesso às correções mais recentes.`;

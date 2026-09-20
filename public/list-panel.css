@@ -80,12 +80,12 @@
 }
 
 .cc-pagination-bar button.cc-page-button:hover:not(:disabled) {
-  border-color: var(--orange, #f97316);
-  color: var(--orange, #f97316);
+  border-color: var(--accent, #f97316);
+  color: var(--accent, #f97316);
 }
 
 .cc-pagination-bar button.cc-page-button:focus-visible {
-  outline: 2px solid var(--orange, #f97316);
+  outline: 2px solid var(--accent, #f97316);
   outline-offset: 1px;
 }
 
@@ -134,16 +134,16 @@
 
 .cc-list-state.cc-list-error .cc-list-retry {
   padding: 8px 16px;
-  border: 1px solid var(--orange, #f97316);
+  border: 1px solid var(--accent, #f97316);
   border-radius: 6px;
   background: transparent;
-  color: var(--orange, #f97316);
+  color: var(--accent, #f97316);
   font-weight: 700;
   cursor: pointer;
 }
 
 .cc-list-state.cc-list-error .cc-list-retry:focus-visible {
-  outline: 2px solid var(--orange, #f97316);
+  outline: 2px solid var(--accent, #f97316);
   outline-offset: 2px;
 }
 

@@ -54,7 +54,7 @@
     if (!el || !localStorage.getItem('cc_token')) return;
     try {
       const data = await api('/bug-reports/delivery/status');
-      el.style.color = data.configured ? 'var(--green)' : 'var(--orange)';
+      el.style.color = data.configured ? 'var(--green)' : 'var(--accent)';
       el.textContent = data.configured
         ? `Central conectada. ${data.delivered || 0} entregue(s), ${data.accepted || 0} aguardando confirmação, ${data.pending || 0} pendente(s), ${data.failed || 0} falha(s).`
         : `Central ainda não ativada nesta versão. ${data.pending || 0} report(s) ficará(ão) salvo(s) na fila.`;

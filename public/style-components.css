@@ -93,7 +93,7 @@
     position: absolute !important;
     inset: 0 auto 0 0 !important;
     width: 4px !important;
-    background: var(--orange) !important;
+    background: var(--accent) !important;
   }
 
   .sidebar nav .nav-item.sync-link:not(.ativo) {
@@ -155,7 +155,7 @@
   justify-content: center !important;
   flex-shrink: 0 !important;
   background: var(--navy-2) !important;
-  border: 2px solid var(--orange) !important;
+  border: 2px solid var(--accent) !important;
   padding: 0 !important;
   box-sizing: border-box !important;
 }
@@ -242,7 +242,7 @@ html.dark body::-webkit-scrollbar {
   }
 
   html.dark .btn-theme-topbar {
-    background: var(--orange) !important;
+    background: var(--accent) !important;
     border-color: rgba(255,255,255,.34) !important;
   }
 
