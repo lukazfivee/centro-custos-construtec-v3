@@ -213,7 +213,7 @@
       if (tbody) tbody.innerHTML = renderTableRows(filtered, abcCurve);
     });
     modalContent.querySelectorAll('[data-map-id]').forEach(btn => {
-      btn.addEventListener('click', () => openQuickMapDialog(btn.dataset.mapId, btn.dataset.contractId, costCenterId, items, center));
+      btn.addEventListener('click', () => openQuickMapDialog(btn.dataset.mapId, btn.dataset.contractId, costCenterId, items, center, unmapped.count));
     });
   }
 
@@ -242,7 +242,7 @@
     }).join('');
   }
 
-  function openQuickMapDialog(allocId, contractId, costCenterId, items, center) {
+  function openQuickMapDialog(allocId, contractId, costCenterId, items, center, unmappedCount = 0) {
     const options = items.map(i => `<option value="${i.controlItemId}">${esc(i.name)} (${esc(i.category)} - Saldo: ${fmtMoney(i.balance)})</option>`).join('');
     const formHtml = `
       <div style="padding:10px;">
@@ -266,7 +266,9 @@
           method: 'POST',
           body: JSON.stringify({ allocationId: allocId, contractId, controlItemId: select.value }),
         });
-        toast('Lançamento vinculado com sucesso!');
+        toast(unmappedCount <= 1
+          ? 'Tudo certo! Todos os lançamentos desta obra estão vinculados ao orçamento.'
+          : 'Lançamento vinculado com sucesso!');
         openBudgetViewModal(costCenterId, center);
       } catch (err) {
         toast(err.message, true);
