@@ -76,6 +76,7 @@ function harness() {
     },
     querySelectorAll(selector) {
       if (selector === '#mobile-menu, #mobile-more') return [mobileMenu, mobileMore];
+      if (selector === '#mobile-menu, #mobile-menu-legacy, #mobile-more') return [mobileMenu, mobileMore];
       if (selector === '.nav-item') return [nav];
       if (selector === '[data-view], [data-mobile-view]') return [nav];
       if (selector.includes('.cc-')) return [];

@@ -55,7 +55,6 @@
         </select>
       </label>
       <button id="cc-sort-direction" class="cc-sort-direction" type="button" title="Alternar sentido da ordenação" aria-label="Alternar sentido da ordenação">↓</button>
-      <button id="cc-clear-filters" class="text-btn" type="button">Limpar filtros</button>
     `;
     tools.appendChild(exportButton);
     tableMeta.appendChild(tools);
@@ -115,7 +114,7 @@
     element('cc-next-page').addEventListener('click', () => goToPage(state.pagina + 1));
     element('cc-last-page').addEventListener('click', () => goToPage(state.meta?.totalPaginas || 1));
 
-    element('cc-clear-filters').addEventListener('click', () => {
+    element('btn-limpar-filtros')?.addEventListener('click', () => {
       const search = element('filtro-busca');
       if (search) search.value = '';
       filterSelectors.forEach((selector) => {
@@ -222,12 +221,13 @@
     });
   }
 
-  function updatePagination(meta, itemCount) {
+  function updatePagination(meta, items) {
     state.meta = meta;
     state.pagina = Number(meta.pagina || state.pagina);
     state.limite = Number(meta.limite || state.limite);
     persistState();
 
+    const itemCount = items.length;
     const total = Number(meta.total || 0);
     const first = total ? ((state.pagina - 1) * state.limite) + 1 : 0;
     const last = total ? first + itemCount - 1 : 0;
@@ -235,6 +235,12 @@
 
     const totalLabel = element('lancamentos-total');
     if (totalLabel) totalLabel.textContent = `${total} lançamento(s)`;
+
+    const somaLabel = element('soma-filtrada');
+    if (somaLabel) {
+      const somaCents = window.ListFilters ? window.ListFilters.sumTransactionsCents(items) : 0;
+      somaLabel.textContent = `Total líquido (página): ${money(somaCents / 100)}`;
+    }
 
     const summary = element('cc-pagination-summary');
     if (summary) {
@@ -284,7 +290,7 @@
 
       lancamentos = items;
       renderRows(items);
-      updatePagination(meta,items.length);
+      updatePagination(meta,items);
     } finally {
       if (requestId === state.requestSequence) setBusy(false);
     }

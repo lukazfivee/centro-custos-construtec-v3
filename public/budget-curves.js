@@ -106,7 +106,7 @@
             <h2 class="curves-header-title" id="curves-dialog-title">Curva S Físico-Financeira — ${esc(center?.nome || 'Obra')}</h2>
             <span class="curves-header-sub">Contrato: ${esc(center?.contrato || 'N/D')} — Carregando projeções...</span>
           </div>
-          <button class="budget-curves-close" id="curves-btn-close" type="button" aria-label="Fechar análise da Curva S" title="Fechar análise da Curva S"></button>
+          <button class="budget-curves-close" id="curves-btn-close" type="button" aria-label="Fechar análise da Curva S" title="Fechar análise da Curva S">×</button>
         </div>
         <div class="budget-curves-body" id="curves-body-content">
           <div style="text-align: center; padding: 40px; color: #64748b;">Carregando dados da Curva S e projeção EAC...</div>

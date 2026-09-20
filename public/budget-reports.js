@@ -40,7 +40,7 @@
           <div class="toolbar-actions">
             ${onCsv ? '<button type="button" class="btn secondary" id="btn-report-download-csv" aria-label="Exportar relatório em formato CSV" title="Baixar os dados deste relatório em CSV">Exportar CSV</button>' : ''}
             <button type="button" class="btn primary" id="btn-report-print" aria-label="Imprimir relatório ou salvar como PDF" title="Imprimir relatório ou salvar como PDF">Imprimir / Salvar PDF</button>
-            <button type="button" class="icon-btn" id="btn-report-close" aria-label="Fechar relatório" title="Fechar relatório"></button>
+            <button type="button" class="icon-btn" id="btn-report-close" aria-label="Fechar relatório" title="Fechar relatório">×</button>
           </div>
         </header>
         <main class="budget-report-sheet">${sheetHtml}</main>

@@ -6,7 +6,7 @@ function setMobileMenu(open, origin) {
   if (open) mobileMenuOrigin = origin || document.activeElement;
   sidebar.classList.toggle('open', open);
   document.getElementById('app').classList.toggle('menu-open', open);
-  document.querySelectorAll('#mobile-menu, #mobile-more').forEach(button => {
+  document.querySelectorAll('#mobile-menu, #mobile-menu-legacy, #mobile-more').forEach(button => {
     button.setAttribute('aria-expanded', String(open));
     button.setAttribute('aria-controls', sidebar.id);
   });
@@ -26,6 +26,7 @@ function syncMobileNavigation(name) {
 document.querySelectorAll('.nav-item').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
 document.querySelectorAll('[data-mobile-view]').forEach(button => button.addEventListener('click', () => showView(button.dataset.mobileView)));
 document.getElementById('mobile-menu').addEventListener('click', event => setMobileMenu(!document.querySelector('.sidebar').classList.contains('open'), event.currentTarget));
+document.getElementById('mobile-menu-legacy')?.addEventListener('click', event => setMobileMenu(!document.querySelector('.sidebar').classList.contains('open'), event.currentTarget));
 document.getElementById('mobile-more').addEventListener('click', event => setMobileMenu(true, event.currentTarget));
 document.getElementById('mobile-nav-scrim').addEventListener('click', () => setMobileMenu(false));
 document.addEventListener('keydown', event => {

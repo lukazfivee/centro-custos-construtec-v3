@@ -217,7 +217,7 @@
                     <td data-label="Medição"><strong>Medição ${String(m.measurement_number).padStart(2, '0')}</strong></td>
                     <td data-label="Período">${esc(m.period_start)} até ${esc(m.period_end)}</td>
                     <td data-label="Valor Medido"><strong style="color:#059669;">${fmtMoney(m.measured_amount)}</strong></td>
-                    <td data-label="Status"><span class="pill ativo" style="font-size:0.72rem;">Aprovada</span></td>
+                    <td data-label="Status"><span class="pill ${m.status === 'approved' ? 'ativo' : 'pendente'}" style="font-size:0.72rem;">${m.status === 'approved' ? 'Aprovada' : esc(m.status || 'Pendente')}</span></td>
                     <td data-label="Boletim"><button type="button" class="btn secondary" data-boletim-id="${m.id}" aria-label="Emitir boletim da medição ${String(m.measurement_number).padStart(2, '0')} de ${esc(m.period_start)} a ${esc(m.period_end)}" title="Emitir boletim desta medição" style="font-size:0.72rem;padding:3px 8px;">Emitir Boletim</button></td>
                   </tr>`).join('')}
               </tbody>

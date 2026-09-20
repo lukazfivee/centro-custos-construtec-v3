@@ -127,7 +127,7 @@
     <main id="conteudo-principal" class="main" tabindex="-1">
       <header class="mobile-header">
         <img class="brand-symbol" src="assets/construtec-favicon.png" alt=""><strong>Centro de Custos</strong>
-        <button id="mobile-menu-legacy" class="icon-btn" type="button" aria-label="Abrir menu de navegação" title="Abrir menu de navegação"></button>
+        <button id="mobile-menu-legacy" class="icon-btn" type="button" aria-label="Abrir menu de navegação" title="Abrir menu de navegação"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       </header>
       <section id="view-dashboard" class="view">
         <div id="first-use-banner" class="first-use-banner oculto">
@@ -288,6 +288,18 @@
                 </div>
               </div>
               <div id="profile-photo-message" class="form-error" role="status"></div>
+            </div>
+            <div class="panel">
+              <h2>Alterar senha</h2>
+              <p>Troque a senha usada para entrar nesta instalação.</p>
+              <form id="form-senha" class="stack">
+                <label for="senha-atual">Senha atual</label>
+                <input id="senha-atual" type="password" autocomplete="current-password" required>
+                <label for="senha-nova">Nova senha</label>
+                <input id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+                <button type="submit" class="btn primary" title="Salvar a nova senha">Alterar senha</button>
+                <p id="senha-mensagem" class="form-error" role="status"></p>
+              </form>
             </div>
             <div class="panel">
               <h2>Identificação da instalação</h2>

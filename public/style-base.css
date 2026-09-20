@@ -18,10 +18,10 @@ input,select,textarea{border:1px solid #cfd7da;background:white;color:var(--ink)
 .login-about:before{content:"";position:absolute;inset:-20%;z-index:-2;background:repeating-linear-gradient(115deg,transparent 0 72px,rgba(81,166,203,.035) 73px 74px);transform:rotate(-4deg)}
 .login-about:after{content:"";position:absolute;width:min(42vw,520px);aspect-ratio:1;right:-7vw;bottom:-16vw;z-index:-1;background:url("assets/construtec-favicon.png") center/contain no-repeat;opacity:.07}
 .login-logo{width:min(430px,85%);height:auto;margin:0 0 42px}
-.login-about .eyebrow{margin-top:0;color:#51a6cb}
+.login-about .eyebrow{margin-top:0}
 .login-about h1{font-weight:600;letter-spacing:-.045em}
 .login-about>p:not(.eyebrow){color:#c3d4da}
-.local-badge{color:#d4e3e7}.local-badge span{background:#51a6cb;box-shadow:0 0 0 5px rgba(91,211,161,.12)}
+.local-badge{color:#d4e3e7}.local-badge span{background:var(--green)}
 .login-panel{background:linear-gradient(145deg,#edf4f5,#f7f9f9)}
 .login-card{border-top:2px solid var(--accent);box-shadow:0 28px 75px rgba(2,29,38,.15)}
 .password-field{position:relative}.password-field input{padding-right:84px}.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);min-height:34px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--blue);font:inherit;font-size:12px;font-weight:800;cursor:pointer}.password-toggle:hover{background:rgba(45,169,208,.1)}.password-toggle:focus-visible{outline:3px solid rgba(45,169,208,.35);outline-offset:1px}
