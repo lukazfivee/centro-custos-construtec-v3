@@ -231,7 +231,7 @@
       return `<tr>
         <td data-label="Código"><span class="muted">${esc(i.code || '—')}</span></td>
         <td data-label="Insumo / Descrição"><strong>${esc(i.name)}</strong></td>
-        <td data-label="Tipo"><span class="pill ${i.kind === 'labor' ? 'ativo' : ''}" style="font-size:0.7rem;">${i.kind === 'labor' ? 'Mão de Obra' : 'Material'}</span></td>
+        <td data-label="Tipo"><span class="badge-kind">${i.kind === 'labor' ? 'Mão de Obra' : 'Material'}</span></td>
         <td data-label="Qtd Orçada">${i.budgetedQuantity} ${esc(i.unit)}</td>
         <td data-label="Custo Orçado">${fmtMoney(i.budgetedCost)}</td>
         <td data-label="Realizado" style="font-weight:700;color:#0284c7;">${fmtMoney(i.realizedCost)}</td>

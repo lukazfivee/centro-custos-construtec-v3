@@ -382,6 +382,23 @@ html.dark .budget-table td {
 .badge-b { background: rgba(139, 92, 246, 0.15); color: #7c3aed; border: 1px solid rgba(139, 92, 246, 0.3); }
 .badge-c { background: rgba(100, 116, 139, 0.15); color: #475569; border: 1px solid rgba(100, 116, 139, 0.3); }
 
+/* Colorize (2026-09-20): "Tipo" (Material/Mao de Obra) e uma categoria, nao
+   um status -- antes tomava emprestado o verde de ".pill.ativo" do app
+   principal (que significa "registro ativo"), uma colisao de significado com
+   a Curva ABC e o Saldo/Desvio na mesma tabela. Fica neutro por decisao, nao
+   por esquecimento: o texto ja diferencia Material de Mao de Obra sem
+   precisar de mais uma cor competindo na linha. */
+.badge-kind {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--muted, #64748b);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
 .budget-unmapped-card {
   border: 1px dashed #f59e0b;
   border-radius: 12px;
