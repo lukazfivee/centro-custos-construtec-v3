@@ -241,9 +241,12 @@
         </div>
       </div>`;
     window.modal('Vincular Lançamento a Item de Orçamento', formHtml);
-    document.getElementById('btn-salvar-vinculo-quick')?.addEventListener('click', async () => {
+    document.getElementById('btn-salvar-vinculo-quick')?.addEventListener('click', async (ev) => {
+      const btn = ev.currentTarget;
       const select = document.getElementById('select-quick-map-item');
       if (!select) return;
+      const originalLabel = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Vinculando...';
       try {
         await api(`/api/centros-custo/${costCenterId}/apropriacoes`, {
           method: 'POST',
@@ -251,7 +254,10 @@
         });
         toast('Lançamento vinculado com sucesso!');
         openBudgetViewModal(costCenterId, center);
-      } catch (err) { toast(err.message, true); }
+      } catch (err) {
+        toast(err.message, true);
+        btn.disabled = false; btn.textContent = originalLabel;
+      }
     });
   }
 
