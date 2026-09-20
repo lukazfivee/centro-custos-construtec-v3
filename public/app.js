@@ -759,6 +759,10 @@ async function loadFirstUse() {
 }
 $('#first-use-dismiss').addEventListener('click', () => $('#first-use-banner').classList.add('oculto'));
 $('#first-use-photo').addEventListener('click',()=>{showView('config');$('#profile-photo-input').click();});
+$('#btn-sync-centros')?.addEventListener('click', () => showView('sincronizacao'));
+$('#btn-open-webmail')?.addEventListener('click', () => {
+  window.electronAPI?.openWebmail?.() || window.open('https://webmailpro.uol.com.br/', '_blank', 'noopener,noreferrer');
+});
 $('#first-use-complete').addEventListener('click', async () => {
   try { await api('/first-use/complete', { method: 'POST' }); $('#first-use-banner').classList.add('oculto'); toast('Assistente finalizado.'); } catch (error) { toast(error.message, true); }
 });

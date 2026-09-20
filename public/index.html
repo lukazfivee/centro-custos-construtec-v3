@@ -97,7 +97,7 @@
           </div>
         </div>
         <button id="mobile-menu" class="btn secondary" type="button" aria-label="Abrir menu" aria-controls="navegacao-principal" aria-expanded="false"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-        <button class="icon-button" aria-label="Abrir Webmail Corporativo UOL Pro" type="button" title="Abrir Webmail Corporativo UOL Pro" onclick="window.electronAPI?.openWebmail?.() || window.open('https://webmailpro.uol.com.br/','_blank','noopener,noreferrer')"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect></svg></button>
+        <button id="btn-open-webmail" class="icon-button" aria-label="Abrir Webmail Corporativo UOL Pro" type="button" title="Abrir Webmail Corporativo UOL Pro"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect></svg></button>
         <button id="topbar-theme-toggle" class="btn-theme-topbar" type="button" aria-label="Ativar modo noturno" title="Ativar modo noturno" aria-pressed="false"> Tema</button>
         <div class="topbar-divider"></div>
         <div class="user-block topbar-profile">
@@ -131,7 +131,7 @@
       </header>
       <section id="view-dashboard" class="view">
         <div id="first-use-banner" class="first-use-banner oculto">
-          <div class="first-use-header"><span class="first-use-icon"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/></svg></span><div><strong>Assistente de primeiro uso</strong><p>Complete os passos abaixo para começar a usar o sistema.</p></div><button id="first-use-dismiss" class="icon-btn" aria-label="Fechar assistente de primeiro uso" title="Fechar assistente de primeiro uso" type="button" onclick="document.getElementById('first-use-banner')?.classList.add('oculto')"></button></div>
+          <div class="first-use-header"><span class="first-use-icon"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/></svg></span><div><strong>Assistente de primeiro uso</strong><p>Complete os passos abaixo para começar a usar o sistema.</p></div><button id="first-use-dismiss" class="icon-btn" aria-label="Fechar assistente de primeiro uso" title="Fechar assistente de primeiro uso" type="button"></button></div>
           <div class="first-use-checklist">
             <div class="check-item" id="check-obras"><span class="check-icon"></span><div><strong>Cadastrar obra / centro de custo</strong><span class="check-hint">Registro necessário para lançamentos</span></div><span class="check-count" id="count-obras">0</span></div>
             <div class="check-item" id="check-categorias"><span class="check-icon"></span><div><strong>Cadastrar categorias</strong><span class="check-hint">Classificação de receitas e despesas</span></div><span class="check-count" id="count-categorias">0</span></div>
@@ -203,7 +203,7 @@
         <div class="page-head">
           <div><h1>Obras / centros de custo</h1></div>
           <div class="page-head-actions">
-            <button id="btn-sync-centros" class="btn secondary" type="button" title="Abrir sincronização de obras e centros" onclick="showView('sincronizacao')">Sincronizar obras e centros</button>
+            <button id="btn-sync-centros" class="btn secondary" type="button" title="Abrir sincronização de obras e centros">Sincronizar obras e centros</button>
             <button id="btn-novo-centro" class="btn primary" type="button" title="Abrir formulário para cadastrar obra ou centro">+ Novo centro</button>
           </div>
         </div>
