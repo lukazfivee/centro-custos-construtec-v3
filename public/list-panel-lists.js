@@ -135,7 +135,8 @@
     toolbarHost: () => document.querySelector('#view-historico .table-meta'),
     paginationHost: () => document.querySelector('#view-historico .table-card'),
     colspan: 5,
-    search: false,
+    searchPlaceholder: 'Buscar por resumo, usuário ou instalação',
+    searchLabel: 'Buscar no histórico de auditoria',
     emptyMessage: 'Nenhuma alteração registrada ainda.',
     skeleton: () => Array.from({ length: 5 }).map(() => '<tr class="cc-skeleton-row"><td><div class="cc-skeleton-line is-short"></div></td><td><div class="cc-skeleton-line"></div></td><td><div class="cc-skeleton-line is-medium"></div></td><td><div class="cc-skeleton-line is-short"></div></td><td><div class="cc-skeleton-line is-short"></div></td></tr>').join(''),
     render: (items) => items.map((item) => `<tr>
@@ -163,13 +164,13 @@
     onItems: (items) => { window.__recorrentesItems = items; },
     render: (items) => items.map((item) => {
       const parcela = item.total_parcelas ? `Parcela ${item.parcela_atual}/${item.total_parcelas}` : 'Sem limite';
-      return `<article class="center-card" data-recurring-id="${item.id}" tabindex="0" role="button" aria-label="Editar recorrência: ${esc(item.nome)}">
+      return `<article class="center-card" data-recurring-id="${item.id}" tabindex="0" role="button" aria-label="Editar modelo recorrente: ${esc(item.nome)}">
         <div class="center-card-head"><div class="center-card-icon">↻</div><span class="pill center-status-pill ${item.ativo ? 'ativo' : 'inativo'}">${item.ativo ? 'Ativa' : 'Inativa'}</span></div>
         <h3 class="center-card-title">${esc(item.nome)}</h3>
         <p class="center-card-client">${esc(item.centro_codigo)} — ${esc(item.centro_nome)}</p>
-        <div class="center-card-stats"><div><span class="center-stat-label">Tipo</span><strong>${esc(item.tipo)}</strong></div><div><span class="center-stat-label">Valor</span><strong>${money(item.valor)}</strong></div></div>
+        <div class="center-card-stats"><div><span class="center-stat-label">Tipo</span><strong>${esc(item.tipo)}</strong></div><div><span class="center-stat-label">Valor</span><strong class="money" style="color:var(--${item.tipo === 'receita' ? 'green' : 'red'})">${item.tipo === 'receita' ? '+' : '-'} ${money(item.valor)}</strong></div></div>
         <div class="center-card-stats"><div><span class="center-stat-label">Frequência</span><strong>${freqLabels[item.frequencia] || esc(item.frequencia)}</strong></div><div><span class="center-stat-label">Parcela</span><strong>${parcela}</strong></div></div>
-        <div class="center-card-footer">${canEdit() ? `<button class="text-btn" data-edit-recurring="${item.id}" aria-label="Editar recorrência: ${esc(item.nome)}" title="Editar recorrência: ${esc(item.nome)}">Editar</button><button class="text-btn danger" data-delete-recurring="${item.id}" aria-label="Excluir recorrência: ${esc(item.nome)}" title="Excluir recorrência: ${esc(item.nome)}">Excluir</button>` : ''}</div>
+        <div class="center-card-footer">${canEdit() ? `<button class="text-btn" data-edit-recurring="${item.id}" aria-label="Editar modelo recorrente: ${esc(item.nome)}" title="Editar modelo recorrente: ${esc(item.nome)}">Editar</button><button class="text-btn danger" data-delete-recurring="${item.id}" aria-label="Excluir modelo recorrente: ${esc(item.nome)}" title="Excluir modelo recorrente: ${esc(item.nome)}">Excluir</button>` : ''}</div>
       </article>`;
     }).join(''),
     bind: (container, items) => {
@@ -199,10 +200,10 @@
       container.querySelectorAll('[data-delete-recurring]').forEach((button) => {
         button.addEventListener('click', async (event) => {
           event.stopPropagation();
-          if (!confirm('Excluir este modelo?')) return;
+          if (!confirm('Excluir este modelo recorrente? Os lançamentos já gerados por ele não serão afetados nem excluídos, apenas o modelo deixará de gerar novos lançamentos.')) return;
           try {
             await window.api(`/recorrentes/${button.dataset.deleteRecurring}`, { method: 'DELETE' });
-            window.toast('Modelo excluído.');
+            window.toast('Modelo recorrente excluído.');
             await window.loadRecurring();
           } catch (error) { window.toast(error.message, true); }
         });
