@@ -51,8 +51,13 @@
     } finally { activityRunning = false; }
   }
 
+  function eligibleForCollections() {
+    return /@rcconstrutec\.com\.br$/i.test(String(user()?.email || ''));
+  }
+
   function ensureCollectionView() {
     if ($('#view-cobrancas')) return;
+    if (!eligibleForCollections()) return;
     const nav = $('.sidebar nav');
     if (nav) {
       const config = nav.querySelector('[data-view="config"]');
@@ -207,8 +212,8 @@
 
   function init() {
     ensureCollectionView();
-    setInterval(pollActivity, 5000);
-    setTimeout(pollActivity, 2500);
+    setInterval(() => { pollActivity(); ensureCollectionView(); }, 5000);
+    setTimeout(() => { pollActivity(); ensureCollectionView(); }, 2500);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
