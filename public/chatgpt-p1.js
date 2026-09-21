@@ -203,7 +203,7 @@
   function renderRows(items) {
     const tbody = element('tabela-lancamentos');
     if (!tbody) return;
-    tbody.innerHTML = items.length ? items.map((item) => `<tr>
+    tbody.innerHTML = items.length ? items.map((item) => `<tr data-transaction-id="${item.id}" tabindex="0" role="button" aria-label="Editar lançamento: ${esc(item.descricao)}">
       <td>${dateBr(item.data)}</td><td data-label="Vencimento">${dateBr(item.vencimento)}</td>
       <td data-label="Situação"><span class="pill ${esc(item.situacao)}">${esc(financialLabel(item))}</span></td>
       <td data-label="Tipo"><span class="pill ${esc(item.tipo)}">${esc(item.tipo)}</span></td>
@@ -213,11 +213,32 @@
       <td data-label="Ações"><div class="row-actions"><button data-edit-transaction="${item.id}">Editar</button>${['admin','gestor'].includes(usuario.role)?`<button class="danger" data-delete-transaction="${item.id}">Excluir</button>`:''}</div></td>
     </tr>`).join('') : '<tr><td colspan="8"><div class="empty">Nenhum lançamento encontrado.</div></td></tr>';
 
+    document.querySelectorAll('#tabela-lancamentos tr[data-transaction-id]').forEach((row) => {
+      const id = Number(row.dataset.transactionId);
+      const openRow = (event) => {
+        if (event.target.closest('button')) return;
+        openTransaction(lancamentos.find((item) => item.id === id));
+      };
+      row.addEventListener('click', openRow);
+      row.addEventListener('keydown', (event) => {
+        if (event.target.closest('button')) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openTransaction(lancamentos.find((item) => item.id === id));
+        }
+      });
+    });
     document.querySelectorAll('[data-edit-transaction]').forEach((button) => {
-      button.addEventListener('click', () => openTransaction(lancamentos.find((item) => item.id === Number(button.dataset.editTransaction))));
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        openTransaction(lancamentos.find((item) => item.id === Number(button.dataset.editTransaction)));
+      });
     });
     document.querySelectorAll('[data-delete-transaction]').forEach((button) => {
-      button.addEventListener('click', () => deleteTransaction(Number(button.dataset.deleteTransaction)));
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        deleteTransaction(Number(button.dataset.deleteTransaction));
+      });
     });
   }
 
