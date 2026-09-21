@@ -79,6 +79,7 @@
           button.type = 'button';
           button.className = 'cc-reversal-button';
           button.textContent = 'Estornar';
+          button.setAttribute('aria-label', `Estornar lançamento: ${item.descricao || 'sem descrição'}`);
           button.addEventListener('click', () => openReversalModal(item));
           actions.insertBefore(button, del || null);
         }
@@ -108,10 +109,10 @@
         <div class="cc-body">
           <p class="cc-warning"><strong>${money(item.valor)}</strong> será compensado por um novo movimento de estorno. O lançamento original não será apagado e continuará disponível no histórico.</p>
           <label for="cc-reversal-date">Data do estorno</label>
-          <input id="cc-reversal-date" type="date" value="${today()}">
+          <input id="cc-reversal-date" type="date" value="${today()}" min="${item.data || ''}">
           <label for="cc-reversal-reason">Motivo</label>
           <textarea id="cc-reversal-reason" maxlength="500" placeholder="Ex.: pagamento realizado em duplicidade, cobrança cancelada, valor lançado incorretamente..."></textarea>
-          <div class="cc-reversal-error"></div>
+          <div class="cc-reversal-error" role="alert" aria-live="assertive"></div>
           <div class="cc-actions">
             <button type="button" class="btn secondary cc-cancel">Cancelar</button>
             <button type="button" class="btn primary cc-confirm">Confirmar estorno</button>
@@ -129,6 +130,7 @@
       const reason = backdrop.querySelector('#cc-reversal-reason').value.trim();
       const date = backdrop.querySelector('#cc-reversal-date').value;
       if (reason.length < 5) { error.textContent = 'Explique o motivo do estorno com pelo menos 5 caracteres.'; return; }
+      if (item.data && date < item.data) { error.textContent = 'A data do estorno não pode ser anterior à data do lançamento original.'; return; }
       button.disabled = true;
       button.textContent = 'Registrando…';
       error.textContent = '';

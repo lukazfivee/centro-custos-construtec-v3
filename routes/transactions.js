@@ -119,6 +119,11 @@ router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (re
     );
     const original = originalResult.rows[0];
     if (!original) throw httpError(404, 'Lançamento não encontrado.');
+    const originalDateStr = original.transaction_date instanceof Date
+      ? original.transaction_date.toISOString().slice(0,10) : String(original.transaction_date).slice(0,10);
+    if (reversalDate < originalDateStr) {
+      throw httpError(400, 'A data do estorno não pode ser anterior à data do lançamento original.');
+    }
     if (original.approval_status !== 'aprovado') throw httpError(409, 'Somente lançamentos aprovados podem ser estornados.');
     if (original.reversal_of) throw httpError(409, 'Um estorno não pode ser estornado novamente. Crie um novo lançamento corretivo, se necessário.');
     if (Number(original.accounting_sign || 1) !== 1) throw httpError(409, 'Este registro já é um movimento de estorno.');
