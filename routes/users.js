@@ -170,6 +170,41 @@ router.post('/', asyncRoute(async (req, res) => {
   res.status(201).json(rows[0]);
 }));
 
+router.put('/:id', asyncRoute(async (req, res) => {
+  const id = positiveId(req.params.id, 'Usuário');
+  const name = String(req.body.nome || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const role = String(req.body.role || '');
+  if (!name || !email) throw httpError(400, 'Preencha nome e e-mail.');
+  if (!['admin', 'gestor', 'supervisor'].includes(role)) throw httpError(400, 'Perfil inválido.');
+
+  const target = (await getDb().query('SELECT id,name,email,role,active,cloud_managed FROM users WHERE id=$1',[id])).rows[0];
+  if (!target) throw httpError(404,'Usuário não encontrado.');
+
+  if (target.cloud_managed) {
+    throw httpError(400, 'Usuários corporativos são gerenciados pelo sistema central — edite pelo Construtec Orçamentos/sistema corporativo.');
+  }
+
+  const duplicate = (await getDb().query('SELECT id FROM users WHERE LOWER(email)=$1 AND id<>$2 LIMIT 1', [email, id])).rows[0];
+  if (duplicate) throw httpError(409, 'Já existe um usuário cadastrado com este e-mail.');
+
+  if (id === req.usuario.id && target.role === 'admin' && role !== 'admin') {
+    const { rows: adminRows } = await getDb().query(
+      "SELECT COUNT(*)::int AS total FROM users WHERE role='admin' AND active=TRUE AND id<>$1", [id]
+    );
+    if (Number(adminRows[0].total) === 0) {
+      throw httpError(400, 'Você não pode remover o próprio perfil de administrador: você é o único administrador ativo.');
+    }
+  }
+
+  const result = await getDb().query(
+    'UPDATE users SET name=$1, email=$2, role=$3, updated_at=NOW() WHERE id=$4 RETURNING id,name,email,role,active',
+    [name.slice(0, 120), email.slice(0, 180), role, id]
+  );
+  await recordAudit({entityType:'usuario',entityId:id,action:'atualizado',summary:`Usuário ${result.rows[0].name} atualizado.`,data:result.rows[0],user:req.usuario});
+  res.json(result.rows[0]);
+}));
+
 router.put('/:id/status', asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id, 'Usuário');
   const active = req.body.ativo === true;
