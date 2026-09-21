@@ -457,6 +457,16 @@ html.dark .budget-unmapped-item {
 .btn.budget-success { background: #059669 !important; }
 .btn.budget-success:hover { background: #047857 !important; }
 
+/* Variante outline do accent do modulo (borda/texto, sem preenchimento) —
+   reaproveitada em vez de style inline no botao "Importar Orcamento". */
+.btn.budget-accent-outline { border-color: #0284c7 !important; color: #0284c7 !important; }
+.btn.budget-accent-outline:hover { background: rgba(2, 132, 199, 0.08) !important; }
+
+/* Botao pequeno reutilizado nos cabecalhos/toolbar da Analise de Orcamento
+   (Atualizar Revisao, Medicoes, Curva S, Exportar CSV, Relatorio Executivo) —
+   antes repetido como style inline idêntico em cada botao. */
+.btn-budget-sm { font-size: 0.75rem; padding: 4px 10px; }
+
 .modal-head {
   position: relative;
   z-index: 10;

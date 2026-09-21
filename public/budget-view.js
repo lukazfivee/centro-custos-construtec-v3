@@ -38,10 +38,9 @@
     if (!headActions || document.getElementById('btn-importar-orcamento-view')) return;
     const importBtn = document.createElement('button');
     importBtn.id = 'btn-importar-orcamento-view';
-    importBtn.className = 'btn secondary';
+    importBtn.className = 'btn secondary budget-accent-outline';
     importBtn.type = 'button';
     importBtn.title = 'Importar uma proposta aprovada em formato JSON';
-    importBtn.style.cssText = 'border-color:#0284c7;color:#0284c7;';
     importBtn.innerHTML = 'Importar Orçamento';
     importBtn.onclick = () => openImportBudgetDialog();
     headActions.insertBefore(importBtn, headActions.firstChild);
@@ -129,7 +128,7 @@
             <h3>Contrato: ${esc(contract.number)} <span class="budget-pill-rev">REV0${contract.baselineVersion}</span></h3>
             <p>Baseline ativa com selo canônico de aprovação imutável</p>
           </div>
-          <div><button type="button" class="btn secondary" id="btn-atualizar-revisao-btn" title="Selecionar uma nova revisão aprovada do orçamento para importar" style="font-size:0.8rem;">Atualizar Revisão / Importar</button></div>
+          <div><button type="button" class="btn secondary btn-budget-sm" id="btn-atualizar-revisao-btn" title="Selecionar uma nova revisão aprovada do orçamento para importar">Atualizar Revisão / Importar</button></div>
         </div>
         <div class="budget-health-panel ${summary.isOverBudget ? 'danger' : 'ok'}">
           <div class="budget-health-main">
@@ -184,10 +183,10 @@
             <h4>Planilha Analítica de Itens Orçados</h4>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <select id="budget-filter-kind" aria-label="Filtrar por tipo de insumo" style="padding:4px 8px;border-radius:6px;font-size:0.8rem;border:1px solid var(--line);"><option value="">Todos os insumos</option><option value="material">Materiais</option><option value="labor">Mão de Obra</option></select>
-              <button type="button" class="btn secondary" id="btn-budget-measurements" title="Abrir medições de mão de obra e contrato" style="font-size:0.75rem;padding:4px 10px;">Medições</button>
-              <button type="button" class="btn secondary" id="btn-budget-curves" title="Abrir a Curva S físico-financeira" style="font-size:0.75rem;padding:4px 10px;">Curva S</button>
-              <button type="button" class="btn secondary" id="btn-budget-export-csv" aria-label="Exportar comparação entre orçado e realizado em CSV" title="Baixar a comparação entre orçado e realizado em CSV" style="font-size:0.75rem;padding:4px 10px;">Exportar CSV</button>
-              <button type="button" class="btn primary budget-accent" id="btn-budget-open-report" title="Abrir o relatório executivo desta obra" style="font-size:0.75rem;padding:4px 10px;">Relatório Executivo</button>
+              <button type="button" class="btn secondary btn-budget-sm" id="btn-budget-measurements" title="Abrir medições de mão de obra e contrato">Medições</button>
+              <button type="button" class="btn secondary btn-budget-sm" id="btn-budget-curves" title="Abrir a Curva S físico-financeira">Curva S</button>
+              <button type="button" class="btn secondary btn-budget-sm" id="btn-budget-export-csv" aria-label="Exportar comparação entre orçado e realizado em CSV" title="Baixar a comparação entre orçado e realizado em CSV">Exportar CSV</button>
+              <button type="button" class="btn primary budget-accent btn-budget-sm" id="btn-budget-open-report" title="Abrir o relatório executivo desta obra">Relatório Executivo</button>
             </div>
           </div>
           <div class="budget-table-scroll">
