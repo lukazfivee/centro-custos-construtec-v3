@@ -207,29 +207,14 @@
             <button id="btn-novo-centro" class="btn primary" type="button" title="Abrir formulário para cadastrar obra ou centro">+ Novo centro</button>
           </div>
         </div>
-        <div class="filter-bar">
-          <input id="busca-centros" aria-label="Buscar obras e centros" type="search" placeholder="Buscar por código, nome, cliente ou responsável">
-          <select id="filtro-centro-status" aria-label="Situação da obra"><option value="">Todos os status</option><option value="ativo">Ativo</option><option value="em-aberto">Em aberto</option><option value="pausado">Pausado</option><option value="concluido">Concluído</option><option value="inativo">Inativo</option></select>
-          <button id="btn-limpar-filtros-centros" class="btn secondary" type="button" title="Remover todos os filtros de obras e centros">Limpar filtros de obras</button>
-        </div>
         <div id="lista-centros-cards" class="centers-grid"></div>
       </section>
       <section id="view-categorias" class="view oculto">
         <div class="page-head"><div><h1>Categorias financeiras</h1></div><button id="btn-nova-categoria" class="btn primary" type="button" title="Abrir formulário para cadastrar categoria">+ Nova categoria</button></div>
-        <div class="filter-bar category-filter-bar">
-          <input id="busca-categorias" aria-label="Buscar categorias" type="search" placeholder="Buscar categoria">
-          <select id="filtro-categoria-tipo" aria-label="Tipo da categoria"><option value="">Todos os tipos</option><option value="receita">Receita</option><option value="despesa">Despesa</option><option value="ambos">Receita e despesa</option></select>
-          <button id="btn-limpar-filtros-categorias" class="btn secondary" type="button" title="Remover todos os filtros de categorias">Limpar filtros de categorias</button>
-        </div>
         <div class="table-card"><div class="table-meta"><span id="total-categorias">0 categorias</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de categorias financeiras; deslize horizontalmente para ver todas as colunas"><table class="cc-mobile-table"><thead><tr><th>Nome</th><th>Tipo padrão</th><th>Lançamentos</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-categorias"></tbody></table></div></div>
       </section>
       <section id="view-fornecedores" class="view oculto">
         <div class="page-head"><div><h1>Fornecedores e parceiros</h1></div><button id="btn-novo-fornecedor" class="btn primary" type="button" title="Abrir formulário para cadastrar fornecedor">+ Novo fornecedor</button></div>
-        <div class="filter-bar supplier-filter-bar">
-          <input id="busca-fornecedores" aria-label="Buscar fornecedores" type="search" placeholder="Buscar por nome, CPF/CNPJ, contato ou e-mail">
-          <select id="filtro-fornecedor-status" aria-label="Situação do fornecedor"><option value="">Todos os status</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option></select>
-          <button id="btn-limpar-filtros-fornecedores" class="btn secondary" type="button" title="Remover todos os filtros de fornecedores">Limpar filtros de fornecedores</button>
-        </div>
         <div class="table-card"><div class="table-meta"><span id="total-fornecedores">0 fornecedor(es)</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de fornecedores e parceiros; deslize horizontalmente para ver todas as colunas"><table class="cc-mobile-table"><thead><tr><th>Nome / Razão</th><th>CPF / CNPJ</th><th>Contato</th><th>E-mail / telefone</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-fornecedores"></tbody></table></div></div>
       </section>
       <section id="view-historico" class="view oculto">
