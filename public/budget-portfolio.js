@@ -93,9 +93,17 @@
           ${riskHtml}
         </div>
       `;
-    } catch {
-      // Falha silenciosa caso o usuário não esteja autenticado ainda
-      if (container) container.innerHTML = '';
+    } catch (error) {
+      if (container) {
+        container.innerHTML = `
+          <div class="portfolio-cockpit-error">
+            <strong>Não foi possível carregar o Cockpit Executivo da Carteira.</strong>
+            <span>Tente novamente em instantes ou recarregue a página.</span>
+          </div>`;
+      }
+      if (typeof window.toast === 'function') {
+        window.toast(error.message || 'Erro ao carregar o cockpit executivo da carteira.', true);
+      }
     }
   }
 

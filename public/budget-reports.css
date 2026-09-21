@@ -157,7 +157,7 @@
 /* Status e Cores de Texto */
 .danger-text { color: #dc2626 !important; font-weight: 600; }
 .active-text { color: #0284c7 !important; font-weight: 600; }
-.muted-text { color: #94a3b8 !important; }
+.muted-text { color: #64748b !important; }
 
 /* Quadro de Assinaturas Técnicas (Saída Comercial) */
 .client-signature-grid {
@@ -185,7 +185,7 @@
   border-top: 1px solid #cbd5e1;
   text-align: center;
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: #64748b;
 }
 .sheet-footer p { margin: 2px 0; }
 

@@ -172,3 +172,29 @@ html.dark .portfolio-risk-ok {
   border-color: #065f46;
   color: #6ee7b7;
 }
+
+/* Estado de Falha ao Carregar o Cockpit */
+.portfolio-cockpit-error {
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  margin-bottom: 24px;
+}
+
+.portfolio-cockpit-error strong { color: #991b1b; }
+.portfolio-cockpit-error span { font-size: 0.76rem; color: #b91c1c; }
+
+html.dark .portfolio-cockpit-error {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: #991b1b;
+  color: #fca5a5;
+}
+
+html.dark .portfolio-cockpit-error strong { color: #fca5a5; }
+html.dark .portfolio-cockpit-error span { color: #fda4af; }
