@@ -21,20 +21,27 @@ const RECURRING_SELECT = `
 
 router.get('/', asyncRoute(async (req, res) => {
   const orderBy = 'rt.active DESC,rt.name';
+  const { where, values } = buildSearchFilter(req.query);
   if (!wantsPagination(req.query)) {
-    const { rows } = await getDb().query(`${RECURRING_SELECT} ORDER BY ${orderBy} LIMIT 500`);
+    const { rows } = await getDb().query(`${RECURRING_SELECT} ${where} ORDER BY ${orderBy} LIMIT 500`, values);
     res.setHeader('X-Result-Limit', '500');
     return res.json(rows);
   }
   const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
   const [dataResult, countResult] = await Promise.all([
-    getDb().query(`${RECURRING_SELECT} ORDER BY ${orderBy} LIMIT $1 OFFSET $2`, [limit, offset]),
-    getDb().query('SELECT COUNT(*)::int AS total FROM recurring_templates'),
+    getDb().query(`${RECURRING_SELECT} ${where} ORDER BY ${orderBy} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, limit, offset]),
+    getDb().query(`SELECT COUNT(*)::int AS total FROM recurring_templates rt ${where}`, values),
   ]);
   const total = Number(countResult.rows[0]?.total || 0);
   res.setHeader('X-Total-Count', String(total));
   return res.json({ itens: dataResult.rows, paginacao: paginationMeta(total, page, limit) });
 }));
+
+function buildSearchFilter(query) {
+  if (!query.busca || !String(query.busca).trim()) return { where: '', values: [] };
+  const search = `%${String(query.busca).trim().slice(0, 100)}%`;
+  return { where: 'WHERE rt.name ILIKE $1', values: [search] };
+}
 
 router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
   const data = validate(req.body);
