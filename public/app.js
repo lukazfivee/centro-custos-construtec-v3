@@ -263,7 +263,7 @@ function renderTrend(items) {
   const months=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   $('#trend-chart').innerHTML=items.map((item)=>{
     const month=months[Number(item.mes.slice(5,7))-1];
-    return `<div class="trend-month"><div class="bar revenue-bar" style="height:${Number(item.receitas)/max*100}%" data-value="${esc(money(item.receitas))}"></div><div class="bar expense-bar" style="height:${Number(item.despesas)/max*100}%" data-value="${esc(money(item.despesas))}"></div><label>${month}</label></div>`;
+    return `<div class="trend-month"><div class="bar revenue-bar" style="height:${Number(item.receitas)/max*100}%" data-value="${esc(money(item.receitas))}" tabindex="0" role="img" aria-label="${esc(month)} - Receitas: ${esc(money(item.receitas))}"></div><div class="bar expense-bar" style="height:${Number(item.despesas)/max*100}%" data-value="${esc(money(item.despesas))}" tabindex="0" role="img" aria-label="${esc(month)} - Despesas: ${esc(money(item.despesas))}"></div><label>${month}</label></div>`;
   }).join('');
 }
 
