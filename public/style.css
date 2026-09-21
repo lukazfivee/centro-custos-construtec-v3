@@ -79,6 +79,8 @@ html.dark :is(.panel,.kpi,.center-card,.filter-bar,.table-card) { box-shadow: no
 .kpi.expense strong, .kpi.overdue strong { color: var(--red); }
 .panel h2, .center-card-title, .page-head h1 { color: var(--ink); }
 .filter-bar { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); }
+/* CC-P0-07: regra base incondicional; antes so existia dentro de media queries e o grid nao renderizava acima de 1000px. */
+.centers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .head-filters, .page-head-actions { flex-wrap: wrap; min-width: 0; }
 .filter-bar > *, .settings-grid > *, .dashboard-grid > * { min-width: 0; }
 .table-scroll { max-width: 100%; overflow: auto; scrollbar-width: thin; }
@@ -233,6 +235,7 @@ html.dark .profile-menu button { background: rgba(182,46,56,.12); border-color: 
   .portfolio-risk-alert, .portfolio-risk-ok { animation: cockpit-alert-in .22s ease both; }
   @keyframes cockpit-alert-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
   .center-card, .portfolio-kpi-card, .sync-card { transition: border-color .16s ease; }
+  /* CC-P1-03: Bolder vence o flat-by-default (68-74) de proposito, so no hover, para dar feedback sem reintroduzir sombra. */
   .center-card:hover, .portfolio-kpi-card:hover, .sync-card:hover { border-color: var(--line-strong); }
   .filter-bar:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(8,92,229,.10); }
   tbody tr, tbody tr td { transition: background-color .16s ease; }
