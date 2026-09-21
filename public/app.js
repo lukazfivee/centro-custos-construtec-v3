@@ -103,6 +103,33 @@ $('#toggle-login-password').addEventListener('click',(event)=>{
   event.currentTarget.setAttribute('aria-label',visible?'Ocultar senha':'Mostrar senha');
   input.focus();
 });
+// Mesmo padrao de #toggle-login-password, reutilizavel para outros campos de senha (config/usuarios).
+function bindPasswordToggle(buttonId,inputId) {
+  const button=$(`#${buttonId}`), input=$(`#${inputId}`);
+  if (!button||!input) return;
+  button.addEventListener('click',()=>{
+    const visible=input.type==='password';
+    input.type=visible?'text':'password';
+    button.textContent=visible?'Ocultar':'Mostrar';
+    button.setAttribute('aria-pressed',String(visible));
+    button.setAttribute('aria-label',visible?'Ocultar senha':'Mostrar senha');
+    input.focus();
+  });
+}
+['toggle-senha-atual|senha-atual','toggle-senha-nova|senha-nova','toggle-senha-nova-confirma|senha-nova-confirma'].forEach((pair)=>{const [buttonId,inputId]=pair.split('|'); bindPasswordToggle(buttonId,inputId);});
+// Substitui confirm() nativo pelo modal customizado do app (mesmo modal()/closeModal() usado em todo o app.js).
+function confirmDialog(message,options={}) {
+  return new Promise((resolve)=>{
+    modal(options.title||'Confirmar ação',`<p>${esc(message)}</p><div class="row-actions" style="justify-content:flex-end;gap:8px;margin-top:18px"><button type="button" class="btn secondary" id="confirm-dialog-cancel">${esc(options.cancelLabel||'Cancelar')}</button><button type="button" class="btn danger" id="confirm-dialog-ok">${esc(options.confirmLabel||'Confirmar')}</button></div>`);
+    let settled=false;
+    const finish=(value)=>{ if(settled) return; settled=true; observer.disconnect(); if(!$('#modal-fundo').classList.contains('oculto')) closeModal(); resolve(value); };
+    $('#confirm-dialog-ok').addEventListener('click',()=>finish(true));
+    $('#confirm-dialog-cancel').addEventListener('click',()=>finish(false));
+    const backdrop=$('#modal-fundo');
+    const observer=new MutationObserver(()=>{ if(backdrop.classList.contains('oculto')) finish(false); });
+    observer.observe(backdrop,{attributes:true,attributeFilter:['class']});
+  });
+}
 $('#btn-sair').addEventListener('click',logout);
 
 function closeProfileMenu() {
@@ -206,10 +233,14 @@ async function loadReferences() {
 $('#dash-mes').addEventListener('change',()=>loadDashboard().catch((error)=>toast(error.message,true)));
 $('#dash-centro').addEventListener('change',()=>loadDashboard().catch((error)=>toast(error.message,true)));
 
+const dashboardKpiIds=['kpi-receitas','kpi-despesas','kpi-saldo','kpi-a-receber','kpi-a-pagar','kpi-vencidos'];
 async function loadDashboard() {
   const params=new URLSearchParams({mes:$('#dash-mes').value || currentMonth()});
   if ($('#dash-centro').value) params.set('centroId',$('#dash-centro').value);
-  const data=await api(`/dashboard/resumo?${params}`);
+  dashboardKpiIds.forEach((id)=>{const el=$(`#${id}`); if (el) el.textContent='Carregando...';});
+  let data;
+  try { data=await api(`/dashboard/resumo?${params}`); }
+  catch (error) { dashboardKpiIds.forEach((id)=>{const el=$(`#${id}`); if (el) el.textContent='Erro ao carregar';}); throw error; }
   $('#kpi-receitas').textContent=money(data.receitas); $('#kpi-despesas').textContent=money(data.despesas);
   $('#kpi-saldo').textContent=money(data.saldo); $('#kpi-saldo').style.color=data.saldo<0?'var(--red)':'';
   $('#kpi-a-receber').textContent=money(data.aReceber); $('#kpi-a-pagar').textContent=money(data.aPagar);
@@ -313,7 +344,7 @@ function openTransaction(item) {
 }
 
 async function deleteTransaction(id) {
-  if (!confirm('Excluir este lançamento? A exclusão será enviada na próxima planilha de troca.')) return;
+  if (!(await confirmDialog('Excluir este lançamento? A exclusão será enviada na próxima planilha de troca.',{confirmLabel:'Excluir'}))) return;
   try { await api(`/lancamentos/${id}`,{method:'DELETE'}); toast('Lançamento excluído.'); await Promise.all([loadTransactions(),loadDashboard()]); } catch(error){toast(error.message,true);}
 }
 
@@ -324,8 +355,8 @@ async function loadCenters() {
     const statusLabel=item.ativo?(item.situacao==='execucao'?'Em aberto':item.situacao==='pausado'?'Pausado':item.situacao==='concluido'?'Concluído':'Ativo'):'Inativo';
     const statusClass=item.ativo?(item.situacao==='execucao'?'em-aberto':item.situacao==='pausado'?'pausado':item.situacao==='concluido'?'concluido':'ativo'):'inativo';
     const desc=item.descricao?`<p class="center-card-desc">${esc(item.descricao)}</p>`:'';
-    return `<article class="center-card" data-center-id="${item.id}">
-      <div class="center-card-head"><div class="center-card-icon">📋</div><span class="pill center-status-pill ${statusClass}">${statusLabel}</span></div>
+    return `<article class="center-card" data-center-id="${item.id}" tabindex="0" aria-label="Ver detalhes do centro ${esc(item.codigo)}: ${esc(item.nome)}">
+      <div class="center-card-head"><div class="center-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2V4a1 1 0 0 1 1-1Z"/><path d="M9 3v3h6V3"/><path d="M8 12h8M8 16h8M8 20h5"/></svg></div><span class="pill center-status-pill ${statusClass}">${statusLabel}</span></div>
       <h3 class="center-card-title">${esc(item.codigo)} — ${esc(item.nome)}</h3>
       <p class="center-card-client">${esc(item.cliente||item.contrato||'—')}</p>
       <div class="center-card-stats">
@@ -339,7 +370,7 @@ async function loadCenters() {
       </div>
     </article>`;
   }).join('') : `<div class="empty">Nenhum centro cadastrado.</div>`;
-  $$('.center-card').forEach((card)=>card.addEventListener('click',(e)=>{if(e.target.closest('[data-edit-center]'))return;const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);}));
+  $$('.center-card').forEach((card)=>{card.addEventListener('click',(e)=>{if(e.target.closest('[data-edit-center]'))return;const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);});card.addEventListener('keydown',(e)=>{if(e.target.closest('button'))return;if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);});});
   $$('[data-edit-center]').forEach((button)=>button.addEventListener('click',(e)=>{e.stopPropagation();openCenter(centros.find((item)=>item.id===Number(button.dataset.editCenter)));}));
   await loadReferences(); loadFirstUse();
 }
@@ -703,9 +734,9 @@ async function loadSync(){const [history,conflicts]=await Promise.all([api('/sin
 function renderSyncResult(result){const element=$('#sync-resultado');element.classList.remove('oculto');element.innerHTML=`<div class="panel-head"><div><p class="eyebrow">Resultado da importação</p><h2>${result.total} linha(s) analisada(s)</h2></div><span class="pill ativo">Concluída</span></div><div class="result-kpis"><div><strong>${result.incluidos}</strong><span>Incluídos</span></div><div><strong>${result.atualizados}</strong><span>Atualizados</span></div><div><strong>${result.ignorados}</strong><span>Ignorados</span></div><div><strong>${result.conflitos}</strong><span>Conflitos</span></div><div><strong>${result.erros}</strong><span>Erros</span></div></div>${result.detalhes.length?`<div class="result-details">${result.detalhes.map((detail)=>`<div class="result-detail"><strong>Linha ${detail.linha} · ${esc(detail.status)}</strong> — ${esc(detail.mensagem)}</div>`).join('')}</div>`:'<p class="muted">Todos os dados foram integrados sem ressalvas.</p>'}`;element.scrollIntoView({behavior:'smooth',block:'center'});}
 
 async function loadUsers(){if(usuario.role!=='admin')return;const users=await api('/usuarios');$('#tabela-usuarios').innerHTML=users.map((item)=>`<tr><td><strong>${esc(item.nome)}</strong></td><td>${esc(item.email)}</td><td>${esc(roleName[item.role])}</td><td><span class="pill ${item.ativo?'ativo':'inativo'}">${item.ativo?'Ativo':'Inativo'}</span></td><td><div class="row-actions"><button aria-label="${item.ativo?'Desativar':'Ativar'} usuário ${esc(item.nome)}" title="${item.ativo?'Bloquear o acesso deste usuário ao sistema':'Permitir que este usuário acesse o sistema'}" data-user-id="${item.id}" data-user-status="${item.ativo?'false':'true'}">${item.ativo?'Desativar':'Ativar'}</button></div></td></tr>`).join('');$$('[data-user-id]').forEach((button)=>button.addEventListener('click',async()=>{try{await api(`/usuarios/${button.dataset.userId}/status`,{method:'PUT',body:JSON.stringify({ativo:button.dataset.userStatus==='true'})});await loadUsers();}catch(error){toast(error.message,true);}}));loadFirstUse();}
-$('#btn-novo-usuario').addEventListener('click',()=>{modal('Novo usuário',`<form id="user-form"><label for="us-nome">Nome</label><input id="us-nome" required><label for="us-email">E-mail</label><input id="us-email" type="email" required><label for="us-senha">Senha provisória</label><input id="us-senha" type="password" minlength="10" required><label for="us-role">Perfil</label><select id="us-role"><option value="supervisor">Supervisor — lançamentos e consultas</option><option value="gestor">Gestor — também gerencia cadastros</option><option value="admin">Administrador — acesso total</option></select><div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Criar usuário</button></form>`);$('#user-form').addEventListener('submit',async(event)=>{event.preventDefault();try{await api('/usuarios',{method:'POST',body:JSON.stringify({nome:$('#us-nome').value,email:$('#us-email').value,senha:$('#us-senha').value,role:$('#us-role').value})});closeModal();toast('Usuário criado.');await loadUsers();}catch(error){$('#modal-error').textContent=error.message;}});});
+$('#btn-novo-usuario').addEventListener('click',()=>{modal('Novo usuário',`<form id="user-form"><label for="us-nome">Nome</label><input id="us-nome" required><label for="us-email">E-mail</label><input id="us-email" type="email" required><label for="us-senha">Senha provisória</label><div class="password-field"><input id="us-senha" type="password" minlength="10" required><button id="toggle-us-senha" class="password-toggle" type="button" aria-controls="us-senha" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button></div><label for="us-senha-confirma">Confirmar senha provisória</label><div class="password-field"><input id="us-senha-confirma" type="password" minlength="10" required><button id="toggle-us-senha-confirma" class="password-toggle" type="button" aria-controls="us-senha-confirma" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button></div><label for="us-role">Perfil</label><select id="us-role"><option value="supervisor">Supervisor — lançamentos e consultas</option><option value="gestor">Gestor — também gerencia cadastros</option><option value="admin">Administrador — acesso total</option></select><div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Criar usuário</button></form>`);bindPasswordToggle('toggle-us-senha','us-senha');bindPasswordToggle('toggle-us-senha-confirma','us-senha-confirma');$('#user-form').addEventListener('submit',async(event)=>{event.preventDefault();if($('#us-senha').value!==$('#us-senha-confirma').value){$('#modal-error').textContent='A confirmação não coincide com a senha provisória.';return;}try{await api('/usuarios',{method:'POST',body:JSON.stringify({nome:$('#us-nome').value,email:$('#us-email').value,senha:$('#us-senha').value,role:$('#us-role').value})});closeModal();toast('Usuário criado.');await loadUsers();}catch(error){$('#modal-error').textContent=error.message;}});});
 
-$('#form-senha')?.addEventListener('submit',async(event)=>{event.preventDefault();try{await api('/auth/alterar-senha',{method:'POST',body:JSON.stringify({senhaAtual:$('#senha-atual').value,novaSenha:$('#senha-nova').value})});event.target.reset();$('#senha-mensagem').textContent='Senha alterada com sucesso.';$('#senha-mensagem').style.color='var(--green)';}catch(error){$('#senha-mensagem').textContent=error.message;$('#senha-mensagem').style.color='var(--red)';}});
+$('#form-senha')?.addEventListener('submit',async(event)=>{event.preventDefault();if($('#senha-nova').value!==$('#senha-nova-confirma').value){$('#senha-mensagem').textContent='A confirmação não coincide com a nova senha.';$('#senha-mensagem').style.color='var(--red)';return;}try{await api('/auth/alterar-senha',{method:'POST',body:JSON.stringify({senhaAtual:$('#senha-atual').value,novaSenha:$('#senha-nova').value})});event.target.reset();$('#senha-mensagem').textContent='Senha alterada com sucesso.';$('#senha-mensagem').style.color='var(--green)';}catch(error){$('#senha-mensagem').textContent=error.message;$('#senha-mensagem').style.color='var(--red)';}});
 $('#btn-backup').addEventListener('click',()=>download('/backup','backup-centro-de-custos.tar.gz'));
 let restoreFile=null;
 $('#restore-arquivo').addEventListener('change',(event)=>{restoreFile=event.target.files[0]||null;$('#restore-arquivo-label').textContent=restoreFile?restoreFile.name:'Escolher backup .tar.gz';$('#btn-restaurar').disabled=!restoreFile;$('#restore-mensagem').textContent='';});
@@ -713,7 +744,7 @@ $('#btn-restaurar').addEventListener('click',async()=>{if(!restoreFile)return;co
 
 const monthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 (async()=>{const now=new Date();if($('#fechamento-ano'))$('#fechamento-ano').value=now.getFullYear();if($('#fechamento-mes'))$('#fechamento-mes').value=now.getMonth()+1;if($('#fechamentos-ativos'))await loadClosings();})();
-async function loadClosings(){try{const closings=await api('/fechamento-mensal');$('#fechamentos-ativos').innerHTML=closings.length?`<p class="hint" style="margin-top:12px">Competências bloqueadas:</p><div class="closing-tags">${closings.map(c=>`<span class="closing-tag">${String(c.month).padStart(2,'0')}/${c.year}${usuario.role==='admin'?`<button data-close-id="${c.id}" class="closing-remove" aria-label="Reabrir competência ${String(c.month).padStart(2,'0')}/${c.year}" title="Permitir novamente alterações nos lançamentos desta competência">Reabrir</button>`:''}</span>`).join('')}</div>`:'';$$('[data-close-id]').forEach(btn=>btn.addEventListener('click',async()=>{if(!confirm('Reabrir esta competência? Lançamentos poderão ser editados novamente.'))return;try{await api(`/fechamento-mensal/${btn.dataset.closeId}`,{method:'DELETE'});toast('Competência reaberta.');await loadClosings();}catch(error){toast(error.message,true);}}));}catch{}}
+async function loadClosings(){try{const closings=await api('/fechamento-mensal');$('#fechamentos-ativos').innerHTML=closings.length?`<p class="hint" style="margin-top:12px">Competências bloqueadas:</p><div class="closing-tags">${closings.map(c=>`<span class="closing-tag">${String(c.month).padStart(2,'0')}/${c.year}${usuario.role==='admin'?`<button data-close-id="${c.id}" class="closing-remove" aria-label="Reabrir competência ${String(c.month).padStart(2,'0')}/${c.year}" title="Permitir novamente alterações nos lançamentos desta competência">Reabrir</button>`:''}</span>`).join('')}</div>`:'';$$('[data-close-id]').forEach(btn=>btn.addEventListener('click',async()=>{if(!(await confirmDialog('Reabrir esta competência? Lançamentos poderão ser editados novamente.',{confirmLabel:'Reabrir'})))return;try{await api(`/fechamento-mensal/${btn.dataset.closeId}`,{method:'DELETE'});toast('Competência reaberta.');await loadClosings();}catch(error){toast(error.message,true);}}));}catch{}}
 $('#btn-fechar-mes')?.addEventListener('click',async()=>{const ano=Number($('#fechamento-ano').value);const mes=Number($('#fechamento-mes').value);const msg=$('#fechamento-mensagem');msg.textContent='';try{await api('/fechamento-mensal',{method:'POST',body:JSON.stringify({ano,mes})});msg.style.color='var(--green)';msg.textContent=`Competência ${String(mes).padStart(2,'0')}/${ano} fechada.`;toast('Competência fechada.');await loadClosings();}catch(error){msg.style.color='var(--red)';msg.textContent=error.message;}});
 
 const freqLabels={mensal:'Mensal',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'};
@@ -728,7 +759,7 @@ function empty(message){return `<div class="empty">${esc(message)}</div>`;}
 async function loadFirstUse() {
   try {
     const data = await api('/first-use/status');
-    if (data.completed) { $('#first-use-banner').classList.add('oculto'); return; }
+    if (data.completed || localStorage.getItem('cc_first_use_dismissed')==='true') { $('#first-use-banner').classList.add('oculto'); return; }
     $('#first-use-banner').classList.remove('oculto');
     const checks = [
       { id: 'obras', count: data.counts.obras, min: 1 },
@@ -746,7 +777,7 @@ async function loadFirstUse() {
     });
   } catch {}
 }
-$('#first-use-dismiss').addEventListener('click', () => $('#first-use-banner').classList.add('oculto'));
+$('#first-use-dismiss').addEventListener('click', () => { localStorage.setItem('cc_first_use_dismissed','true'); $('#first-use-banner').classList.add('oculto'); });
 $('#first-use-photo').addEventListener('click',()=>{showView('config');$('#profile-photo-input').click();});
 $('#btn-sync-centros')?.addEventListener('click', () => showView('sincronizacao'));
 $('#btn-open-webmail')?.addEventListener('click', () => {
@@ -764,7 +795,7 @@ $('#profile-photo-input').addEventListener('change',async(event)=>{
   finally{event.target.value='';}
 });
 $('#profile-photo-remove').addEventListener('click',async()=>{
-  if(!confirm('Remover sua foto de perfil? As iniciais voltarão a aparecer.'))return;
+  if(!(await confirmDialog('Remover sua foto de perfil? As iniciais voltarão a aparecer.',{confirmLabel:'Remover'})))return;
   const message=$('#profile-photo-message');
   try{await api('/auth/foto-perfil',{method:'DELETE'});renderProfilePhoto(null);message.textContent='Foto removida.';message.style.color='var(--green)';toast('Foto de perfil removida.');loadFirstUse();}
   catch(error){message.textContent=error.message;message.style.color='var(--red)';}
@@ -859,8 +890,9 @@ $('#btn-install-update')?.addEventListener('click', async () => {
 const bugTipoLabel={bug:'Bug',melhoria:'Melhoria',sugestao:'Sugestão'};
 const bugSeveridadeLabel={baixa:'Baixa',media:'Média',alta:'Alta',critica:'Crítica'};
 const bugStatusLabel={aberto:'Aberto','em andamento':'Em andamento',resolvido:'Resolvido',fechado:'Fechado'};
-const bugSeveridadeClass={baixa:'pill',media:'pill pendente',alta:'pill vencido',critica:'pill despesa'};
-const bugStatusClass={aberto:'pill pendente','em andamento':'pill projeto-execucao',resolvido:'pill ativo',fechado:'pill inativo'};
+// Classes proprias do dominio de bug reports (nao reaproveitam pill financeiro/orcamento: pendente/vencido/despesa/projeto-execucao/ativo/inativo).
+const bugSeveridadeClass={baixa:'pill bug-baixa',media:'pill bug-media',alta:'pill bug-alta',critica:'pill bug-critica'};
+const bugStatusClass={aberto:'pill bug-aberto','em andamento':'pill bug-andamento',resolvido:'pill bug-resolvido',fechado:'pill bug-fechado'};
 
 async function loadBugReports(){
   const items=await api('/bug-reports');

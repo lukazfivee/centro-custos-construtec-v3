@@ -150,7 +150,7 @@
           <article class="kpi expense"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18M5 7v13h14V7M8 4h8v3"/></svg></span><p>Pago</p><strong id="kpi-despesas">R$ 0,00</strong><span>despesas liquidadas</span></article>
           <article class="kpi balance"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h18M12 3v18"/></svg></span><p>Resultado</p><strong id="kpi-saldo">R$ 0,00</strong><span>receitas - despesas</span></article>
           <article class="kpi pending"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 10l7-7 7 7"/></svg></span><p>A receber</p><strong id="kpi-a-receber">R$ 0,00</strong><span>previsão em aberto</span></article>
-          <article class="kpi overdue"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 14l7 7 7-7"/></svg></span><p>A pagar</p><strong id="kpi-a-pagar">R$ 0,00</strong><span>contas pendentes</span></article>
+          <article class="kpi pending"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 14l7 7 7-7"/></svg></span><p>A pagar</p><strong id="kpi-a-pagar">R$ 0,00</strong><span>contas pendentes</span></article>
           <article class="kpi overdue"><span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span><p>Vencidos</p><strong id="kpi-vencidos">R$ 0,00</strong><span id="kpi-vencidos-count">nenhuma pendência</span></article>
         </div>
         <div class="dashboard-grid">
@@ -279,9 +279,20 @@
               <p>Troque a senha usada para entrar nesta instalação.</p>
               <form id="form-senha" class="stack">
                 <label for="senha-atual">Senha atual</label>
-                <input id="senha-atual" type="password" autocomplete="current-password" required>
+                <div class="password-field">
+                  <input id="senha-atual" type="password" autocomplete="current-password" required>
+                  <button id="toggle-senha-atual" class="password-toggle" type="button" aria-controls="senha-atual" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button>
+                </div>
                 <label for="senha-nova">Nova senha</label>
-                <input id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+                <div class="password-field">
+                  <input id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+                  <button id="toggle-senha-nova" class="password-toggle" type="button" aria-controls="senha-nova" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button>
+                </div>
+                <label for="senha-nova-confirma">Confirmar nova senha</label>
+                <div class="password-field">
+                  <input id="senha-nova-confirma" type="password" autocomplete="new-password" minlength="8" required>
+                  <button id="toggle-senha-nova-confirma" class="password-toggle" type="button" aria-controls="senha-nova-confirma" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button>
+                </div>
                 <button type="submit" class="btn primary" title="Salvar a nova senha">Alterar senha</button>
                 <p id="senha-mensagem" class="form-error" role="status"></p>
               </form>
@@ -319,7 +330,7 @@
         </div>
       </section>
       <section id="view-recorrentes" class="view oculto">
-        <div class="page-head"><div><h1>Lançamentos recorrentes</h1></div><button id="btn-novo-recorrente" class="btn primary" type="button" title="Abrir formulário para cadastrar lançamento recorrente">+ Nova recorrência</button></div>
+        <div class="page-head"><div><h1>Modelos recorrentes</h1></div><button id="btn-novo-recorrente" class="btn primary" type="button" title="Abrir formulário para cadastrar modelo recorrente">+ Novo modelo recorrente</button></div>
         <div id="lista-recorrentes" class="centers-grid"></div>
       </section>
       <section id="view-bugreports" class="view oculto">

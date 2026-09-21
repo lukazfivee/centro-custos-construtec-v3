@@ -78,9 +78,21 @@ html.dark :is(.panel,.kpi,.center-card,.filter-bar,.table-card) { box-shadow: no
 .kpi.revenue strong { color: var(--green); }
 .kpi.expense strong, .kpi.overdue strong { color: var(--red); }
 .panel h2, .center-card-title, .page-head h1 { color: var(--ink); }
+/* CC-P3: pills de bug report (severidade/status) com classes proprias, mesma paleta de .pill.pendente/.vencido/.despesa/.ativo/.inativo/.projeto-execucao, sem reaproveitar o significado financeiro/orcamento. */
+.pill.bug-baixa { background: #edf1f2; color: #5f6b70; }
+.pill.bug-media, .pill.bug-aberto { background: #fff2d9; color: #8b5a00; }
+.pill.bug-alta { background: #fae9e6; color: #a43c34; }
+.pill.bug-critica { background: #f6c7c1; color: #7a1f1a; }
+.pill.bug-andamento { background: #ddf3fa; color: #176d89; }
+.pill.bug-resolvido { background: #e2f4ec; color: #177354; }
+.pill.bug-fechado { background: #eceeed; color: #7d868a; }
 .filter-bar { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); }
 /* CC-P0-07: regra base incondicional; antes so existia dentro de media queries e o grid nao renderizava acima de 1000px. */
 .centers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+/* CC-P2: cards de Centros de Custo sao clicaveis e agora tambem ativaveis via teclado (Enter/Espaco). */
+.center-card { cursor: pointer; }
+.center-card:focus-visible { outline: 3px solid rgba(8,92,229,.35); outline-offset: 2px; }
+.center-card-icon svg { stroke: var(--navy); }
 .head-filters, .page-head-actions { flex-wrap: wrap; min-width: 0; }
 .filter-bar > *, .settings-grid > *, .dashboard-grid > * { min-width: 0; }
 .table-scroll { max-width: 100%; overflow: auto; scrollbar-width: thin; }
@@ -119,7 +131,9 @@ tbody tr:hover, html.dark tbody tr:hover { background: var(--surface-muted); }
 .topbar-actions { gap: 3px !important; }
 .instance-name { display: none !important; }
 .topbar-status { display: inline-flex !important; align-items: center; gap: 7px; margin-left: 0; padding: 0 16px; color: #eef2f7; font-size: 12px; white-space: nowrap; }
-.topbar-status .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #42bd68; }
+/* Cinza neutro: o indicador é permanentemente "Offline / Dados locais" (app local-first),
+   não uma conexão ativa — verde sugeriria "conectado", o que contradiz o rótulo ao lado. */
+.topbar-status .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #8fa2ad; }
 .status-caret { font-size: 16px; line-height: 1; color: #dbe7ef; margin-left: -2px; }
 .topbar-search { display: flex; align-items: center; gap: 9px; flex: 0 1 420px; height: 34px; margin: 0 auto; padding: 0 12px; border: 1px solid #3b475a; border-radius: 6px; background: #293242; color: #c9d1dc; }
 .topbar-search input { width: 100%; border: 0; outline: 0; background: transparent; color: #dbe7ef; font: inherit; font-size: 12px; }
