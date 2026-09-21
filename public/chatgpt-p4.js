@@ -194,17 +194,9 @@
     } catch (error) { backdrop.querySelector('.cc-doc-error').textContent = error.message; }
   }
 
-  function addHint() {
-    const meta = document.querySelector('#view-lancamentos .table-meta');
-    if (!meta || meta.querySelector('.cc-p4-note')) return;
-    const note = document.createElement('span'); note.className = 'cc-p4-note'; note.textContent = 'P4: documentos vinculados ao lançamento';
-    const tools = meta.querySelector('.cc-list-tools'); if (tools) tools.prepend(note); else meta.appendChild(note);
-  }
-
   function init() {
-    addHint();
     const tbody = document.querySelector('#tabela-lancamentos');
-    if (tbody) new MutationObserver(() => { addHint(); scheduleRefresh(); }).observe(tbody, { childList:true,subtree:true });
+    if (tbody) new MutationObserver(scheduleRefresh).observe(tbody, { childList:true,subtree:true });
     scheduleRefresh();
   }
 

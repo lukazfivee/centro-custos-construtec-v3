@@ -122,16 +122,3 @@
   color: var(--red);
   font-size: 11px;
 }
-
-.cc-p2-note {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  border: 1px solid #9a5b00;
-  border-radius: 7px;
-  background: #fff5d9;
-  color: #9a5b00;
-  font-size: 9px;
-  font-weight: 700;
-}

@@ -158,21 +158,10 @@
     }[char]));
   }
 
-  function addP2Hint() {
-    const meta = document.querySelector('#view-lancamentos .table-meta');
-    if (!meta || meta.querySelector('.cc-p2-note')) return;
-    const note = document.createElement('span');
-    note.className = 'cc-p2-note';
-    note.textContent = 'P2: estorno preserva o histórico';
-    const tools = meta.querySelector('.cc-list-tools');
-    if (tools) tools.prepend(note); else meta.appendChild(note);
-  }
-
   function init() {
-    addP2Hint();
     const tbody = document.querySelector('#tabela-lancamentos');
     if (tbody) {
-      new MutationObserver(() => { addP2Hint(); scheduleRefresh(); })
+      new MutationObserver(scheduleRefresh)
         .observe(tbody, { childList:true, subtree:true });
     }
     scheduleRefresh();
