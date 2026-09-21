@@ -6,8 +6,8 @@
   margin-top: 5px;
   padding: 3px 7px;
   border-radius: 999px;
-  background: #fff1d8;
-  color: #8a5a00;
+  background: #fff5d9;
+  color: #9a5b00;
   font-size: 8px;
   font-weight: 850;
   text-transform: uppercase;
@@ -24,11 +24,11 @@
 }
 
 .cc-reversal-row .money {
-  color: #8a5a00 !important;
+  color: #9a5b00 !important;
 }
 
 .cc-reversal-button {
-  color: #9a6500 !important;
+  color: #9a5b00 !important;
 }
 
 .cc-reversal-button:hover {
@@ -68,7 +68,7 @@
 
 .cc-reversal-modal header p {
   margin: 0 0 4px;
-  color: #a36a00;
+  color: #9a5b00;
   font-size: 10px;
   font-weight: 850;
   text-transform: uppercase;
@@ -89,8 +89,8 @@
   margin: 0 0 16px;
   padding: 12px 13px;
   border-radius: 9px;
-  background: #fff7e8;
-  color: #735019;
+  background: #fff5d9;
+  color: #9a5b00;
   font-size: 11px;
   line-height: 1.55;
 }
@@ -128,10 +128,10 @@
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  border: 1px solid #ead7a8;
+  border: 1px solid #9a5b00;
   border-radius: 7px;
-  background: #fffaf0;
-  color: #7c5a18;
+  background: #fff5d9;
+  color: #9a5b00;
   font-size: 9px;
   font-weight: 700;
 }
