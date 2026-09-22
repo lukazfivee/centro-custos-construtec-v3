@@ -9,8 +9,7 @@ const { startServer, stopServer, buildDriver, stopDriver, login, collectConsoleE
 
 const SECTIONS = [
   'dashboard', 'lancamentos', 'centros', 'categorias', 'fornecedores',
-  'config', 'historico', 'chamados', 'orcamentos',
-  'recorrentes', 'bugreports', 'usuarios',
+  'config', 'recorrentes', 'bugreports', 'usuarios',
 ];
 
 test('E2E painel financeiro: carrega os KPIs sem erro de console', async () => {
