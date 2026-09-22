@@ -66,8 +66,14 @@ function releaseLocalDatabaseLock() {
   localLockPath = null;
 }
 
+function resolveEnvPath(rawPath, fallback) {
+  if (!rawPath) return fallback;
+  const expanded = rawPath.replace(/%([^%]+)%/g, (_, n) => process.env[n] || '');
+  return path.resolve(expanded);
+}
+
 function restoreRootDir() {
-  return path.resolve(process.env.RESTORE_ROOT_DIR || path.join(__dirname, 'dados'));
+  return resolveEnvPath(process.env.RESTORE_ROOT_DIR, path.join(__dirname, 'dados'));
 }
 
 function pendingRestorePath() {
@@ -138,8 +144,12 @@ async function createDatabase() {
     const { Pool, types } = require('pg');
     types.setTypeParser(20, Number);
     types.setTypeParser(1700, Number);
+    const databaseUrl = new URL(process.env.DATABASE_URL);
+    databaseUrl.searchParams.delete('options');
+    if (databaseUrl.hostname.includes('-pooler')) databaseUrl.hostname = databaseUrl.hostname.replace('-pooler', '');
     const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: databaseUrl.toString(),
+      options: '-c search_path=public',
       max: Number(process.env.DB_POOL_MAX || 10),
       idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS || 30000),
       connectionTimeoutMillis: Number(process.env.DB_CONNECTION_TIMEOUT_MS || 10000),
@@ -169,7 +179,7 @@ async function createDatabase() {
   }
 
   const { PGlite } = await import('@electric-sql/pglite');
-  const dataDir = path.resolve(process.env.PGLITE_DATA_DIR || path.join(__dirname, 'dados', 'pglite'));
+  const dataDir = resolveEnvPath(process.env.PGLITE_DATA_DIR, path.join(__dirname, 'dados', 'pglite'));
   fs.mkdirSync(path.dirname(dataDir), { recursive: true });
   acquireLocalDatabaseLock(dataDir);
   const restore = prepareRestore(dataDir);

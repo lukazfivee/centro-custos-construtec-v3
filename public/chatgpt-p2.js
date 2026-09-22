@@ -13,6 +13,7 @@
   }
 
   async function refreshItems() {
+    if (!localStorage.getItem('cc_token')) return;
     try {
       const response = await fetch('/api/lancamentos', { headers:authHeaders() });
       if (!response.ok) return;
@@ -78,6 +79,7 @@
           button.type = 'button';
           button.className = 'cc-reversal-button';
           button.textContent = 'Estornar';
+          button.setAttribute('aria-label', `Estornar lançamento: ${item.descricao || 'sem descrição'}`);
           button.addEventListener('click', () => openReversalModal(item));
           actions.insertBefore(button, del || null);
         }
@@ -100,14 +102,17 @@
     backdrop.className = 'cc-reversal-modal-backdrop';
     backdrop.innerHTML = `
       <section class="cc-reversal-modal" role="dialog" aria-modal="true" aria-label="Registrar estorno">
-        <header><p>Estorno formal</p><h3>${escapeHtml(item.descricao || 'Lançamento')}</h3></header>
+        <header style="position:relative;display:flex;justify-content:space-between;align-items:start;">
+          <div><p>Estorno formal</p><h3>${escapeHtml(item.descricao || 'Lançamento')}</h3></div>
+          <button type="button" class="cc-doc-close cc-cancel" aria-label="Fechar" style="background:transparent;border:0;font-size:22px;line-height:1;cursor:pointer;color:var(--muted);padding:4px 8px;">×</button>
+        </header>
         <div class="cc-body">
           <p class="cc-warning"><strong>${money(item.valor)}</strong> será compensado por um novo movimento de estorno. O lançamento original não será apagado e continuará disponível no histórico.</p>
           <label for="cc-reversal-date">Data do estorno</label>
-          <input id="cc-reversal-date" type="date" value="${today()}">
+          <input id="cc-reversal-date" type="date" value="${today()}" min="${item.data || ''}">
           <label for="cc-reversal-reason">Motivo</label>
           <textarea id="cc-reversal-reason" maxlength="500" placeholder="Ex.: pagamento realizado em duplicidade, cobrança cancelada, valor lançado incorretamente..."></textarea>
-          <div class="cc-reversal-error"></div>
+          <div class="cc-reversal-error" role="alert" aria-live="assertive"></div>
           <div class="cc-actions">
             <button type="button" class="btn secondary cc-cancel">Cancelar</button>
             <button type="button" class="btn primary cc-confirm">Confirmar estorno</button>
@@ -115,14 +120,17 @@
         </div>
       </section>`;
     document.body.appendChild(backdrop);
-    backdrop.querySelector('.cc-cancel').addEventListener('click', closeModal);
+    backdrop.querySelectorAll('.cc-cancel').forEach((btn) => btn.addEventListener('click', closeModal));
     backdrop.addEventListener('click', (event) => { if (event.target === backdrop) closeModal(); });
+    const escHandler = (e) => { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', escHandler); } };
+    document.addEventListener('keydown', escHandler);
     backdrop.querySelector('.cc-confirm').addEventListener('click', async () => {
       const button = backdrop.querySelector('.cc-confirm');
       const error = backdrop.querySelector('.cc-reversal-error');
       const reason = backdrop.querySelector('#cc-reversal-reason').value.trim();
       const date = backdrop.querySelector('#cc-reversal-date').value;
       if (reason.length < 5) { error.textContent = 'Explique o motivo do estorno com pelo menos 5 caracteres.'; return; }
+      if (item.data && date < item.data) { error.textContent = 'A data do estorno não pode ser anterior à data do lançamento original.'; return; }
       button.disabled = true;
       button.textContent = 'Registrando…';
       error.textContent = '';
@@ -150,21 +158,10 @@
     }[char]));
   }
 
-  function addP2Hint() {
-    const meta = document.querySelector('#view-lancamentos .table-meta');
-    if (!meta || meta.querySelector('.cc-p2-note')) return;
-    const note = document.createElement('span');
-    note.className = 'cc-p2-note';
-    note.textContent = 'P2: estorno preserva o histórico';
-    const tools = meta.querySelector('.cc-list-tools');
-    if (tools) tools.prepend(note); else meta.appendChild(note);
-  }
-
   function init() {
-    addP2Hint();
     const tbody = document.querySelector('#tabela-lancamentos');
     if (tbody) {
-      new MutationObserver(() => { addP2Hint(); scheduleRefresh(); })
+      new MutationObserver(scheduleRefresh)
         .observe(tbody, { childList:true, subtree:true });
     }
     scheduleRefresh();

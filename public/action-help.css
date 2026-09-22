@@ -1,0 +1,26 @@
+/* Preserve the suite palette while making keyboard position unambiguous. */
+:is(button, a[href], input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #005bea !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 2px #fff !important;
+}
+.topbar :focus-visible, .sidebar :focus-visible, html.dark :focus-visible {
+  outline-color: #8ec5ff !important;
+  box-shadow: 0 0 0 2px #122036 !important;
+}
+.action-tooltip {
+  position: fixed; z-index: 100000; max-width: min(320px, calc(100vw - 16px));
+  padding: 8px 12px; border: 1px solid #718096; border-radius: 6px;
+  background: #122036; color: #fff; font: 13px/1.45 system-ui, sans-serif;
+  box-shadow: 0 3px 10px #12203633; overflow-wrap: anywhere;
+}
+.action-tooltip[hidden] { display: none; }
+.center-card-footer { gap: 12px; flex-wrap: wrap; }
+.closing-remove { width: auto; min-width: 64px; }
+@media (max-width: 800px), (pointer: coarse) {
+  button, a.btn, label.btn, [role="button"] { min-height: 44px !important; min-width: 44px !important; }
+  .row-actions { gap: 8px; flex-wrap: wrap; }
+  .profile-trigger { max-width: 100%; }
+  .profile-menu { max-width: calc(100vw - 24px); }
+}
+@media print { .action-tooltip { display: none !important; } }

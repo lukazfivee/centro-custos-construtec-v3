@@ -11,12 +11,33 @@ const { initializeDatabase, closeDatabase, getDb, getInstanceIdentity } = requir
 const { observability } = require('./middleware/observability');
 const logger = require('./lib/logger');
 
-function createApp() {
+function rawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+function createApp({ orcamentosApp } = {}) {
   const app = express();
   app.disable('x-powered-by');
   app.set('etag', 'strong');
+  app.use((req, res, next) => {
+    const origin = req.get('origin');
+    if (origin && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+    next();
+  });
   app.use(observability);
-  app.use(express.json({ limit:process.env.JSON_BODY_LIMIT || '110mb', strict:true }));
+  app.use(express.json({
+    limit:process.env.JSON_BODY_LIMIT || '110mb',
+    strict:true,
+    verify: (req, _res, buf) => { req.rawBody = buf; },
+  }));
 
   app.get('/api/health/live', (req, res) => {
     res.json({ status:'ok', service:'centro-custos', uptimeSeconds:Math.round(process.uptime()) });
@@ -63,6 +84,8 @@ function createApp() {
   app.use('/api/usuarios', require('./routes/users'));
   app.use('/api/centros-custo', require('./routes/costCenters'));
   app.use('/api/notas-fiscais-centro', require('./routes/costCenterInvoices'));
+  app.use('/api/centros-custo', require('./routes/costCenterProposals'));
+  app.use('/api/centros-custo', require('./routes/costCenterInvoicesLedger'));
   app.use('/api/categorias', require('./routes/categories'));
   app.use('/api/fornecedores', require('./routes/suppliers'));
   app.use('/api/historico', require('./routes/history'));
@@ -74,6 +97,7 @@ function createApp() {
   app.use('/api/dashboard', require('./routes/dashboard'));
   app.use('/api/sincronizacao', require('./routes/sync'));
   app.use('/api/sincronizacao-inteligente', require('./routes/smartSync'));
+  app.use('/api/integracao/orcamentos', require('./routes/integracaoOrcamentos'));
   app.use('/api/cloud-sync', require('./routes/cloudSync'));
   app.use('/api/backup', require('./routes/backup'));
   app.use('/api/backup-automatico', require('./routes/backupAuto'));
@@ -83,25 +107,55 @@ function createApp() {
   app.use('/api/recorrentes', require('./routes/recurring'));
   app.use('/api/update', require('./routes/update'));
   app.use('/api/bug-reports', require('./routes/bugReports'));
+  app.use('/api/jobs', require('./routes/jobs'));
   app.use('/api/appearance', require('./routes/appearance'));
   app.use('/api/sistema', require('./routes/system'));
 
+  const CHAMADOPRO_URL = process.env.CHAMADOPRO_URL || 'http://127.0.0.1:4555';
+  const ORCAMENTOS_API_URL = process.env.ORCAMENTOS_API_URL || 'http://127.0.0.1:5176';
+  const ORCAMENTOS_RENDERER_DIR = path.join(__dirname, 'modules', 'orcamentos');
+
+  async function proxyPass(req, res, baseUrl, stripHeaders) {
+    try {
+      const target = `${baseUrl}${req.url}`;
+      const headers = { ...req.headers, host: new URL(baseUrl).host };
+      if (stripHeaders) { delete headers['x-frame-options']; delete headers['content-security-policy']; }
+      const init = { method: req.method, headers };
+      if (['POST','PUT','PATCH'].includes(req.method)) {
+        if (req.rawBody?.length) {
+          init.body = req.rawBody;
+          delete headers['content-length'];
+        } else if (req.body !== undefined) {
+          init.body = JSON.stringify(req.body);
+          delete headers['content-length'];
+        } else init.body = await rawBody(req);
+      }
+      const resp = await fetch(target, init);
+      for (const [k, v] of resp.headers) {
+        const lk = k.toLowerCase();
+        if (stripHeaders && (lk === 'x-frame-options' || lk === 'content-security-policy')) continue;
+        if (lk === 'transfer-encoding') continue;
+        res.setHeader(k, v);
+      }
+      res.status(resp.status);
+      const { Readable } = require('stream');
+      Readable.fromWeb(resp.body).pipe(res);
+    } catch (err) {
+      res.status(502).json({ erro: 'Serviço indisponível', detalhe: err.message });
+    }
+  }
+
+  app.use('/chamados-proxy', (req, res) => proxyPass(req, res, CHAMADOPRO_URL, true));
+  if (orcamentosApp) app.use('/orcamentos-api', orcamentosApp);
+  else app.use('/orcamentos-api', (req, res) => proxyPass(req, res, ORCAMENTOS_API_URL, false));
+  app.use('/orcamentos', express.static(ORCAMENTOS_RENDERER_DIR, { index:'index.html', etag:true }));
+  app.get('/orcamentos/*', (req, res) => res.sendFile(path.join(ORCAMENTOS_RENDERER_DIR, 'index.html')));
+
   const publicDir = path.join(__dirname, 'public');
   const indexPath = path.join(publicDir, 'index.html');
-  let indexHtml = fs.readFileSync(indexPath, 'utf8');
-  if (!indexHtml.includes('v3-1-enhancements.css')) indexHtml = indexHtml.replace('</head>', '  <link rel="stylesheet" href="v3-1-enhancements.css">\n</head>');
-  if (!indexHtml.includes('v3-1-refinements.css')) indexHtml = indexHtml.replace('</head>', '  <link rel="stylesheet" href="v3-1-refinements.css">\n</head>');
-  if (!indexHtml.includes('v3-1-figma.css')) indexHtml = indexHtml.replace('</head>', '  <link rel="stylesheet" href="v3-1-figma.css">\n</head>');
-  if (!indexHtml.includes('report-v2.js')) indexHtml = indexHtml.replace('</body>', '  <script src="report-v2.js"></script>\n</body>');
-  if (!indexHtml.includes('cloud-sync.js')) indexHtml = indexHtml.replace('</body>', '  <script src="cloud-sync.js"></script>\n</body>');
-  if (!indexHtml.includes('v3-1-enhancements.js')) indexHtml = indexHtml.replace('</body>', '  <script src="v3-1-enhancements.js"></script>\n</body>');
-  if (!indexHtml.includes('v3-1-refinements.js')) indexHtml = indexHtml.replace('</body>', '  <script src="v3-1-refinements.js"></script>\n</body>');
-  if (!indexHtml.includes('v3-1-invoices.js')) indexHtml = indexHtml.replace('</body>', '  <script src="v3-1-invoices.js"></script>\n</body>');
-  if (!indexHtml.includes('report-consent.js')) indexHtml = indexHtml.replace('</body>', '  <script src="report-consent.js"></script>\n</body>');
-
   const sendIndex = (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
-    res.type('html').send(indexHtml);
+    res.sendFile(indexPath);
   };
 
   app.get('/', sendIndex);
@@ -113,7 +167,14 @@ function createApp() {
     },
   }));
 
-  app.use('/api', (req, res) => res.status(404).json({ erro:'Rota da API não encontrada.', requestId:req.requestId }));
+  // Embedded Orçamentos uses relative /api URLs; proxy only requests coming from that renderer.
+  app.use('/api', (req, res) => {
+    if (req.get('referer')?.includes('/orcamentos/')) {
+      req.url = `/api${req.url}`;
+      return proxyPass(req, res, ORCAMENTOS_API_URL, false);
+    }
+    return res.status(404).json({ erro:'Rota da API não encontrada.', requestId:req.requestId });
+  });
   app.get('*', sendIndex);
 
   app.use((error, req, res, next) => {
@@ -154,7 +215,7 @@ function positiveEnv(name, fallback) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-async function start() {
+async function start(options = {}) {
   const t0 = Date.now();
   const secret = process.env.JWT_SECRET || '';
   if (secret.length < 32) throw new Error('Defina JWT_SECRET no .env com pelo menos 32 caracteres.');
@@ -164,7 +225,7 @@ async function start() {
   const port = Number(process.env.PORT || 3333);
   const host = process.env.HOST || '127.0.0.1';
   let server;
-  const app = createApp();
+  const app = createApp(options);
   const t3 = Date.now();
   try {
     server = await new Promise((resolve, reject) => {
@@ -181,8 +242,10 @@ async function start() {
 
   const { startAutoBackup, stopAutoBackup } = require('./services/autoBackup');
   const { startReportDelivery, stopReportDelivery } = require('./services/reportDelivery');
+  const { startJobRunner } = require('./lib/jobs');
   startAutoBackup();
   startReportDelivery();
+  await startJobRunner();
 
   const t4 = Date.now();
   logger.info('application_started', { performanceMs:{env:t1-t0,database:t2-t1,app:t3-t2,listen:t4-t3,total:t4-t0}, databaseMode:info.mode, instance:info.instance.name, host, port, reportDeliveryConfigured:Boolean(process.env.REPORT_API_URL), cloudSyncConfigured:Boolean(process.env.SYNC_API_URL) });
@@ -208,6 +271,7 @@ async function start() {
     });
   }
   app.locals.requestShutdown = () => shutdown('requested_by_application');
+  await require('./lib/localControl').registerControl('centro-custos', app.locals.requestShutdown);
   process.once('SIGINT', () => shutdown('SIGINT'));
   process.once('SIGTERM', () => shutdown('SIGTERM'));
   process.on('unhandledRejection', (error) => logger.error('unhandled_rejection', { error }));

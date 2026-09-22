@@ -3,19 +3,39 @@ const crypto = require('crypto');
 const { getDb } = require('../db');
 const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
+const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(autenticar);
 
+const CATEGORIES_SELECT = `
+  SELECT c.id,c.name AS nome,c.type AS tipo,c.active AS ativo,c.revision,COUNT(t.id) AS total_lancamentos
+  FROM categories c LEFT JOIN transactions t ON t.category_id=c.id AND t.deleted_at IS NULL`;
+
 router.get('/', asyncRoute(async (req, res) => {
-  const { rows } = await getDb().query(`
-    SELECT c.id,c.name AS nome,c.type AS tipo,c.active AS ativo,c.revision,COUNT(t.id) AS total_lancamentos
-    FROM categories c LEFT JOIN transactions t ON t.category_id=c.id AND t.deleted_at IS NULL
-    GROUP BY c.id ORDER BY c.active DESC,c.type,c.name
-  `);
-  res.json(rows);
+  const orderBy = 'c.active DESC,c.type,c.name';
+  const { where, values } = buildSearchFilter(req.query);
+  if (!wantsPagination(req.query)) {
+    const { rows } = await getDb().query(`${CATEGORIES_SELECT} ${where} GROUP BY c.id ORDER BY ${orderBy} LIMIT 500`, values);
+    res.setHeader('X-Result-Limit', '500');
+    return res.json(rows);
+  }
+  const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
+  const [dataResult, countResult] = await Promise.all([
+    getDb().query(`${CATEGORIES_SELECT} ${where} GROUP BY c.id ORDER BY ${orderBy} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, limit, offset]),
+    getDb().query(`SELECT COUNT(*)::int AS total FROM categories c ${where}`, values),
+  ]);
+  const total = Number(countResult.rows[0]?.total || 0);
+  res.setHeader('X-Total-Count', String(total));
+  return res.json({ itens: dataResult.rows, paginacao: paginationMeta(total, page, limit) });
 }));
+
+function buildSearchFilter(query) {
+  if (!query.busca || !String(query.busca).trim()) return { where: '', values: [] };
+  const search = `%${String(query.busca).trim().slice(0, 100)}%`;
+  return { where: 'WHERE c.name ILIKE $1', values: [search] };
+}
 
 router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
   const data = validate(req.body);

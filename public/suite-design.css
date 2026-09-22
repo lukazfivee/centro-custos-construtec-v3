@@ -1,0 +1,110 @@
+/* Proporções da suíte: referência Construtec Orçamentos/src/index.css. */
+:root { --navy:#122036; --navy-2:#1b2c45; --line-strong:#cfd5de; font-synthesis:none; text-rendering:optimizeLegibility; }
+.topbar .brand-symbol-mobile { width:22px!important; height:22px!important; object-fit:contain; }
+.topbar .brand span { margin:0!important; max-width:none; }
+.topbar-search input:disabled { background:transparent!important; border:0!important; box-shadow:none!important; min-height:0; padding:0; border-radius:0; }
+.topbar-search input::placeholder { color:#c9d1dc; }
+.topbar .icon-button, .topbar #topbar-theme-toggle { display:inline-grid!important; place-items:center; padding:0!important; border:1px solid transparent!important; border-radius:5px!important; }
+.topbar .icon-button:hover, .topbar .icon-button:focus-visible { border-color:white!important; box-shadow:none!important; }
+.topbar #topbar-theme-toggle:hover,
+.topbar #topbar-theme-toggle:focus-visible {
+  background:#233147!important;
+  border-color:#fff!important;
+}
+.profile-menu { max-width:calc(100vw - 28px); }
+.profile-menu-head > div:last-child { min-width:0; overflow-wrap:anywhere; }
+.login-logo { width:min(300px,100%)!important; height:auto!important; max-height:none!important; object-fit:contain!important; }
+.mobile-brand img { width:min(240px,100%); height:auto; object-fit:contain; }
+.page-head h1 { font-size:24px; letter-spacing:-.025em; }
+.page-head { align-items:center; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+.panel, .center-card, .table-card, .filter-bar { border-radius:6px!important; box-shadow:none!important; }
+.panel { padding:20px; }
+.panel h2 { font-size:16px; }
+.dashboard-grid { gap:20px; }
+/* Divisórias de células no mesmo padrão do Orçamentos. */
+@media screen {
+  table { border-collapse:collapse; }
+  table > :is(thead,tbody,tfoot) > tr > :is(th,td) {
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  table > :is(thead,tbody,tfoot) > tr > :is(th,td):last-child { border-right:0; }
+}
+.kpi-grid { gap:12px; }
+.kpi { padding:16px 18px; min-height:112px; border-width:1px; border-radius:6px; box-shadow:none!important; }
+.kpi strong { font-size:24px; letter-spacing:-.025em; }
+.kpi strong { color:var(--ink)!important; font-weight:750; font-variant-numeric:tabular-nums; }
+.kpi {
+  --kpi-accent:var(--blue); --kpi-tint:#eef4ff;
+  position:relative; display:grid; grid-template-columns:64px minmax(0,1fr);
+  grid-template-rows:auto auto auto; column-gap:16px; align-content:center;
+  border-left:4px solid var(--blue); border-radius:12px!important;
+  background:var(--white); padding:18px 18px 18px 14px;
+}
+.kpi > .kpi-icon {
+  display:grid; position:static; grid-column:1; grid-row:1 / 4;
+  align-self:center; place-items:center; margin:0;
+  width:60px; height:60px; border-radius:11px; background:var(--kpi-tint);
+}
+.kpi-icon svg { width:28px; height:28px; fill:none; stroke:var(--kpi-accent); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.kpi p, .kpi strong, .kpi > span:not(.kpi-icon) { grid-column:2; }
+.kpi p { grid-row:1; margin:0 0 3px; font-weight:700; color:var(--muted); }
+.kpi strong { grid-row:2; }
+.kpi > span:not(.kpi-icon) { grid-row:3; }
+/* Cor comunica natureza financeira; os valores permanecem neutros. */
+.kpi.revenue, .kpi.pending { --kpi-accent:var(--green); --kpi-tint:#edf8f0; }
+.kpi.expense, .kpi.overdue { --kpi-accent:var(--red); --kpi-tint:#fff0f1; }
+.kpi:has(#kpi-vencidos) { --kpi-accent:#956000; --kpi-tint:#fff5db; }
+.kpi { border-left-color:var(--kpi-accent)!important; }
+html.dark .kpi { --kpi-tint:#263955; }
+html.dark .kpi.revenue, html.dark .kpi.pending { --kpi-tint:#183a2a; }
+html.dark .kpi.expense, html.dark .kpi.overdue { --kpi-tint:#44262d; }
+html.dark .kpi:has(#kpi-vencidos) { --kpi-accent:#ffd078; --kpi-tint:#42341d; }
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .kpi:hover, .center-card:hover, .portfolio-kpi-card:hover, .sync-card:hover {
+    transform:translateY(-2px);
+    box-shadow:0 8px 20px rgba(18,32,54,.12)!important;
+  }
+}
+@media (prefers-reduced-motion:no-preference) {
+  .topbar .icon-button, .topbar #topbar-theme-toggle { transition:transform .12s ease, background-color .12s ease, border-color .12s ease; }
+}
+.filter-bar { gap:8px; padding:12px!important; }
+.btn { font-size:12px; min-height:36px; padding:0 14px; border-radius:6px; }
+input, select, textarea { border-radius:5px; }
+.modal { border-radius:8px!important; }
+.budget-kpi-card, .portfolio-kpi-card { border-radius:6px; box-shadow:none; }
+.budget-header-card, html.dark .budget-header-card { background:var(--surface-muted); border-color:var(--line); border-radius:6px; }
+@media(min-width:801px) {
+  html, body { height:100%; overflow:hidden; scrollbar-gutter:auto; }
+  #app.app-shell { display:grid; grid-template:43px minmax(0,1fr) / 118px minmax(0,1fr)!important; height:100dvh; min-height:0; overflow:hidden; }
+  #app .topbar { grid-row:1; height:43px!important; min-height:43px!important; max-height:43px!important; padding:0!important; gap:0!important; box-shadow:none!important; }
+  html.desktop-app #app .topbar { padding-right:138px!important; }
+  .topbar-actions { height:100%; padding:0 12px 0 8px; gap:3px!important; }
+  .topbar .icon-button, .topbar #topbar-theme-toggle { width:34px!important; min-width:34px!important; height:32px!important; min-height:32px!important; }
+  .topbar .btn-suite-topbar { height:28px!important; min-height:28px!important; }
+  .topbar .profile-trigger { height:34px; }
+  .topbar .profile-trigger > span:first-child { width:27px!important; height:27px!important; font-size:10px; }
+  .topbar .profile-trigger b { font-size:11.5px!important; font-weight:500!important; }
+  #app .sidebar { position:relative!important; top:0!important; height:100%!important; width:118px!important; min-width:118px!important; max-width:118px!important; padding:0!important; background:#122036!important; }
+  #app .sidebar nav { padding:10px 0 0!important; }
+  #app .sidebar nav .nav-item { flex:0 0 82px; height:82px!important; min-height:82px!important; padding:8px!important; gap:7px!important; color:#b8c3d3!important; }
+  #app .sidebar nav .nav-item span { width:auto; font-size:12px!important; line-height:1.25!important; }
+  #app .sidebar nav .nav-item:hover { background:#182941!important; color:white!important; }
+  #app .sidebar nav .nav-item.ativo { background:#1b2c45!important; color:white!important; }
+  #app .main { grid-column:2; grid-row:2; height:100%!important; min-height:0; padding:24px 26px!important; overflow:auto!important; background:var(--white); }
+  #app input, #app select { min-height:38px; font-size:12px; }
+  #app .topbar-search input { min-height:0; }
+  .topbar-search { flex:0 1 420px; width:min(420px,34vw); }
+}
+@media(max-width:1100px) and (min-width:801px) {
+  .topbar-status { display:none!important; }
+  .topbar-search { min-width:0; margin:0 12px; }
+}
+@media(max-width:800px) {
+  #app .topbar { height:60px!important; min-height:60px!important; max-height:60px!important; }
+  .topbar-status { display:none!important; }
+  .topbar .icon-button, .topbar #topbar-theme-toggle { width:44px!important; min-width:44px!important; height:44px!important; min-height:44px!important; }
+  .page-head h1 { font-size:22px; }
+  .mobile-brand { justify-content:center; }
+}

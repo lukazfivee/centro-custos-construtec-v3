@@ -1,0 +1,200 @@
+/* ==========================================================================
+   Cockpit Executivo Consolidado da Carteira de Obras (Multi-Obras)
+   Construtec Centro de Custos v3
+   ========================================================================== */
+
+.portfolio-cockpit {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+html.dark .portfolio-cockpit {
+  background: #0f172a;
+  border-color: #334155;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.portfolio-cockpit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+html.dark .portfolio-cockpit-header {
+  border-color: #1e293b;
+}
+
+.portfolio-cockpit-title h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+html.dark .portfolio-cockpit-title h2 {
+  color: #f8fafc;
+}
+
+.portfolio-cockpit-title p {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+html.dark .portfolio-cockpit-title p {
+  color: #94a3b8;
+}
+
+.portfolio-badge-pill {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+html.dark .portfolio-badge-pill {
+  background: rgba(2, 132, 199, 0.15);
+  color: #38bdf8;
+  border-color: #0369a1;
+}
+
+/* Grid de KPIs Consolidados */
+.portfolio-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.portfolio-kpi-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+html.dark .portfolio-kpi-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.portfolio-kpi-card span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+html.dark .portfolio-kpi-card span {
+  color: #94a3b8;
+}
+
+.portfolio-kpi-card strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+html.dark .portfolio-kpi-card strong {
+  color: #f8fafc;
+}
+
+.portfolio-kpi-card.highlight strong {
+  color: #0284c7;
+}
+
+html.dark .portfolio-kpi-card.highlight strong {
+  color: #38bdf8;
+}
+
+.portfolio-kpi-card.good strong {
+  color: #059669;
+}
+
+html.dark .portfolio-kpi-card.good strong {
+  color: #34d399;
+}
+
+.portfolio-kpi-card.danger strong {
+  color: #dc2626;
+}
+
+html.dark .portfolio-kpi-card.danger strong {
+  color: #f87171;
+}
+
+/* Barra de Alerta e Termômetro de Risco */
+.portfolio-risk-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+html.dark .portfolio-risk-alert {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: #991b1b;
+  color: #fca5a5;
+}
+
+.portfolio-risk-ok {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+html.dark .portfolio-risk-ok {
+  background: rgba(5, 150, 105, 0.15);
+  border-color: #065f46;
+  color: #6ee7b7;
+}
+
+/* Estado de Falha ao Carregar o Cockpit */
+.portfolio-cockpit-error {
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  margin-bottom: 24px;
+}
+
+.portfolio-cockpit-error strong { color: #991b1b; }
+.portfolio-cockpit-error span { font-size: 0.76rem; color: #b91c1c; }
+
+html.dark .portfolio-cockpit-error {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: #991b1b;
+  color: #fca5a5;
+}
+
+html.dark .portfolio-cockpit-error strong { color: #fca5a5; }
+html.dark .portfolio-cockpit-error span { color: #fda4af; }

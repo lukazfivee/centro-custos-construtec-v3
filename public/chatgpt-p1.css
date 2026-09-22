@@ -12,6 +12,15 @@
   box-shadow: 0 1px 0 var(--line);
 }
 
+#tabela-lancamentos tr[data-transaction-id] {
+  cursor: pointer;
+}
+
+#tabela-lancamentos tr[data-transaction-id]:focus-visible {
+  outline: 3px solid rgba(50, 169, 205, .35);
+  outline-offset: -2px;
+}
+
 .cc-list-tools {
   display: flex;
   align-items: center;
@@ -55,8 +64,8 @@
 
 .cc-sort-direction:hover,
 .cc-page-button:hover:not(:disabled) {
-  border-color: var(--orange);
-  color: var(--orange-dark);
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 .cc-sort-direction:focus-visible,
@@ -126,7 +135,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid var(--line);
-  border-top-color: var(--orange);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: cc-spin .75s linear infinite;
 }
@@ -147,7 +156,7 @@ html.dark .cc-pagination {
   color: var(--ink);
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1000px) {
   #view-lancamentos .table-scroll {
     max-height: none;
   }
@@ -163,7 +172,7 @@ html.dark .cc-pagination {
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 800px) {
   #view-lancamentos .table-meta {
     align-items: flex-start;
     flex-direction: column;

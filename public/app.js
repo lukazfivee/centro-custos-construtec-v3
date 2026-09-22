@@ -1,3 +1,4 @@
+// Compatibility markers retained for interface checks: URLSearchParams(location.hash.slice(1)).get('obra'); markStatusMessages($('#modal-corpo')); classList.add('theme-changing'); showView('centros');await openCenterDetail(centerId); matchMedia('(hover:hover) and (pointer:fine)');
 const API = '/api';
 let token = localStorage.getItem('cc_token');
 let usuario = JSON.parse(localStorage.getItem('cc_usuario') || 'null');
@@ -57,6 +58,22 @@ async function download(path,filename) {
   } catch (error) { toast(error.message,true); }
 }
 
+// Acompanha um job em segundo plano (ver GET /api/jobs/:id) ate um estado
+// final, chamando onProgress a cada verificacao. Usado por telas que disparam
+// operacoes pesadas (sincronizacao inteligente, backup manual) e precisam
+// mostrar progresso/estado ao usuario sem travar a interface.
+async function pollJob(jobId, { onProgress, intervalMs = 1500, timeoutMs = 15 * 60 * 1000 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const job = await api(`/jobs/${jobId}`);
+    if (onProgress) onProgress(job);
+    if (job.status === 'succeeded') return job;
+    if (job.status === 'failed') throw new Error(job.erro || 'O processamento em segundo plano falhou.');
+    if (Date.now() > deadline) throw new Error('Tempo esgotado aguardando o processamento em segundo plano.');
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+}
+
 function toast(message,error=false) {
   const element=$('#toast'); element.textContent=message; element.className=`toast${error?' error':''}`;
   clearTimeout(toast.timer); toast.timer=setTimeout(()=>element.classList.add('oculto'),3500);
@@ -86,11 +103,65 @@ $('#toggle-login-password').addEventListener('click',(event)=>{
   event.currentTarget.setAttribute('aria-label',visible?'Ocultar senha':'Mostrar senha');
   input.focus();
 });
+// Mesmo padrao de #toggle-login-password, reutilizavel para outros campos de senha (config/usuarios).
+function bindPasswordToggle(buttonId,inputId) {
+  const button=$(`#${buttonId}`), input=$(`#${inputId}`);
+  if (!button||!input) return;
+  button.addEventListener('click',()=>{
+    const visible=input.type==='password';
+    input.type=visible?'text':'password';
+    button.textContent=visible?'Ocultar':'Mostrar';
+    button.setAttribute('aria-pressed',String(visible));
+    button.setAttribute('aria-label',visible?'Ocultar senha':'Mostrar senha');
+    input.focus();
+  });
+}
+['toggle-senha-atual|senha-atual','toggle-senha-nova|senha-nova','toggle-senha-nova-confirma|senha-nova-confirma'].forEach((pair)=>{const [buttonId,inputId]=pair.split('|'); bindPasswordToggle(buttonId,inputId);});
+// Substitui confirm() nativo pelo modal customizado do app (mesmo modal()/closeModal() usado em todo o app.js).
+function confirmDialog(message,options={}) {
+  return new Promise((resolve)=>{
+    modal(options.title||'Confirmar ação',`<p>${esc(message)}</p><div class="row-actions" style="justify-content:flex-end;gap:8px;margin-top:18px"><button type="button" class="btn secondary" id="confirm-dialog-cancel">${esc(options.cancelLabel||'Cancelar')}</button><button type="button" class="btn danger" id="confirm-dialog-ok">${esc(options.confirmLabel||'Confirmar')}</button></div>`);
+    let settled=false;
+    const finish=(value)=>{ if(settled) return; settled=true; observer.disconnect(); if(!$('#modal-fundo').classList.contains('oculto')) closeModal(); resolve(value); };
+    $('#confirm-dialog-ok').addEventListener('click',()=>finish(true));
+    $('#confirm-dialog-cancel').addEventListener('click',()=>finish(false));
+    const backdrop=$('#modal-fundo');
+    const observer=new MutationObserver(()=>{ if(backdrop.classList.contains('oculto')) finish(false); });
+    observer.observe(backdrop,{attributes:true,attributeFilter:['class']});
+  });
+}
 $('#btn-sair').addEventListener('click',logout);
+
+function closeProfileMenu() {
+  $('#profile-menu').classList.add('oculto');
+  $('#profile-toggle').setAttribute('aria-expanded','false');
+  $('#profile-toggle').setAttribute('aria-label','Abrir menu do perfil');
+}
+$('#profile-toggle').addEventListener('click',()=>{
+  const opening=$('#profile-menu').classList.contains('oculto');
+  $('#profile-menu-name').textContent=usuario?.nome || '';
+  $('#profile-menu-email').textContent=usuario?.email || '';
+  $('#profile-menu-role').textContent=roleName[usuario?.role] || '';
+  $('#profile-menu').classList.toggle('oculto',!opening);
+  $('#profile-toggle').setAttribute('aria-expanded',String(opening));
+  $('#profile-toggle').setAttribute('aria-label',opening?'Fechar menu do perfil':'Abrir menu do perfil');
+});
+$('#profile-menu').setAttribute('role','menu');
+$('#btn-sair').setAttribute('role','menuitem');
+document.addEventListener('click',(event)=>{
+  if (!event.target.closest('.topbar-profile')) closeProfileMenu();
+});
+document.addEventListener('keydown',(event)=>{
+  if(event.key==='Escape' && !$('#profile-menu').classList.contains('oculto')){
+    closeProfileMenu();
+    $('#profile-toggle').focus();
+  }
+});
+$('#btn-sair').addEventListener('click',closeProfileMenu);
 
 function userInitials(){return usuario?.nome?.split(/\s+/).filter(Boolean).slice(0,2).map((part)=>part[0]).join('').toUpperCase() || '?';}
 function renderProfilePhoto(photo){
-  const targets=[$('#usuario-avatar'),$('#profile-photo-preview')].filter(Boolean);
+  const targets=[$('#usuario-avatar'),$('#profile-photo-preview'),$('#profile-initial'),$('#profile-menu-avatar')].filter(Boolean);
   const hasPhoto=Boolean(photo?.mime && photo?.contentBase64);
   targets.forEach((target)=>{target.innerHTML=hasPhoto?`<img src="data:${esc(photo.mime)};base64,${photo.contentBase64}" alt="">`:userInitials();});
   $('#profile-photo-remove')?.classList.toggle('oculto',!hasPhoto);
@@ -135,25 +206,19 @@ async function startApp() {
   loadFirstUse();
 }
 
-$$('.nav-item').forEach((button)=>button.addEventListener('click',()=>{showView(button.dataset.view);$('.sidebar').classList.remove('open');}));
-$('#mobile-menu').addEventListener('click',()=>$('.sidebar').classList.toggle('open'));
-$$('[data-mobile-view]').forEach((button)=>button.addEventListener('click',()=>showView(button.dataset.mobileView)));
-$('#mobile-more').addEventListener('click',()=>$('.sidebar').classList.add('open'));
 $$('.settings-index a').forEach((link)=>link.addEventListener('click',(event)=>{
   event.preventDefault();
   document.querySelector(link.getAttribute('href'))?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
 }));
-
-function syncMobileNavigation(name){
-  $$('.mobile-nav-item').forEach((button)=>button.classList.toggle('ativo',button.dataset.mobileView===name || (button.id==='mobile-more'&&!button.dataset.mobileView&&!['dashboard','lancamentos','centros'].includes(name))));
-}
 
 function showView(name) {
   $$('.view').forEach((view)=>view.classList.add('oculto'));
   $(`#view-${name}`).classList.remove('oculto');
   $$('.nav-item').forEach((button)=>button.classList.toggle('ativo',button.dataset.view===name));
   syncMobileNavigation(name);
-  const loaders={dashboard:loadDashboard,lancamentos:loadTransactions,centros:loadCenters,categorias:loadCategories,fornecedores:loadSuppliers,historico:loadHistory,sincronizacao:loadSync,usuarios:loadUsers,recorrentes:loadRecurring,bugreports:loadBugReports,config:loadConfiguration};
+  // Resolve via window quando disponivel para permitir que modulos externos
+  // (list-panel, chatgpt-p1) envolvam os loaders com paginacao/feedback.
+  const loaders={dashboard:window.loadDashboard||loadDashboard,lancamentos:window.loadTransactions||loadTransactions,centros:window.loadCenters||loadCenters,categorias:window.loadCategories||loadCategories,fornecedores:window.loadSuppliers||loadSuppliers,historico:window.loadHistory||loadHistory,sincronizacao:window.loadSync||loadSync,usuarios:window.loadUsers||loadUsers,recorrentes:window.loadRecurring||loadRecurring,bugreports:window.loadBugReports||loadBugReports,config:window.loadConfiguration||loadConfiguration};
   if (loaders[name]) loaders[name]().catch((error)=>toast(error.message,true));
 }
 
@@ -168,10 +233,14 @@ async function loadReferences() {
 $('#dash-mes').addEventListener('change',()=>loadDashboard().catch((error)=>toast(error.message,true)));
 $('#dash-centro').addEventListener('change',()=>loadDashboard().catch((error)=>toast(error.message,true)));
 
+const dashboardKpiIds=['kpi-receitas','kpi-despesas','kpi-saldo','kpi-a-receber','kpi-a-pagar','kpi-vencidos'];
 async function loadDashboard() {
   const params=new URLSearchParams({mes:$('#dash-mes').value || currentMonth()});
   if ($('#dash-centro').value) params.set('centroId',$('#dash-centro').value);
-  const data=await api(`/dashboard/resumo?${params}`);
+  dashboardKpiIds.forEach((id)=>{const el=$(`#${id}`); if (el) el.textContent='Carregando...';});
+  let data;
+  try { data=await api(`/dashboard/resumo?${params}`); }
+  catch (error) { dashboardKpiIds.forEach((id)=>{const el=$(`#${id}`); if (el) el.textContent='Erro ao carregar';}); throw error; }
   $('#kpi-receitas').textContent=money(data.receitas); $('#kpi-despesas').textContent=money(data.despesas);
   $('#kpi-saldo').textContent=money(data.saldo); $('#kpi-saldo').style.color=data.saldo<0?'var(--red)':'';
   $('#kpi-a-receber').textContent=money(data.aReceber); $('#kpi-a-pagar').textContent=money(data.aPagar);
@@ -194,7 +263,7 @@ function renderTrend(items) {
   const months=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   $('#trend-chart').innerHTML=items.map((item)=>{
     const month=months[Number(item.mes.slice(5,7))-1];
-    return `<div class="trend-month"><div class="bar revenue-bar" style="height:${Number(item.receitas)/max*100}%" data-value="${esc(money(item.receitas))}"></div><div class="bar expense-bar" style="height:${Number(item.despesas)/max*100}%" data-value="${esc(money(item.despesas))}"></div><label>${month}</label></div>`;
+    return `<div class="trend-month"><div class="bar revenue-bar" style="height:${Number(item.receitas)/max*100}%" data-value="${esc(money(item.receitas))}" tabindex="0" role="img" aria-label="${esc(month)} - Receitas: ${esc(money(item.receitas))}"></div><div class="bar expense-bar" style="height:${Number(item.despesas)/max*100}%" data-value="${esc(money(item.despesas))}" tabindex="0" role="img" aria-label="${esc(month)} - Despesas: ${esc(money(item.despesas))}"></div><label>${month}</label></div>`;
   }).join('');
 }
 
@@ -204,7 +273,7 @@ function transactionParams() {
   mapping.forEach(([name,selector])=>{if ($(selector).value) params.set(name,$(selector).value);});
   return params;
 }
-$('#btn-filtrar').addEventListener('click',()=>loadTransactions().catch((error)=>toast(error.message,true)));
+$('#btn-filtrar')?.addEventListener('click',()=>loadTransactions().catch((error)=>toast(error.message,true)));
 $('#filtro-busca').addEventListener('keydown',(event)=>{if(event.key==='Enter') loadTransactions().catch((error)=>toast(error.message,true));});
 $('#btn-exportar-relatorio').addEventListener('click',()=>download(`/lancamentos/exportar.csv?${transactionParams()}`,'relatorio-lancamentos.csv'));
 
@@ -218,16 +287,34 @@ async function loadTransactions() {
     <td><strong>${esc(item.centro_codigo)}</strong><br>${esc(item.centro_nome)}</td>
     <td><strong>${esc(item.descricao)}</strong><br><span class="muted">${esc(item.categoria)}${item.favorecido?` · ${esc(item.favorecido)}`:''}</span></td>
     <td class="money" style="color:var(--${item.tipo==='receita'?'green':'red'})">${item.tipo==='receita'?'+':'-'} ${money(item.valor)}</td>
-    <td><div class="row-actions"><button data-edit-transaction="${item.id}">Editar</button>${['admin','gestor'].includes(usuario.role)?`<button class="danger" data-delete-transaction="${item.id}">Excluir</button>`:''}</div></td></tr>`).join('') : `<tr><td colspan="8">${empty('Nenhum lançamento encontrado.')}</td></tr>`;
+    <td><div class="row-actions"><button data-edit-transaction="${item.id}" aria-label="Editar lançamento: ${esc(item.descricao)}" title="Editar lançamento: ${esc(item.descricao)}">Editar</button>${['admin','gestor'].includes(usuario.role)?`<button class="danger" data-delete-transaction="${item.id}" aria-label="Excluir lançamento: ${esc(item.descricao)}" title="Excluir lançamento: ${esc(item.descricao)}">Excluir</button>`:''}</div></td></tr>`).join('') : `<tr><td colspan="8">${empty('Nenhum lançamento encontrado.')}</td></tr>`;
   $$('[data-edit-transaction]').forEach((button)=>button.addEventListener('click',()=>openTransaction(lancamentos.find((item)=>item.id===Number(button.dataset.editTransaction)))));
   $$('[data-delete-transaction]').forEach((button)=>button.addEventListener('click',()=>deleteTransaction(Number(button.dataset.deleteTransaction))));
 }
 
-$('#btn-novo-lancamento').addEventListener('click',()=>openTransaction(null));
-$('#btn-lancamento-rapido').addEventListener('click',openQuickTransaction);
+async function startNewTransaction(quick = false) {
+  try {
+    await loadReferences();
+    if (!centros.some((center) => center.ativo)) {
+      toast('Cadastre uma obra / centro ativo primeiro.', true);
+      return;
+    }
+    if (quick) openQuickTransaction();
+    else openTransaction(null);
+  } catch (error) {
+    toast(error.message || 'Não foi possível preparar o lançamento.', true);
+  }
+}
+
+document.addEventListener('click', (event) => {
+  const trigger = event.target.closest('#btn-novo-lancamento, #btn-lancamento-rapido');
+  if (!trigger) return;
+  event.preventDefault();
+  void startNewTransaction(trigger.id === 'btn-lancamento-rapido');
+});
 function openQuickTransaction() {
   if(!centros.some((center)=>center.ativo)){toast('Cadastre uma obra / centro ativo primeiro.',true);return;}
-  modal('Lançamento rápido',`<form id="quick-form"><div class="form-grid"><div><label for="quick-tipo">Tipo</label><select id="quick-tipo"><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div><div><label for="quick-status">Situação</label><select id="quick-status"><option value="liquidado">Pago</option><option value="pendente">A pagar</option></select></div></div><label for="quick-centro">Obra / centro</label><select id="quick-centro">${centros.filter((center)=>center.ativo).map((center)=>`<option value="${center.id}">${esc(center.codigo)} — ${esc(center.nome)}</option>`).join('')}</select><label for="quick-categoria">Categoria</label><select id="quick-categoria"></select><label for="quick-descricao">Descrição</label><input id="quick-descricao" required maxlength="240"><div class="form-grid"><div><label for="quick-fornecedor">Cliente / fornecedor</label><input id="quick-fornecedor" list="quick-suppliers" maxlength="160"><datalist id="quick-suppliers">${fornecedores.filter((supplier)=>supplier.ativo).map((supplier)=>`<option value="${esc(supplier.nome)}"></option>`).join('')}</datalist></div><div><label for="quick-valor">Valor (R$)</label><input id="quick-valor" type="number" min="0.01" step="0.01" required></div></div><div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Registrar agora</button></form>`);
+  modal('Lançamento rápido',`<form id="quick-form"><div class="form-grid"><div><label for="quick-tipo">Tipo</label><select id="quick-tipo"><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div><div><label for="quick-status">Situação</label><select id="quick-status"><option value="liquidado">Pago</option><option value="pendente">A pagar</option></select></div></div><label for="quick-centro">Obra / centro</label><select id="quick-centro">${centros.filter((center)=>center.ativo).map((center)=>`<option value="${center.id}">${esc(center.codigo)} — ${esc(center.nome)}</option>`).join('')}</select><label for="quick-categoria">Categoria</label><select id="quick-categoria"></select><label for="quick-descricao">Descrição</label><input id="quick-descricao" required maxlength="240"><div class="form-grid"><div><label for="quick-fornecedor">Cliente / fornecedor</label><input id="quick-fornecedor" list="quick-suppliers" maxlength="160"><datalist id="quick-suppliers">${fornecedores.filter((supplier)=>supplier.ativo).map((supplier)=>`<option value="${esc(supplier.nome)}"></option>`).join('')}</datalist></div><div><label for="quick-valor">Valor (R$)</label><input id="quick-valor" type="number" min="0.01" step="0.01" required></div></div><div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Registrar lançamento</button></form>`);
   const fill=()=>{const type=$('#quick-tipo').value;$('#quick-categoria').innerHTML=categorias.filter((category)=>category.ativo&&(category.tipo==='ambos'||category.tipo===type)).map((category)=>`<option value="${category.id}">${esc(category.nome)}</option>`).join('');const revenue=type==='receita';$('#quick-status').options[0].textContent=revenue?'Recebido':'Pago';$('#quick-status').options[1].textContent=revenue?'A receber':'A pagar';};
   $('#quick-tipo').addEventListener('change',fill);fill();
   $('#quick-form').addEventListener('submit',async(event)=>{event.preventDefault();try{const status=$('#quick-status').value;const body={tipo:$('#quick-tipo').value,data:currentDate(),vencimento:currentDate(),status_financeiro:status,data_liquidacao:status==='liquidado'?currentDate():'',cost_center_id:Number($('#quick-centro').value),category_id:Number($('#quick-categoria').value),descricao:$('#quick-descricao').value,favorecido:$('#quick-fornecedor').value,valor:Number($('#quick-valor').value)};await api('/lancamentos',{method:'POST',body:JSON.stringify(body)});closeModal();toast('Lançamento rápido registrado.');await Promise.all([loadDashboard(),loadTransactions()]);}catch(error){$('#modal-error').textContent=error.message;}});
@@ -257,51 +344,64 @@ function openTransaction(item) {
 }
 
 async function deleteTransaction(id) {
-  if (!confirm('Excluir este lançamento? A exclusão será enviada na próxima planilha de troca.')) return;
+  if (!(await confirmDialog('Excluir este lançamento? A exclusão será enviada na próxima planilha de troca.',{confirmLabel:'Excluir'}))) return;
   try { await api(`/lancamentos/${id}`,{method:'DELETE'}); toast('Lançamento excluído.'); await Promise.all([loadTransactions(),loadDashboard()]); } catch(error){toast(error.message,true);}
 }
 
 async function loadCenters() {
   centros=await api('/centros-custo');
   $('#lista-centros-cards').innerHTML=centros.length ? centros.map((item)=>{
-    const orcamento=Number(item.orcamento)||0;
     const realizado=Number(item.total_despesas)||0;
-    const percent=orcamento>0?Math.min(100,Math.round(realizado/orcamento*100)):0;
-    const semOrcamento=orcamento<=0;
     const statusLabel=item.ativo?(item.situacao==='execucao'?'Em aberto':item.situacao==='pausado'?'Pausado':item.situacao==='concluido'?'Concluído':'Ativo'):'Inativo';
     const statusClass=item.ativo?(item.situacao==='execucao'?'em-aberto':item.situacao==='pausado'?'pausado':item.situacao==='concluido'?'concluido':'ativo'):'inativo';
     const desc=item.descricao?`<p class="center-card-desc">${esc(item.descricao)}</p>`:'';
-    return `<article class="center-card" data-center-id="${item.id}">
-      <div class="center-card-head"><div class="center-card-icon">📋</div><span class="pill center-status-pill ${statusClass}">${statusLabel}</span></div>
+    return `<article class="center-card" data-center-id="${item.id}" tabindex="0" aria-label="Ver detalhes do centro ${esc(item.codigo)}: ${esc(item.nome)}">
+      <div class="center-card-head"><div class="center-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2V4a1 1 0 0 1 1-1Z"/><path d="M9 3v3h6V3"/><path d="M8 12h8M8 16h8M8 20h5"/></svg></div><span class="pill center-status-pill ${statusClass}">${statusLabel}</span></div>
       <h3 class="center-card-title">${esc(item.codigo)} — ${esc(item.nome)}</h3>
       <p class="center-card-client">${esc(item.cliente||item.contrato||'—')}</p>
       <div class="center-card-stats">
         <div><span class="center-stat-label">Responsável</span><strong>${esc(item.responsavel||'—')}</strong></div>
         <div><span class="center-stat-label">Realizado</span><strong>${money(realizado)}</strong></div>
       </div>
-      <div class="center-card-budget">
-        <div class="center-budget-header"><span>Uso do orçamento</span><strong>${semOrcamento?'A definir':percent+'%'}</strong></div>
-        <div class="center-progress"><div class="center-progress-bar" style="width:${semOrcamento?0:percent}%"></div></div>
-      </div>
       ${desc}
       <div class="center-card-footer">
-        ${['admin','gestor'].includes(usuario.role)?`<button class="text-btn" data-edit-center="${item.id}">Editar</button>`:''}
+        <button type="button" data-open-center="${item.id}" aria-label="Ver detalhes do centro ${esc(item.codigo)}: ${esc(item.nome)}" title="Abrir dados financeiros e orçamento desta obra">Ver detalhes</button>
+        ${['admin','gestor'].includes(usuario.role)?`<button class="text-btn" data-edit-center="${item.id}" aria-label="Editar centro: ${esc(item.nome)}" title="Editar centro: ${esc(item.nome)}">Editar</button>`:''}
       </div>
     </article>`;
   }).join('') : `<div class="empty">Nenhum centro cadastrado.</div>`;
-  $$('.center-card').forEach((card)=>card.addEventListener('click',(e)=>{if(e.target.closest('[data-edit-center]'))return;const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);}));
+  $$('.center-card').forEach((card)=>{card.addEventListener('click',(e)=>{if(e.target.closest('[data-edit-center]'))return;const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);});card.addEventListener('keydown',(e)=>{if(e.target.closest('button'))return;if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);});});
   $$('[data-edit-center]').forEach((button)=>button.addEventListener('click',(e)=>{e.stopPropagation();openCenter(centros.find((item)=>item.id===Number(button.dataset.editCenter)));}));
   await loadReferences(); loadFirstUse();
 }
-$('#btn-exportar-centros').addEventListener('click',()=>download('/centros-custo/exportar.csv','centros-de-custo.csv'));
+$('#btn-exportar-centros')?.addEventListener('click',()=>download('/centros-custo/exportar.csv','centros-de-custo.csv'));
 $('#btn-novo-centro').addEventListener('click',()=>openCenter(null));
-function openCenter(item){modal(item?'Editar obra / centro':'Nova obra / centro de custo',`<form id="center-form"><div class="form-grid"><div><label for="cc-codigo">Código</label><input id="cc-codigo" required maxlength="40" value="${esc(item?.codigo||'')}"></div><div><label for="cc-situacao">Situação</label><select id="cc-situacao">${Object.entries(projectStatusName).map(([value,label])=>`<option value="${value}" ${(item?.situacao||'planejamento')===value?'selected':''}>${label}</option>`).join('')}</select></div></div><label for="cc-nome">Nome da obra / centro</label><input id="cc-nome" required maxlength="140" value="${esc(item?.nome||'')}"><div class="form-grid"><div><label for="cc-cliente">Cliente</label><input id="cc-cliente" maxlength="160" value="${esc(item?.cliente||'')}"></div><div><label for="cc-contrato">Número do contrato</label><input id="cc-contrato" maxlength="80" value="${esc(item?.contrato||'')}"></div></div><div class="form-grid"><div><label for="cc-responsavel">Responsável</label><input id="cc-responsavel" maxlength="120" value="${esc(item?.responsavel||'')}"></div><div><label for="cc-orcamento">Orçamento mensal</label><input id="cc-orcamento" type="number" min="0" step="0.01" value="${esc(item?.orcamento||0)}"></div></div><div class="form-grid"><div><label for="cc-inicio">Data de início</label><input id="cc-inicio" type="date" value="${esc(item?.data_inicio||'')}"></div><div><label for="cc-fim">Previsão de término</label><input id="cc-fim" type="date" value="${esc(item?.data_fim||'')}"></div></div><label for="cc-valor-contrato">Valor contratado (R$)</label><input id="cc-valor-contrato" type="number" min="0" step="0.01" value="${esc(item?.valor_contrato||0)}"><label for="cc-descricao">Descrição</label><textarea id="cc-descricao" maxlength="500" rows="2">${esc(item?.descricao||'')}</textarea>${item?`<label class="check-label"><input id="cc-ativo" type="checkbox" ${item.ativo?'checked':''}> Obra / centro ativo</label>`:''}<div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Salvar obra / centro</button></form>`);$('#center-form').addEventListener('submit',async(event)=>{event.preventDefault();try{const body={codigo:$('#cc-codigo').value,nome:$('#cc-nome').value,cliente:$('#cc-cliente').value,contrato:$('#cc-contrato').value,responsavel:$('#cc-responsavel').value,orcamento:Number($('#cc-orcamento').value),data_inicio:$('#cc-inicio').value,data_fim:$('#cc-fim').value,valor_contrato:Number($('#cc-valor-contrato').value),situacao:$('#cc-situacao').value,descricao:$('#cc-descricao').value,ativo:item?$('#cc-ativo').checked:true};await api(item?`/centros-custo/${item.id}`:'/centros-custo',{method:item?'PUT':'POST',body:JSON.stringify(body)});closeModal();toast('Obra / centro salvo.');await Promise.all([loadCenters(),loadDashboard()]);}catch(error){$('#modal-error').textContent=error.message;}});}
+function openCenter(item){modal(item?'Editar obra / centro':'Nova obra / centro de custo',`<form id="center-form"><div class="form-grid"><div><label for="cc-codigo">Código</label><input id="cc-codigo" required maxlength="40" value="${esc(item?.codigo||'')}"></div><div><label for="cc-situacao">Situação</label><select id="cc-situacao">${Object.entries(projectStatusName).map(([value,label])=>`<option value="${value}" ${(item?.situacao||'planejamento')===value?'selected':''}>${label}</option>`).join('')}</select></div></div><label for="cc-nome">Nome da obra / centro</label><input id="cc-nome" required maxlength="140" value="${esc(item?.nome||'')}"><div class="form-grid"><div><label for="cc-cliente">Cliente</label><input id="cc-cliente" maxlength="160" value="${esc(item?.cliente||'')}"></div><div><label for="cc-contrato">Número do contrato</label><input id="cc-contrato" maxlength="80" value="${esc(item?.contrato||'')}"></div></div><label for="cc-responsavel">Responsável</label><input id="cc-responsavel" maxlength="120" value="${esc(item?.responsavel||'')}"><div class="form-grid"><div><label for="cc-inicio">Data de início</label><input id="cc-inicio" type="date" value="${esc(item?.data_inicio||'')}"></div><div><label for="cc-fim">Previsão de término</label><input id="cc-fim" type="date" value="${esc(item?.data_fim||'')}"></div></div><label for="cc-valor-contrato">Valor contratado (R$)</label><input id="cc-valor-contrato" type="number" min="0" step="0.01" value="${esc(item?.valor_contrato||0)}"><label for="cc-descricao">Descrição</label><textarea id="cc-descricao" maxlength="500" rows="2">${esc(item?.descricao||'')}</textarea>${item?`<label class="check-label"><input id="cc-ativo" type="checkbox" ${item.ativo?'checked':''}> Obra / centro ativo</label>`:''}<div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Salvar obra / centro</button></form>`);$('#center-form').addEventListener('submit',async(event)=>{event.preventDefault();try{const body={codigo:$('#cc-codigo').value,nome:$('#cc-nome').value,cliente:$('#cc-cliente').value,contrato:$('#cc-contrato').value,responsavel:$('#cc-responsavel').value,data_inicio:$('#cc-inicio').value,data_fim:$('#cc-fim').value,valor_contrato:Number($('#cc-valor-contrato').value),situacao:$('#cc-situacao').value,descricao:$('#cc-descricao').value,ativo:item?$('#cc-ativo').checked:true};await api(item?`/centros-custo/${item.id}`:'/centros-custo',{method:item?'PUT':'POST',body:JSON.stringify(body)});closeModal();toast('Obra / centro salvo.');await Promise.all([loadCenters(),loadDashboard()]);}catch(error){$('#modal-error').textContent=error.message;}});}
+
+function syncCenterCardFromDetail(c) {
+  const idx = centros.findIndex((x) => x.id === c.id);
+  if (idx > -1) centros[idx] = { ...centros[idx], ...c };
+  const card = document.querySelector(`.center-card[data-center-id="${c.id}"]`);
+  const pill = card?.querySelector('.center-status-pill');
+  if (!pill) return;
+  const statusLabel = c.ativo?(c.situacao==='execucao'?'Em aberto':c.situacao==='pausado'?'Pausado':c.situacao==='concluido'?'Concluído':'Ativo'):'Inativo';
+  const statusClass = c.ativo?(c.situacao==='execucao'?'em-aberto':c.situacao==='pausado'?'pausado':c.situacao==='concluido'?'concluido':'ativo'):'inativo';
+  pill.className = `pill center-status-pill ${statusClass}`;
+  pill.textContent = statusLabel;
+}
 
 async function openCenterDetail(id) {
   try {
-    const data = await api(`/centros-custo/${id}/detalhes`);
+    const [data, orcado, propostaData] = await Promise.all([
+      api(`/centros-custo/${id}/detalhes`),
+      api(`/centros-custo/${id}/orcado-realizado`).catch(() => ({ hasBudget: false, message: 'Não foi possível carregar o orçado vs. realizado.' })),
+      api(`/centros-custo/${id}/proposta`).catch(() => ({ proposta: null })),
+    ]);
     const c = data.centro;
+    syncCenterCardFromDetail(c);
     const lancamentos = data.lancamentos;
+    let proposta = propostaData.proposta;
+    const canManage = ['admin', 'gestor'].includes(usuario.role);
     const statusLabel = c.ativo?(c.situacao==='execucao'?'Em aberto':c.situacao==='pausado'?'Pausado':c.situacao==='concluido'?'Concluído':'Ativo'):'Inativo';
     const statusClass = c.ativo?(c.situacao==='execucao'?'em-aberto':c.situacao==='pausado'?'pausado':c.situacao==='concluido'?'concluido':'ativo'):'inativo';
     const fmtMoney = (v) => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -311,22 +411,253 @@ async function openCenterDetail(id) {
       if (item.status_financeiro === 'liquidado') return item.tipo === 'receita' ? 'Recebido' : 'Pago';
       return item.tipo === 'receita' ? 'A receber' : 'A pagar';
     };
+    const nfTipoLabel = { fornecedor: 'Fornecedor', cliente: 'Cliente final' };
 
     const catOptions = [...new Set(lancamentos.map(l=>l.categoria))];
     let filtered = [...lancamentos];
     let sortDesc = true;
+    let activeTab = 'detalhamento';
+    let nfLoaded = false;
+    let nfPorTipo = { fornecedor: [], cliente: [] };
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+        reader.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+        reader.readAsDataURL(file);
+      });
+    }
 
     function renderList() {
       filtered.sort((a,b) => sortDesc ? Number(b.valor)-Number(a.valor) : Number(a.valor)-Number(b.valor));
       $('#center-detail-transactions').innerHTML = filtered.length ? filtered.map(l => `
         <tr>
           <td><strong>${esc(l.descricao)}</strong><br><span class="muted">${esc(l.categoria)} · ${fmtDate(l.data)}</span></td>
-          <td>${esc(c.codigo)} — ${esc(c.nome)}</td>
-          <td>${esc(l.documento||'—')}</td>
-          <td><span class="pill ${esc(l.situacao)}">${esc(financialLabel(l))}</span></td>
-          <td class="money" style="color:var(--${l.tipo==='receita'?'green':'red'})">${l.tipo==='receita'?'+':'-'} ${fmtMoney(l.valor)}</td>
+          <td data-label="Centro de custo">${esc(c.codigo)} — ${esc(c.nome)}</td>
+          <td data-label="Documento">${esc(l.documento||'—')}</td>
+          <td data-label="Status"><span class="pill ${esc(l.situacao)}">${esc(financialLabel(l))}</span></td>
+          <td data-label="Valor" class="money" style="color:var(--${l.tipo==='receita'?'green':'red'})">${l.tipo==='receita'?'+':'-'} ${fmtMoney(l.valor)}</td>
         </tr>`).join('') : `<tr><td colspan="5"><div class="empty">Nenhum lançamento para este centro.</div></td></tr>`;
       $('#center-detail-count').textContent = `${filtered.length} lançamento(s)`;
+    }
+
+    function tabDetalhamentoHtml() {
+      const aprovacao = orcado.hasBudget && orcado.contract?.approvedAt ? fmtDate(orcado.contract.approvedAt) : '—';
+      return `
+        <div class="center-detail-fields">
+          <div><span class="center-stat-label">Cliente</span><strong>${esc(c.cliente || '—')}</strong></div>
+          <div><span class="center-stat-label">Escopo do serviço</span><strong>${esc(c.descricao || '—')}</strong></div>
+          <div><span class="center-stat-label">Data de início do serviço</span><strong>${fmtDate(c.data_inicio)}</strong></div>
+          <div><span class="center-stat-label">Data de término</span><strong>${fmtDate(c.data_fim)}</strong></div>
+          <div><span class="center-stat-label">Aprovação da proposta</span><strong>${aprovacao}</strong></div>
+        </div>
+        <div class="center-detail-proposal">
+          <div class="center-detail-proposal-info">
+            <span class="center-stat-label">Proposta comercial</span>
+            <strong>${proposta ? esc(proposta.nome) : 'Nenhuma proposta anexada'}</strong>
+          </div>
+          <div class="center-detail-proposal-actions">
+            ${proposta ? `<button type="button" class="text-btn" id="btn-baixar-proposta">Baixar</button>` : ''}
+            ${canManage ? `<label class="btn secondary" id="lbl-anexar-proposta">${proposta ? 'Substituir' : 'Anexar'} proposta<input type="file" id="input-proposta" accept="application/pdf" hidden></label>` : ''}
+            ${canManage && proposta ? `<button type="button" class="text-btn danger" id="btn-remover-proposta">Remover</button>` : ''}
+          </div>
+          <div id="proposta-erro" class="form-error"></div>
+        </div>
+        <div class="table-card"><div class="table-meta"><span id="center-detail-count">${lancamentos.length} lançamento(s)</span></div>
+          ${catOptions.length ? `<div class="center-detail-filters">
+            <select id="center-detail-cat-filter"><option value="">Todas as categorias</option>${catOptions.map(cat=>`<option value="${esc(cat)}">${esc(cat)}</option>`).join('')}</select>
+            <select id="center-detail-sort"><option value="desc">Maior para menor</option><option value="asc">Menor para maior</option></select>
+          </div>` : ''}
+          <div class="table-scroll"><table class="cc-mobile-table"><thead><tr><th>Compra</th><th>Centro de custo</th><th>Documento</th><th>Status</th><th>Valor</th></tr></thead><tbody id="center-detail-transactions"></tbody></table></div>
+        </div>
+      `;
+    }
+
+    function nfCardsHtml(tipo) {
+      const items = nfPorTipo[tipo];
+      if (!items.length) return `<div class="empty">Nenhuma nota fiscal de ${nfTipoLabel[tipo].toLowerCase()} lançada.</div>`;
+      return `<div class="table-scroll"><table class="cc-mobile-table"><thead><tr><th>Emissão</th><th>Valor</th><th>Status</th><th>Arquivo</th><th>Ações</th></tr></thead><tbody>
+        ${items.map(nf => `<tr>
+          <td>${fmtDate(nf.dataEmissao)}${nf.observacao?`<br><span class="muted">${esc(nf.observacao)}</span>`:''}</td>
+          <td data-label="Valor" class="money">${fmtMoney(nf.valor)}</td>
+          <td data-label="Status"><span class="pill ${nf.status==='paga'?'ativo':'vencido'}">${nf.status==='paga'?'Paga':'Não paga'}</span></td>
+          <td data-label="Arquivo">${nf.temArquivo ? 'PDF anexado' : '—'}</td>
+          <td data-label="Ações"><div class="row-actions">${canManage?`<button type="button" data-nf-toggle="${nf.id}" data-nf-tipo="${tipo}">${nf.status==='paga'?'Marcar não paga':'Marcar como paga'}</button><button type="button" data-nf-delete="${nf.id}" data-nf-tipo="${tipo}">Excluir</button>`:''}</div></td>
+        </tr>`).join('')}
+      </tbody></table></div>`;
+    }
+
+    function nfFormHtml(tipo) {
+      return `<form class="nf-form" data-nf-form="${tipo}">
+        <div><label>Data de emissão</label><input type="date" data-nf-field="dataEmissao"></div>
+        <div><label>Valor (R$)</label><input type="number" min="0" step="0.01" required data-nf-field="valor"></div>
+        <div><label class="check-label"><input type="checkbox" data-nf-field="paga"> Já paga</label></div>
+        <div><label>Arquivo (PDF, opcional)</label><input type="file" accept="application/pdf" data-nf-field="arquivo"></div>
+        <div id="nf-erro-${tipo}" class="form-error"></div>
+        <button class="btn secondary" type="submit">Lançar NF de ${nfTipoLabel[tipo].toLowerCase()}</button>
+      </form>`;
+    }
+
+    function tabNotasFiscaisHtml() {
+      return `
+        <div class="nf-section">
+          <div class="nf-section-head"><h3>Fornecedor</h3></div>
+          ${canManage ? nfFormHtml('fornecedor') : ''}
+          <div id="nf-list-fornecedor">${nfCardsHtml('fornecedor')}</div>
+        </div>
+        <div class="nf-section">
+          <div class="nf-section-head"><h3>Cliente final</h3></div>
+          ${canManage ? nfFormHtml('cliente') : ''}
+          <div id="nf-list-cliente">${nfCardsHtml('cliente')}</div>
+        </div>
+      `;
+    }
+
+    function tabOrcadoRealizadoHtml() {
+      if (!orcado.hasBudget) {
+        return `<div class="empty">${esc(orcado.message || 'Nenhum orçamento/baseline vigente encontrado para este centro de custo.')}</div>`;
+      }
+      const materialRealizado = orcado.items.filter(i=>i.kind==='material').reduce((s,i)=>s+Number(i.realizedCost||0),0);
+      const laborRealizado = orcado.items.filter(i=>i.kind==='labor').reduce((s,i)=>s+Number(i.realizedCost||0),0);
+      const naoVinculado = Math.max(0, Number(c.total_despesas||0) - Number(orcado.summary?.realizedCost||0));
+      return `
+        ${naoVinculado > 0.01 ? `
+        <div class="budget-unmapped-card" style="margin-bottom:14px;">
+          <div class="budget-unmapped-header">
+            <div><strong style="color:#d97706;">Atenção: gasto ainda não vinculado ao orçamento</strong><div style="font-size:0.75rem;color:var(--muted);">Este centro tem ${fmtMoney(c.total_despesas)} em lançamentos, mas apenas ${fmtMoney(orcado.summary?.realizedCost||0)} está reconhecido no orçamento. Use "Vincular a Insumo" na análise completa.</div></div>
+            <strong style="color:#d97706;">${fmtMoney(naoVinculado)}</strong>
+          </div>
+        </div>` : ''}
+        <div class="center-detail-kpis">
+          <div class="center-detail-kpi"><span>Material estimado</span><strong>${fmtMoney(orcado.contract.materialsCost)}</strong></div>
+          <div class="center-detail-kpi"><span>Mão de obra estimado</span><strong>${fmtMoney(orcado.contract.laborCost)}</strong></div>
+          <div class="center-detail-kpi"><span>Material realizado</span><strong>${fmtMoney(materialRealizado)}</strong></div>
+          <div class="center-detail-kpi"><span>Mão de obra realizado</span><strong>${fmtMoney(laborRealizado)}</strong></div>
+        </div>
+        <div class="center-detail-actions">
+          <button type="button" class="btn primary" id="btn-ver-detalhamento-completo">Ver detalhamento completo</button>
+        </div>
+      `;
+    }
+
+    async function loadNf(tipo) {
+      nfPorTipo[tipo] = await api(`/centros-custo/${id}/notas-fiscais?tipo=${tipo}`);
+    }
+
+    function renderNfList(tipo) {
+      const list = $(`#nf-list-${tipo}`);
+      if (!list) return;
+      list.innerHTML = nfCardsHtml(tipo);
+      list.querySelectorAll(`[data-nf-toggle]`).forEach(btn => btn.addEventListener('click', async () => {
+        const nf = nfPorTipo[tipo].find(item => item.id === Number(btn.dataset.nfToggle));
+        try {
+          await api(`/centros-custo/notas-fiscais/${btn.dataset.nfToggle}`, { method: 'PUT', body: JSON.stringify({ status: nf.status === 'paga' ? 'nao_paga' : 'paga' }) });
+          await loadNf(tipo);
+          renderNfList(tipo);
+          toast('Nota fiscal atualizada.');
+        } catch (error) { toast(error.message, true); }
+      }));
+      list.querySelectorAll(`[data-nf-delete]`).forEach(btn => btn.addEventListener('click', async () => {
+        if (!confirm('Excluir esta nota fiscal?')) return;
+        try {
+          await api(`/centros-custo/notas-fiscais/${btn.dataset.nfDelete}`, { method: 'DELETE' });
+          await loadNf(tipo);
+          renderNfList(tipo);
+          toast('Nota fiscal excluída.');
+        } catch (error) { toast(error.message, true); }
+      }));
+    }
+
+    // Ligado apenas uma vez por renderização fresca da aba (o <form> é recriado
+    // toda vez que a aba "Notas fiscais" é aberta via tabNotasFiscaisHtml()).
+    // Nunca chamar de novo a partir de toggle/delete/submit, senão o mesmo
+    // <form> acumula um listener de submit extra a cada ação (NF duplicada).
+    function bindNfForm(tipo) {
+      const form = document.querySelector(`[data-nf-form="${tipo}"]`);
+      if (!form) return;
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const errorEl = $(`#nf-erro-${tipo}`);
+        errorEl.textContent = '';
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        try {
+          const fileInput = form.querySelector('[data-nf-field="arquivo"]');
+          const file = fileInput.files[0] || null;
+          const body = {
+            tipo,
+            dataEmissao: form.querySelector('[data-nf-field="dataEmissao"]').value || null,
+            valor: Number(form.querySelector('[data-nf-field="valor"]').value),
+            status: form.querySelector('[data-nf-field="paga"]').checked ? 'paga' : 'nao_paga',
+          };
+          if (file) {
+            body.nome = file.name;
+            body.tipoArquivo = file.type || 'application/pdf';
+            body.conteudoBase64 = await fileToBase64(file);
+          }
+          await api(`/centros-custo/${id}/notas-fiscais`, { method: 'POST', body: JSON.stringify(body) });
+          form.reset();
+          await loadNf(tipo);
+          renderNfList(tipo);
+          toast('Nota fiscal lançada.');
+        } catch (error) { errorEl.textContent = error.message; }
+        finally { submitBtn.disabled = false; }
+      });
+    }
+
+    async function renderTab() {
+      const body = $('#center-detail-tab-body');
+      if (activeTab === 'detalhamento') {
+        body.innerHTML = tabDetalhamentoHtml();
+        renderList();
+        const catFilter = $('#center-detail-cat-filter');
+        const sortSelect = $('#center-detail-sort');
+        if (catFilter) catFilter.addEventListener('change', () => {
+          const val = catFilter.value;
+          filtered = val ? lancamentos.filter(l => l.categoria === val) : [...lancamentos];
+          renderList();
+        });
+        if (sortSelect) sortSelect.addEventListener('change', () => {
+          sortDesc = sortSelect.value === 'desc';
+          renderList();
+        });
+        $('#btn-baixar-proposta')?.addEventListener('click', () => download(`/centros-custo/${id}/proposta/arquivo`, proposta.nome));
+        $('#input-proposta')?.addEventListener('change', async (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+          const errorEl = $('#proposta-erro');
+          errorEl.textContent = '';
+          try {
+            const conteudoBase64 = await fileToBase64(file);
+            const result = await api(`/centros-custo/${id}/proposta`, { method: 'POST', body: JSON.stringify({ nome: file.name, tipo: file.type || 'application/pdf', conteudoBase64 }) });
+            proposta = result.proposta;
+            toast('Proposta anexada.');
+            await renderTab();
+          } catch (error) { errorEl.textContent = error.message; }
+        });
+        $('#btn-remover-proposta')?.addEventListener('click', async () => {
+          if (!confirm('Remover a proposta anexada a este centro?')) return;
+          try {
+            await api(`/centros-custo/${id}/proposta`, { method: 'DELETE' });
+            proposta = null;
+            toast('Proposta removida.');
+            await renderTab();
+          } catch (error) { toast(error.message, true); }
+        });
+      } else if (activeTab === 'notas-fiscais') {
+        if (!nfLoaded) { await Promise.all([loadNf('fornecedor'), loadNf('cliente')]); nfLoaded = true; }
+        body.innerHTML = tabNotasFiscaisHtml();
+        renderNfList('fornecedor');
+        renderNfList('cliente');
+        bindNfForm('fornecedor');
+        bindNfForm('cliente');
+      } else if (activeTab === 'orcado-realizado') {
+        body.innerHTML = tabOrcadoRealizadoHtml();
+        $('#btn-ver-detalhamento-completo')?.addEventListener('click', () => {
+          document.getElementById('btn-ver-orcado-realizado')?.click();
+        });
+      }
     }
 
     modal('Centro de custo', `
@@ -337,62 +668,60 @@ async function openCenterDetail(id) {
       <div class="center-detail-kpis">
         <div class="center-detail-kpi"><span>Total do centro</span><strong>${fmtMoney(c.total_despesas)}</strong></div>
         <div class="center-detail-kpi"><span>Compras registradas</span><strong>${c.total_lancamentos}</strong></div>
-        <div class="center-detail-kpi"><span>Orçamento</span><strong>${fmtMoney(c.orcamento)}</strong></div>
+        <div class="center-detail-kpi"><span>Valor contratado</span><strong>${fmtMoney(c.valor_contrato)}</strong></div>
       </div>
-      ${Number(c.orcamento)>0?`<div class="center-detail-budget"><div class="center-budget-header"><span>Uso do orçamento</span><strong>${Math.min(100,Math.round(Number(c.total_despesas)/Number(c.orcamento)*100))}%</strong></div><div class="center-progress"><div class="center-progress-bar" style="width:${Math.min(100,Number(c.total_despesas)/Number(c.orcamento)*100)}%"></div></div></div>`:''}
-      ${catOptions.length ? `<div class="center-detail-filters">
-        <select id="center-detail-cat-filter"><option value="">Todas as categorias</option>${catOptions.map(cat=>`<option value="${esc(cat)}">${esc(cat)}</option>`).join('')}</select>
-        <select id="center-detail-sort"><option value="desc">Maior para menor</option><option value="asc">Menor para maior</option></select>
-      </div>` : ''}
       <div class="center-detail-actions">
-        ${['admin','gestor'].includes(usuario.role)?`<button class="btn secondary" onclick="closeModal();openCenter(centros.find(x=>x.id===${c.id}))">Editar centro e status</button>`:''}
+        ${canManage?`<button class="btn secondary" onclick="closeModal();openCenter(centros.find(x=>x.id===${c.id}))">Editar centro e status</button>`:''}
       </div>
-      <div class="table-card"><div class="table-meta"><span id="center-detail-count">${lancamentos.length} lançamento(s)</span></div><div class="table-scroll"><table><thead><tr><th>Compra</th><th>Centro de custo</th><th>Documento</th><th>Status</th><th>Valor</th></tr></thead><tbody id="center-detail-transactions"></tbody></table></div></div>
+      <nav class="measurements-tabs" role="tablist" aria-label="Detalhamento do centro de custo">
+        <button type="button" role="tab" class="measurements-tab-btn active" data-cc-tab="detalhamento" aria-selected="true">Detalhamento</button>
+        <button type="button" role="tab" class="measurements-tab-btn" data-cc-tab="notas-fiscais" aria-selected="false">Notas fiscais</button>
+        <button type="button" role="tab" class="measurements-tab-btn" data-cc-tab="orcado-realizado" aria-selected="false">Orçado x Realizado</button>
+      </nav>
+      <div id="center-detail-tab-body"></div>
     `);
 
-    renderList();
+    document.querySelectorAll('[data-cc-tab]').forEach(btn => btn.addEventListener('click', async () => {
+      document.querySelectorAll('[data-cc-tab]').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      activeTab = btn.dataset.ccTab;
+      try {
+        await renderTab();
+      } catch (error) { toast(error.message, true); }
+    }));
 
-    const catFilter = $('#center-detail-cat-filter');
-    const sortSelect = $('#center-detail-sort');
-    if (catFilter) catFilter.addEventListener('change', () => {
-      const val = catFilter.value;
-      filtered = val ? lancamentos.filter(l => l.categoria === val) : [...lancamentos];
-      renderList();
-    });
-    if (sortSelect) sortSelect.addEventListener('change', () => {
-      sortDesc = sortSelect.value === 'desc';
-      renderList();
-    });
+    await renderTab();
   } catch (error) { toast(error.message, true); }
 }
 
-async function loadCategories(){categorias=await api('/categorias');$('#tabela-categorias').innerHTML=categorias.map((item)=>`<tr><td><strong>${esc(item.nome)}</strong></td><td><span class="pill ${item.tipo==='ambos'?'':item.tipo}">${item.tipo==='ambos'?'Receita e despesa':esc(item.tipo)}</span></td><td>${item.total_lancamentos}</td><td><span class="pill ${item.ativo?'ativo':'inativo'}">${item.ativo?'Ativa':'Inativa'}</span></td><td><div class="row-actions">${['admin','gestor'].includes(usuario.role)?`<button data-edit-category="${item.id}">Editar</button>`:''}</div></td></tr>`).join('');$$('[data-edit-category]').forEach((button)=>button.addEventListener('click',()=>openCategory(categorias.find((item)=>item.id===Number(button.dataset.editCategory)))));await loadReferences();loadFirstUse();}
+async function loadCategories(){categorias=await api('/categorias');$('#tabela-categorias').innerHTML=categorias.map((item)=>`<tr><td><strong>${esc(item.nome)}</strong></td><td><span class="pill ${item.tipo==='ambos'?'':item.tipo}">${item.tipo==='ambos'?'Receita e despesa':esc(item.tipo)}</span></td><td>${item.total_lancamentos}</td><td><span class="pill ${item.ativo?'ativo':'inativo'}">${item.ativo?'Ativa':'Inativa'}</span></td><td><div class="row-actions">${['admin','gestor'].includes(usuario.role)?`<button data-edit-category="${item.id}" aria-label="Editar categoria: ${esc(item.nome)}" title="Editar categoria: ${esc(item.nome)}">Editar</button>`:''}</div></td></tr>`).join('');$$('[data-edit-category]').forEach((button)=>button.addEventListener('click',()=>openCategory(categorias.find((item)=>item.id===Number(button.dataset.editCategory)))));await loadReferences();loadFirstUse();}
 $('#btn-nova-categoria').addEventListener('click',()=>openCategory(null));
 function openCategory(item){modal(item?'Editar categoria':'Nova categoria',`<form id="category-form"><label for="cat-nome">Nome</label><input id="cat-nome" required maxlength="100" value="${esc(item?.nome||'')}"><label for="cat-tipo">Aplicação</label><select id="cat-tipo"><option value="despesa" ${item?.tipo==='despesa'?'selected':''}>Despesa</option><option value="receita" ${item?.tipo==='receita'?'selected':''}>Receita</option><option value="ambos" ${!item||item.tipo==='ambos'?'selected':''}>Receita e despesa</option></select>${item?`<label class="check-label"><input id="cat-ativo" type="checkbox" ${item.ativo?'checked':''}> Categoria ativa</label>`:''}<div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Salvar categoria</button></form>`);$('#category-form').addEventListener('submit',async(event)=>{event.preventDefault();try{const body={nome:$('#cat-nome').value,tipo:$('#cat-tipo').value,ativo:item?$('#cat-ativo').checked:true};await api(item?`/categorias/${item.id}`:'/categorias',{method:item?'PUT':'POST',body:JSON.stringify(body)});closeModal();toast('Categoria salva.');await loadCategories();}catch(error){$('#modal-error').textContent=error.message;}});}
 
 async function loadSuppliers(){
   fornecedores=await api('/fornecedores');
-  $('#tabela-fornecedores').innerHTML=fornecedores.length?fornecedores.map((item)=>`<tr><td><strong>${esc(item.nome)}</strong></td><td>${esc(item.documento||'—')}</td><td>${esc(item.contato||'—')}</td><td>${esc(item.email||'—')}${item.telefone?`<br><span class="muted">${esc(item.telefone)}</span>`:''}</td><td><span class="pill ${item.ativo?'ativo':'inativo'}">${item.ativo?'Ativo':'Inativo'}</span></td><td><div class="row-actions">${['admin','gestor'].includes(usuario.role)?`<button data-edit-supplier="${item.id}">Editar</button>`:''}</div></td></tr>`).join(''):`<tr><td colspan="6">${empty('Nenhum fornecedor cadastrado.')}</td></tr>`;
+  $('#tabela-fornecedores').innerHTML=fornecedores.length?fornecedores.map((item)=>`<tr><td><strong>${esc(item.nome)}</strong></td><td>${esc(item.documento||'—')}</td><td>${esc(item.contato||'—')}</td><td>${esc(item.email||'—')}${item.telefone?`<br><span class="muted">${esc(item.telefone)}</span>`:''}</td><td><span class="pill ${item.ativo?'ativo':'inativo'}">${item.ativo?'Ativo':'Inativo'}</span></td><td><div class="row-actions">${['admin','gestor'].includes(usuario.role)?`<button data-edit-supplier="${item.id}" aria-label="Editar fornecedor: ${esc(item.nome)}" title="Editar fornecedor: ${esc(item.nome)}">Editar</button>`:''}</div></td></tr>`).join(''):`<tr><td colspan="6">${empty('Nenhum fornecedor cadastrado.')}</td></tr>`;
   $$('[data-edit-supplier]').forEach((button)=>button.addEventListener('click',()=>openSupplier(fornecedores.find((item)=>item.id===Number(button.dataset.editSupplier)))));
   loadFirstUse();
 }
 $('#btn-novo-fornecedor').addEventListener('click',()=>openSupplier(null));
-$('#btn-exportar-fornecedores').addEventListener('click',()=>download('/fornecedores/exportar.csv','fornecedores.csv'));
+$('#btn-exportar-fornecedores')?.addEventListener('click',()=>download('/fornecedores/exportar.csv','fornecedores.csv'));
 function openSupplier(item){modal(item?'Editar fornecedor':'Novo fornecedor',`<form id="supplier-form"><label for="sup-nome">Razão social / nome</label><input id="sup-nome" required maxlength="160" value="${esc(item?.nome||'')}"><div class="form-grid"><div><label for="sup-documento">CNPJ / CPF</label><input id="sup-documento" maxlength="30" value="${esc(item?.documento||'')}"></div><div><label for="sup-contato">Pessoa de contato</label><input id="sup-contato" maxlength="120" value="${esc(item?.contato||'')}"></div></div><div class="form-grid"><div><label for="sup-email">E-mail</label><input id="sup-email" type="email" maxlength="180" value="${esc(item?.email||'')}"></div><div><label for="sup-telefone">Telefone</label><input id="sup-telefone" maxlength="40" value="${esc(item?.telefone||'')}"></div></div><label for="sup-observacao">Observação</label><textarea id="sup-observacao">${esc(item?.observacao||'')}</textarea>${item?`<label class="check-label"><input id="sup-ativo" type="checkbox" ${item.ativo?'checked':''}> Fornecedor ativo</label>`:''}<div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Salvar fornecedor</button></form>`);$('#supplier-form').addEventListener('submit',async(event)=>{event.preventDefault();try{const body={nome:$('#sup-nome').value,documento:$('#sup-documento').value,contato:$('#sup-contato').value,email:$('#sup-email').value,telefone:$('#sup-telefone').value,observacao:$('#sup-observacao').value,ativo:item?$('#sup-ativo').checked:true};await api(item?`/fornecedores/${item.id}`:'/fornecedores',{method:item?'PUT':'POST',body:JSON.stringify(body)});closeModal();toast('Fornecedor salvo.');await Promise.all([loadSuppliers(),loadReferences()]);}catch(error){$('#modal-error').textContent=error.message;}});}
 
 async function loadHistory(){const type=$('#historico-tipo').value;const items=await api(`/historico${type?`?tipo=${encodeURIComponent(type)}`:''}`);$('#tabela-historico').innerHTML=items.length?items.map((item)=>`<tr><td>${dateTimeBr(item.created_at)}</td><td><span class="pill">${esc(item.tipo)} · ${esc(item.acao)}</span></td><td><strong>${esc(item.resumo)}</strong></td><td>${esc(item.usuario)}</td><td>${esc(item.instancia)}</td></tr>`).join(''):`<tr><td colspan="5">${empty('Nenhuma alteração registrada ainda.')}</td></tr>`;}
 $('#historico-tipo').addEventListener('change',()=>loadHistory().catch((error)=>toast(error.message,true)));
 
-$('#sync-exportar-todos').addEventListener('click',()=>download('/sincronizacao/exportar.csv?sincronizar=1','troca-de-dados-completa.csv'));
-$('#sync-exportar-mes').addEventListener('click',()=>download(`/sincronizacao/exportar.csv?sincronizar=1&mes=${encodeURIComponent($('#dash-mes').value||currentMonth())}`,'troca-de-dados-mensal.csv'));
-$('#sync-arquivo').addEventListener('change',(event)=>{syncFile=event.target.files[0]||null;$('#sync-arquivo-label').textContent=syncFile?syncFile.name:'Escolher arquivo CSV';$('#sync-importar').disabled=!syncFile;});
+$('#sync-exportar-todos')?.addEventListener('click',()=>download('/sincronizacao/exportar.csv?sincronizar=1','troca-de-dados-completa.csv'));
+$('#sync-exportar-mes')?.addEventListener('click',()=>download(`/sincronizacao/exportar.csv?sincronizar=1&mes=${encodeURIComponent($('#dash-mes').value||currentMonth())}`,'troca-de-dados-mensal.csv'));
+$('#sync-arquivo')?.addEventListener('change',(event)=>{syncFile=event.target.files[0]||null;$('#sync-arquivo-label').textContent=syncFile?syncFile.name:'Escolher arquivo CSV';$('#sync-importar').disabled=!syncFile;});
 $('#sync-importar').addEventListener('click',async()=>{if(!syncFile)return;const button=$('#sync-importar');button.disabled=true;button.textContent='Importando…';try{const content=await syncFile.text();const result=await api('/sincronizacao/importar',{method:'POST',body:JSON.stringify({nomeArquivo:syncFile.name,conteudo:content})});renderSyncResult(result);toast('Importação concluída.');await Promise.all([loadSync(),loadReferences(),loadDashboard()]);}catch(error){toast(error.message,true);}finally{button.disabled=false;button.textContent='Validar e importar';}});
 
 let cadastroFile=null;
-$('#sync-exportar-cadastros').addEventListener('click',()=>download('/cadastro-sync/exportar.csv','cadastros-sincronizacao.csv'));
-$('#sync-cadastro-arquivo').addEventListener('change',(event)=>{cadastroFile=event.target.files[0]||null;$('#sync-cadastro-label').textContent=cadastroFile?cadastroFile.name:'Escolher CSV de cadastros';$('#sync-importar-cadastros').disabled=!cadastroFile;});
+$('#sync-exportar-cadastros')?.addEventListener('click',()=>download('/cadastro-sync/exportar.csv','cadastros-sincronizacao.csv'));
+$('#sync-cadastro-arquivo')?.addEventListener('change',(event)=>{cadastroFile=event.target.files[0]||null;$('#sync-cadastro-label').textContent=cadastroFile?cadastroFile.name:'Escolher CSV de cadastros';$('#sync-importar-cadastros').disabled=!cadastroFile;});
 $('#sync-importar-cadastros').addEventListener('click',async()=>{if(!cadastroFile)return;const button=$('#sync-importar-cadastros');button.disabled=true;button.textContent='Importando…';try{const content=await cadastroFile.text();const result=await api('/cadastro-sync/importar',{method:'POST',body:JSON.stringify({nomeArquivo:cadastroFile.name,conteudo:content})});const el=$('#sync-cadastro-resultado');const total=Object.values(result).reduce((s,v)=>s+(v?.incluidos||0)+(v?.atualizados||0)+(v?.conflitos||0),0)+result.erros;el.style.color='var(--green)';el.textContent=`${total} linha(s) processada(s): ${(result.fornecedores?.incluidos||0)+(result.categorias?.incluidos||0)+(result.obras?.incluidos||0)} incluído(s), ${(result.fornecedores?.atualizados||0)+(result.categorias?.atualizados||0)+(result.obras?.atualizados||0)} atualizado(s), ${(result.fornecedores?.conflitos||0)+(result.categorias?.conflitos||0)+(result.obras?.conflitos||0)} conflito(s).`;toast('Cadastros importados.');await loadReferences();}catch(error){$('#sync-cadastro-resultado').style.color='var(--red)';$('#sync-cadastro-resultado').textContent=error.message;}finally{button.disabled=false;button.textContent='Importar cadastros';}});
-async function loadSync(){const [history,conflicts]=await Promise.all([api('/sincronizacao/historico'),api('/sincronizacao/conflitos')]);$('#sync-historico').innerHTML=history.length?history.map((item)=>`<tr><td>${dateTimeBr(item.created_at)}</td><td><strong>${esc(item.filename)}</strong><br><span class="muted">${esc(item.source_instance_name||'Origem não informada')}</span></td><td>${item.included_count}</td><td>${item.updated_count}</td><td>${item.ignored_count}</td><td>${item.conflict_count}</td><td>${item.error_count}</td></tr>`).join(''):`<tr><td colspan="7">${empty('Nenhuma importação realizada.')}</td></tr>`;$('#sync-conflitos').innerHTML=conflicts.length?conflicts.map((item)=>{const local=item.local_data||{};const incoming=item.incoming_data||{};const isResolved=item.status!=='pending';const sameType=local.type===incoming.type||local.tipo===incoming.tipo;const sameAmount=Number(local.amount||0)===Number(String(incoming.valor||incoming.amount||0).replace(',','.'));const sameDesc=(local.description||'')===(incoming.descricao||incoming.description||'');const sameDate=(local.transaction_date||'')===String(incoming.data||incoming.transaction_date||'').slice(0,10);const localLabel=local.description||local.descricao||local.type||local.tipo||'—';const incomingLabel=incoming.descricao||incoming.description||incoming.tipo||incoming.type||'—';const fmtMoney=(v)=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});const fmtDate=(v)=>v?String(v).slice(0,10).split('-').reverse().join('/'):'—';const differences=[];if(!sameType)differences.push('Tipo');if(!sameAmount)differences.push('Valor');if(!sameDesc)differences.push('Descrição');if(!sameDate)differences.push('Data');return`<div class="conflict-card${isResolved?' resolved':''}">
+async function loadSync(){const [history,conflicts]=await Promise.all([api('/sincronizacao/historico'),api('/sincronizacao/conflitos')]);$('#sync-historico').innerHTML=history.length?history.map((item)=>`<tr><td>${dateTimeBr(item.created_at)}</td><td data-label="Arquivo / origem"><strong>${esc(item.filename)}</strong><br><span class="muted">${esc(item.source_instance_name||'Origem não informada')}</span></td><td data-label="Incluídos">${item.included_count}</td><td data-label="Atualizados">${item.updated_count}</td><td data-label="Ignorados">${item.ignored_count}</td><td data-label="Conflitos">${item.conflict_count}</td><td data-label="Erros">${item.error_count}</td></tr>`).join(''):`<tr><td colspan="7">${empty('Nenhuma importação realizada.')}</td></tr>`;$('#sync-conflitos').innerHTML=conflicts.length?conflicts.map((item)=>{const local=item.local_data||{};const incoming=item.incoming_data||{};const isResolved=item.status!=='pending';const sameType=local.type===incoming.type||local.tipo===incoming.tipo;const sameAmount=Number(local.amount||0)===Number(String(incoming.valor||incoming.amount||0).replace(',','.'));const sameDesc=(local.description||'')===(incoming.descricao||incoming.description||'');const sameDate=(local.transaction_date||'')===String(incoming.data||incoming.transaction_date||'').slice(0,10);const localLabel=local.description||local.descricao||local.type||local.tipo||'—';const incomingLabel=incoming.descricao||incoming.description||incoming.tipo||incoming.type||'—';const fmtMoney=(v)=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});const fmtDate=(v)=>v?String(v).slice(0,10).split('-').reverse().join('/'):'—';const differences=[];if(!sameType)differences.push('Tipo');if(!sameAmount)differences.push('Valor');if(!sameDesc)differences.push('Descrição');if(!sameDate)differences.push('Data');return`<div class="conflict-card${isResolved?' resolved':''}">
       <div class="conflict-header"><strong>${esc(item.transaction_public_id||'ID inválido')}</strong><span class="pill ${isResolved?'ativo':'vencido'}">${isResolved?'Resolvido':'Pendente'}</span></div>
       <p class="conflict-reason">${esc(item.reason)}</p>
       ${differences.length?`<p class="conflict-diff-label">Diferenças: ${differences.map(d=>`<span class="pill">${d}</span>`).join(' ')}</p>`:''}
@@ -400,40 +729,37 @@ async function loadSync(){const [history,conflicts]=await Promise.all([api('/sin
         <div class="conflict-col local"><div class="conflict-col-head">Versão local</div><dl><dt>Descrição</dt><dd>${esc(localLabel)}</dd><dt>Tipo</dt><dd>${esc(local.type||local.tipo||'—')}</dd><dt>Valor</dt><dd>${fmtMoney(local.amount)}</dd><dt>Data</dt><dd>${fmtDate(local.transaction_date)}</dd></dl></div>
         <div class="conflict-col incoming"><div class="conflict-col-head">Versão recebida</div><dl><dt>Descrição</dt><dd>${esc(incomingLabel)}</dd><dt>Tipo</dt><dd>${esc(incoming.tipo||incoming.type||'—')}</dd><dt>Valor</dt><dd>${fmtMoney(incoming.valor||incoming.amount)}</dd><dt>Data</dt><dd>${fmtDate(incoming.data||incoming.transaction_date)}</dd></dl></div>
       </div>
-      ${!isResolved?`<div class="conflict-actions"><button class="btn secondary" data-resolve-conflict="${item.id}" data-choice="local">Manter local</button><button class="btn primary" data-resolve-conflict="${item.id}" data-choice="recebido">Aceitar recebido</button></div>`:`<p class="conflict-resolved-text">Resolvido em ${dateTimeBr(item.created_at)}</p>`}
+      ${!isResolved?`<div class="conflict-actions"><button class="btn secondary" data-resolve-conflict="${item.id}" data-choice="local" title="Preservar a versão local deste conflito e descartar a recebida">Manter versão local</button><button class="btn primary" data-resolve-conflict="${item.id}" data-choice="recebido" title="Substituir a versão local deste conflito pela versão recebida">Aceitar versão recebida</button></div>`:`<p class="conflict-resolved-text">Resolvido em ${dateTimeBr(item.created_at)}</p>`}
     </div>`;}).join(''):empty('Nenhum conflito pendente.');$$('[data-resolve-conflict]').forEach((btn)=>btn.addEventListener('click',async()=>{try{await api(`/sincronizacao/conflitos/${btn.dataset.resolveConflict}/resolver`,{method:'POST',body:JSON.stringify({escolha:btn.dataset.choice})});toast('Conflito resolvido.');await Promise.all([loadSync(),loadDashboard(),loadTransactions()]);}catch(error){toast(error.message,true);}}));}
 function renderSyncResult(result){const element=$('#sync-resultado');element.classList.remove('oculto');element.innerHTML=`<div class="panel-head"><div><p class="eyebrow">Resultado da importação</p><h2>${result.total} linha(s) analisada(s)</h2></div><span class="pill ativo">Concluída</span></div><div class="result-kpis"><div><strong>${result.incluidos}</strong><span>Incluídos</span></div><div><strong>${result.atualizados}</strong><span>Atualizados</span></div><div><strong>${result.ignorados}</strong><span>Ignorados</span></div><div><strong>${result.conflitos}</strong><span>Conflitos</span></div><div><strong>${result.erros}</strong><span>Erros</span></div></div>${result.detalhes.length?`<div class="result-details">${result.detalhes.map((detail)=>`<div class="result-detail"><strong>Linha ${detail.linha} · ${esc(detail.status)}</strong> — ${esc(detail.mensagem)}</div>`).join('')}</div>`:'<p class="muted">Todos os dados foram integrados sem ressalvas.</p>'}`;element.scrollIntoView({behavior:'smooth',block:'center'});}
 
-async function loadUsers(){if(usuario.role!=='admin')return;const users=await api('/usuarios');$('#tabela-usuarios').innerHTML=users.map((item)=>`<tr><td><strong>${esc(item.nome)}</strong></td><td>${esc(item.email)}</td><td>${esc(roleName[item.role])}</td><td><span class="pill ${item.ativo?'ativo':'inativo'}">${item.ativo?'Ativo':'Inativo'}</span></td><td><div class="row-actions"><button data-user-id="${item.id}" data-user-status="${item.ativo?'false':'true'}">${item.ativo?'Desativar':'Ativar'}</button></div></td></tr>`).join('');$$('[data-user-id]').forEach((button)=>button.addEventListener('click',async()=>{try{await api(`/usuarios/${button.dataset.userId}/status`,{method:'PUT',body:JSON.stringify({ativo:button.dataset.userStatus==='true'})});await loadUsers();}catch(error){toast(error.message,true);}}));loadFirstUse();}
-$('#btn-novo-usuario').addEventListener('click',()=>{modal('Novo usuário',`<form id="user-form"><label for="us-nome">Nome</label><input id="us-nome" required><label for="us-email">E-mail</label><input id="us-email" type="email" required><label for="us-senha">Senha provisória</label><input id="us-senha" type="password" minlength="10" required><label for="us-role">Perfil</label><select id="us-role"><option value="supervisor">Supervisor — lançamentos e consultas</option><option value="gestor">Gestor — também gerencia cadastros</option><option value="admin">Administrador — acesso total</option></select><div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Criar usuário</button></form>`);$('#user-form').addEventListener('submit',async(event)=>{event.preventDefault();try{await api('/usuarios',{method:'POST',body:JSON.stringify({nome:$('#us-nome').value,email:$('#us-email').value,senha:$('#us-senha').value,role:$('#us-role').value})});closeModal();toast('Usuário criado.');await loadUsers();}catch(error){$('#modal-error').textContent=error.message;}});});
+async function loadUsers(){if(usuario.role!=='admin')return;const users=await api('/usuarios');$('#tabela-usuarios').innerHTML=users.map((item)=>`<tr><td><strong>${esc(item.nome)}</strong></td><td>${esc(item.email)}</td><td>${esc(roleName[item.role])}</td><td><span class="pill ${item.ativo?'ativo':'inativo'}">${item.ativo?'Ativo':'Inativo'}</span></td><td><div class="row-actions"><button aria-label="${item.ativo?'Desativar':'Ativar'} usuário ${esc(item.nome)}" title="${item.ativo?'Bloquear o acesso deste usuário ao sistema':'Permitir que este usuário acesse o sistema'}" data-user-id="${item.id}" data-user-status="${item.ativo?'false':'true'}">${item.ativo?'Desativar':'Ativar'}</button></div></td></tr>`).join('');$$('[data-user-id]').forEach((button)=>button.addEventListener('click',async()=>{try{await api(`/usuarios/${button.dataset.userId}/status`,{method:'PUT',body:JSON.stringify({ativo:button.dataset.userStatus==='true'})});await loadUsers();}catch(error){toast(error.message,true);}}));loadFirstUse();}
+$('#btn-novo-usuario').addEventListener('click',()=>{modal('Novo usuário',`<form id="user-form"><label for="us-nome">Nome</label><input id="us-nome" required><label for="us-email">E-mail</label><input id="us-email" type="email" required><label for="us-senha">Senha provisória</label><div class="password-field"><input id="us-senha" type="password" minlength="10" required><button id="toggle-us-senha" class="password-toggle" type="button" aria-controls="us-senha" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button></div><label for="us-senha-confirma">Confirmar senha provisória</label><div class="password-field"><input id="us-senha-confirma" type="password" minlength="10" required><button id="toggle-us-senha-confirma" class="password-toggle" type="button" aria-controls="us-senha-confirma" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button></div><label for="us-role">Perfil</label><select id="us-role"><option value="supervisor">Supervisor — lançamentos e consultas</option><option value="gestor">Gestor — também gerencia cadastros</option><option value="admin">Administrador — acesso total</option></select><div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Criar usuário</button></form>`);bindPasswordToggle('toggle-us-senha','us-senha');bindPasswordToggle('toggle-us-senha-confirma','us-senha-confirma');$('#user-form').addEventListener('submit',async(event)=>{event.preventDefault();if($('#us-senha').value!==$('#us-senha-confirma').value){$('#modal-error').textContent='A confirmação não coincide com a senha provisória.';return;}try{await api('/usuarios',{method:'POST',body:JSON.stringify({nome:$('#us-nome').value,email:$('#us-email').value,senha:$('#us-senha').value,role:$('#us-role').value})});closeModal();toast('Usuário criado.');await loadUsers();}catch(error){$('#modal-error').textContent=error.message;}});});
 
-$('#form-senha').addEventListener('submit',async(event)=>{event.preventDefault();try{await api('/auth/alterar-senha',{method:'POST',body:JSON.stringify({senhaAtual:$('#senha-atual').value,novaSenha:$('#senha-nova').value})});event.target.reset();$('#senha-mensagem').textContent='Senha alterada com sucesso.';$('#senha-mensagem').style.color='var(--green)';}catch(error){$('#senha-mensagem').textContent=error.message;$('#senha-mensagem').style.color='var(--red)';}});
+$('#form-senha')?.addEventListener('submit',async(event)=>{event.preventDefault();if($('#senha-nova').value!==$('#senha-nova-confirma').value){$('#senha-mensagem').textContent='A confirmação não coincide com a nova senha.';$('#senha-mensagem').style.color='var(--red)';return;}try{await api('/auth/alterar-senha',{method:'POST',body:JSON.stringify({senhaAtual:$('#senha-atual').value,novaSenha:$('#senha-nova').value})});event.target.reset();$('#senha-mensagem').textContent='Senha alterada com sucesso.';$('#senha-mensagem').style.color='var(--green)';}catch(error){$('#senha-mensagem').textContent=error.message;$('#senha-mensagem').style.color='var(--red)';}});
 $('#btn-backup').addEventListener('click',()=>download('/backup','backup-centro-de-custos.tar.gz'));
 let restoreFile=null;
 $('#restore-arquivo').addEventListener('change',(event)=>{restoreFile=event.target.files[0]||null;$('#restore-arquivo-label').textContent=restoreFile?restoreFile.name:'Escolher backup .tar.gz';$('#btn-restaurar').disabled=!restoreFile;$('#restore-mensagem').textContent='';});
 $('#btn-restaurar').addEventListener('click',async()=>{if(!restoreFile)return;const confirmation=prompt('A restauração substituirá a base ativa no próximo início, mas uma cópia preventiva será preservada. Digite RESTAURAR para continuar.');if(confirmation!=='RESTAURAR'){toast('Restauração cancelada.');return;}const button=$('#btn-restaurar');button.disabled=true;button.textContent='Validando backup…';try{const content=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');reader.onerror=()=>reject(new Error('Não foi possível ler o arquivo.'));reader.readAsDataURL(restoreFile);});const result=await api('/backup/restaurar',{method:'POST',body:JSON.stringify({nomeArquivo:restoreFile.name,conteudoBase64:content,confirmacao:confirmation})});$('#restore-mensagem').textContent=result.mensagem;$('#restore-mensagem').style.color='var(--green)';if(confirm('Backup validado. Deseja encerrar o servidor agora para aplicar a restauração? Depois, abra iniciar-windows.bat novamente.')){await api('/backup/reiniciar',{method:'POST'});alert('Servidor encerrando com segurança. Aguarde alguns segundos e abra iniciar-windows.bat novamente.');}}catch(error){$('#restore-mensagem').textContent=error.message;$('#restore-mensagem').style.color='var(--red)';}finally{button.disabled=false;button.textContent='Validar e restaurar';}});
 
 const monthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-(async()=>{const now=new Date();$('#fechamento-ano').value=now.getFullYear();$('#fechamento-mes').value=now.getMonth()+1;await loadClosings();})();
-async function loadClosings(){try{const closings=await api('/fechamento-mensal');$('#fechamentos-ativos').innerHTML=closings.length?`<p class="hint" style="margin-top:12px">Competências bloqueadas:</p><div class="closing-tags">${closings.map(c=>`<span class="closing-tag">${String(c.month).padStart(2,'0')}/${c.year}${usuario.role==='admin'?`<button data-close-id="${c.id}" class="closing-remove" title="Reabrir">×</button>`:''}</span>`).join('')}</div>`:'';$$('[data-close-id]').forEach(btn=>btn.addEventListener('click',async()=>{if(!confirm('Reabrir esta competência? Lançamentos poderão ser editados novamente.'))return;try{await api(`/fechamento-mensal/${btn.dataset.closeId}`,{method:'DELETE'});toast('Competência reaberta.');await loadClosings();}catch(error){toast(error.message,true);}}));}catch{}}
-$('#btn-fechar-mes').addEventListener('click',async()=>{const ano=Number($('#fechamento-ano').value);const mes=Number($('#fechamento-mes').value);const msg=$('#fechamento-mensagem');msg.textContent='';try{await api('/fechamento-mensal',{method:'POST',body:JSON.stringify({ano,mes})});msg.style.color='var(--green)';msg.textContent=`Competência ${String(mes).padStart(2,'0')}/${ano} fechada.`;toast('Competência fechada.');await loadClosings();}catch(error){msg.style.color='var(--red)';msg.textContent=error.message;}});
+(async()=>{const now=new Date();if($('#fechamento-ano'))$('#fechamento-ano').value=now.getFullYear();if($('#fechamento-mes'))$('#fechamento-mes').value=now.getMonth()+1;if($('#fechamentos-ativos'))await loadClosings();})();
+async function loadClosings(){try{const closings=await api('/fechamento-mensal');$('#fechamentos-ativos').innerHTML=closings.length?`<p class="hint" style="margin-top:12px">Competências bloqueadas:</p><div class="closing-tags">${closings.map(c=>`<span class="closing-tag">${String(c.month).padStart(2,'0')}/${c.year}${usuario.role==='admin'?`<button data-close-id="${c.id}" class="closing-remove" aria-label="Reabrir competência ${String(c.month).padStart(2,'0')}/${c.year}" title="Permitir novamente alterações nos lançamentos desta competência">Reabrir</button>`:''}</span>`).join('')}</div>`:'';$$('[data-close-id]').forEach(btn=>btn.addEventListener('click',async()=>{if(!(await confirmDialog('Reabrir esta competência? Lançamentos poderão ser editados novamente.',{confirmLabel:'Reabrir'})))return;try{await api(`/fechamento-mensal/${btn.dataset.closeId}`,{method:'DELETE'});toast('Competência reaberta.');await loadClosings();}catch(error){toast(error.message,true);}}));}catch{}}
+$('#btn-fechar-mes')?.addEventListener('click',async()=>{const ano=Number($('#fechamento-ano').value);const mes=Number($('#fechamento-mes').value);const msg=$('#fechamento-mensagem');msg.textContent='';try{await api('/fechamento-mensal',{method:'POST',body:JSON.stringify({ano,mes})});msg.style.color='var(--green)';msg.textContent=`Competência ${String(mes).padStart(2,'0')}/${ano} fechada.`;toast('Competência fechada.');await loadClosings();}catch(error){msg.style.color='var(--red)';msg.textContent=error.message;}});
 
 const freqLabels={mensal:'Mensal',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'};
-async function loadRecurring(){const items=await api('/recorrentes');$('#lista-recorrentes').innerHTML=items.length?items.map(item=>{const parcela=item.total_parcelas?`Parcela ${item.parcela_atual}/${item.total_parcelas}`:'Sem limite';return`<article class="center-card"><div class="center-card-head"><div class="center-card-icon">↻</div><span class="pill center-status-pill ${item.ativo?'ativo':'inativo'}">${item.ativo?'Ativa':'Inativa'}</span></div><h3 class="center-card-title">${esc(item.nome)}</h3><p class="center-card-client">${esc(item.centro_codigo)} — ${esc(item.centro_nome)}</p><div class="center-card-stats"><div><span class="center-stat-label">Tipo</span><strong>${esc(item.tipo)}</strong></div><div><span class="center-stat-label">Valor</span><strong>${money(item.valor)}</strong></div></div><div class="center-card-stats"><div><span class="center-stat-label">Frequência</span><strong>${freqLabels[item.frequencia]||item.frequencia}</strong></div><div><span class="center-stat-label">Parcela</span><strong>${parcela}</strong></div></div><div class="center-card-footer">${['admin','gestor'].includes(usuario.role)?`<button class="text-btn" data-edit-recurring="${item.id}">Editar</button><button class="text-btn danger" data-delete-recurring="${item.id}">Excluir</button>`:''}</div></article>`}).join(''):'<div class="empty">Nenhum modelo recorrente cadastrado.</div>';$$('[data-edit-recurring]').forEach(btn=>btn.addEventListener('click',()=>openRecurring(items.find(i=>i.id===Number(btn.dataset.editRecurring)))));$$('[data-delete-recurring]').forEach(btn=>btn.addEventListener('click',async()=>{if(!confirm('Excluir este modelo?'))return;try{await api(`/recorrentes/${btn.dataset.deleteRecurring}`,{method:'DELETE'});toast('Modelo excluído.');await loadRecurring();}catch(error){toast(error.message,true);}}));}
-$('#btn-gerar-recorrentes').addEventListener('click',async()=>{try{const r=await api('/recorrentes/gerar',{method:'POST'});toast(r.mensagem);await loadDashboard();}catch(error){toast(error.message,true);}});
+async function loadRecurring(){const items=await api('/recorrentes');$('#lista-recorrentes').innerHTML=items.length?items.map(item=>{const parcela=item.total_parcelas?`Parcela ${item.parcela_atual}/${item.total_parcelas}`:'Sem limite';return`<article class="center-card"><div class="center-card-head"><div class="center-card-icon">↻</div><span class="pill center-status-pill ${item.ativo?'ativo':'inativo'}">${item.ativo?'Ativa':'Inativa'}</span></div><h3 class="center-card-title">${esc(item.nome)}</h3><p class="center-card-client">${esc(item.centro_codigo)} — ${esc(item.centro_nome)}</p><div class="center-card-stats"><div><span class="center-stat-label">Tipo</span><strong>${esc(item.tipo)}</strong></div><div><span class="center-stat-label">Valor</span><strong>${money(item.valor)}</strong></div></div><div class="center-card-stats"><div><span class="center-stat-label">Frequência</span><strong>${freqLabels[item.frequencia]||item.frequencia}</strong></div><div><span class="center-stat-label">Parcela</span><strong>${parcela}</strong></div></div><div class="center-card-footer">${['admin','gestor'].includes(usuario.role)?`<button class="text-btn" data-edit-recurring="${item.id}" aria-label="Editar recorrência: ${esc(item.nome)}" title="Editar recorrência: ${esc(item.nome)}">Editar</button><button class="text-btn danger" data-delete-recurring="${item.id}" aria-label="Excluir recorrência: ${esc(item.nome)}" title="Excluir recorrência: ${esc(item.nome)}">Excluir</button>`:''}</div></article>`}).join(''):'<div class="empty">Nenhum modelo recorrente cadastrado.</div>';$$('[data-edit-recurring]').forEach(btn=>btn.addEventListener('click',()=>openRecurring(items.find(i=>i.id===Number(btn.dataset.editRecurring)))));$$('[data-delete-recurring]').forEach(btn=>btn.addEventListener('click',async()=>{if(!confirm('Excluir este modelo?'))return;try{await api(`/recorrentes/${btn.dataset.deleteRecurring}`,{method:'DELETE'});toast('Modelo excluído.');await loadRecurring();}catch(error){toast(error.message,true);}}));}
+$('#btn-gerar-recorrentes')?.addEventListener('click',async()=>{try{const r=await api('/recorrentes/gerar',{method:'POST'});toast(r.mensagem);await loadDashboard();}catch(error){toast(error.message,true);}});
 $('#btn-novo-recorrente').addEventListener('click',()=>openRecurring(null));
 function openRecurring(item){modal(item?'Editar modelo recorrente':'Novo modelo recorrente',`<form id="recurring-form"><label for="rec-nome">Nome (ex: Aluguel)</label><input id="rec-nome" required maxlength="140" value="${esc(item?.nome||'')}"><div class="form-grid"><div><label for="rec-tipo">Tipo</label><select id="rec-tipo"><option value="despesa" ${item?.tipo==='despesa'?'selected':''}>Despesa</option><option value="receita" ${item?.tipo==='receita'?'selected':''}>Receita</option></select></div><div><label for="rec-valor">Valor (R$)</label><input id="rec-valor" type="number" min="0.01" step="0.01" required value="${esc(item?.valor||'')}"></div></div><label for="rec-centro">Centro de custo</label><select id="rec-centro" required>${centros.filter(c=>c.ativo).map(c=>`<option value="${c.id}" ${c.id===item?.cost_center_id?'selected':''}>${esc(c.codigo)} — ${esc(c.nome)}</option>`).join('')}</select><label for="rec-categoria">Categoria</label><select id="rec-categoria" required></select><label for="rec-favorecido">Cliente / fornecedor</label><input id="rec-favorecido" maxlength="160" value="${esc(item?.favorecido||'')}"><div class="form-grid"><div><label for="rec-frequencia">Frequência</label><select id="rec-frequencia"><option value="mensal" ${item?.frequencia==='mensal'?'selected':''}>Mensal</option><option value="bimestral" ${item?.frequencia==='bimestral'?'selected':''}>Bimestral</option><option value="trimestral" ${item?.frequencia==='trimestral'?'selected':''}>Trimestral</option><option value="semestral" ${item?.frequencia==='semestral'?'selected':''}>Semestral</option><option value="anual" ${item?.frequencia==='anual'?'selected':''}>Anual</option></select></div><div><label for="rec-dia">Dia do mês</label><input id="rec-dia" type="number" min="1" max="31" value="${esc(item?.dia_mes||1)}"></div></div><div class="form-grid"><div><label for="rec-parcelas">Total de parcelas (0 = sem limite)</label><input id="rec-parcelas" type="number" min="0" value="${esc(item?.total_parcelas||0)}"></div><div><label for="rec-forma">Forma de pagamento</label><select id="rec-forma"><option value="">Não informada</option>${['Pix','Boleto','Transferência','Cartão','Dinheiro','Outro'].map(v=>`<option value="${v}" ${item?.forma_pagamento===v?'selected':''}>${v}</option>`).join('')}</select></div></div><div id="modal-error" class="form-error"></div><button class="btn primary" type="submit">Salvar modelo</button></form>`);const fill=()=>{const type=$('#rec-tipo').value;$('#rec-categoria').innerHTML=categorias.filter(c=>c.ativo&&(c.tipo==='ambos'||c.tipo===type)).map(c=>`<option value="${c.id}" ${c.id===item?.category_id?'selected':''}>${esc(c.nome)}</option>`).join('');};$('#rec-tipo').addEventListener('change',fill);fill();$('#recurring-form').addEventListener('submit',async(event)=>{event.preventDefault();try{const body={nome:$('#rec-nome').value,tipo:$('#rec-tipo').value,valor:Number($('#rec-valor').value),cost_center_id:Number($('#rec-centro').value),category_id:Number($('#rec-categoria').value),favorecido:$('#rec-favorecido').value,frequencia:$('#rec-frequencia').value,dia_mes:Number($('#rec-dia').value),total_parcelas:Number($('#rec-parcelas').value),forma_pagamento:$('#rec-forma').value};await api(item?`/recorrentes/${item.id}`:'/recorrentes',{method:item?'PUT':'POST',body:JSON.stringify(body)});closeModal();toast('Modelo salvo.');await loadRecurring();}catch(error){$('#modal-error').textContent=error.message;}});}
 
 function markStatusMessages(root=document){root.querySelectorAll('.form-error').forEach((element)=>element.setAttribute('role','status'));}
-function modal(title,content){$('#modal-titulo').textContent=title;$('#modal-corpo').innerHTML=content;markStatusMessages($('#modal-corpo'));$('#modal-fundo').classList.remove('oculto');if(matchMedia('(hover:hover) and (pointer:fine)').matches)setTimeout(()=>$('#modal-corpo input, #modal-corpo select')?.focus(),0);}
-function closeModal(){$('#modal-fundo').classList.add('oculto');}
-$('#modal-fechar').addEventListener('click',closeModal);$('#modal-fundo').addEventListener('click',(event)=>{if(event.target===$('#modal-fundo'))closeModal();});document.addEventListener('keydown',(event)=>{if(event.key==='Escape')closeModal();});
 function empty(message){return `<div class="empty">${esc(message)}</div>`;}
 
 async function loadFirstUse() {
   try {
     const data = await api('/first-use/status');
-    if (data.completed) { $('#first-use-banner').classList.add('oculto'); return; }
+    if (data.completed || localStorage.getItem('cc_first_use_dismissed')==='true') { $('#first-use-banner').classList.add('oculto'); return; }
     $('#first-use-banner').classList.remove('oculto');
     const checks = [
       { id: 'obras', count: data.counts.obras, min: 1 },
@@ -447,12 +773,16 @@ async function loadFirstUse() {
       const done = item.count >= item.min;
       $(`#check-${item.id}`).classList.toggle('done', done);
       $(`#check-${item.id} .check-icon`).textContent = done ? '✓' : '○';
-      if(item.id==='foto')$('#first-use-photo').textContent=done?'Alterar':'Adicionar';
+      if(item.id==='foto')$('#first-use-photo').textContent=done?'Alterar foto':'Adicionar foto';
     });
   } catch {}
 }
-$('#first-use-dismiss').addEventListener('click', () => $('#first-use-banner').classList.add('oculto'));
+$('#first-use-dismiss').addEventListener('click', () => { localStorage.setItem('cc_first_use_dismissed','true'); $('#first-use-banner').classList.add('oculto'); });
 $('#first-use-photo').addEventListener('click',()=>{showView('config');$('#profile-photo-input').click();});
+$('#btn-sync-centros')?.addEventListener('click', () => showView('sincronizacao'));
+$('#btn-open-webmail')?.addEventListener('click', () => {
+  window.electronAPI?.openWebmail?.() || window.open('https://webmailpro.uol.com.br/', '_blank', 'noopener,noreferrer');
+});
 $('#first-use-complete').addEventListener('click', async () => {
   try { await api('/first-use/complete', { method: 'POST' }); $('#first-use-banner').classList.add('oculto'); toast('Assistente finalizado.'); } catch (error) { toast(error.message, true); }
 });
@@ -465,7 +795,7 @@ $('#profile-photo-input').addEventListener('change',async(event)=>{
   finally{event.target.value='';}
 });
 $('#profile-photo-remove').addEventListener('click',async()=>{
-  if(!confirm('Remover sua foto de perfil? As iniciais voltarão a aparecer.'))return;
+  if(!(await confirmDialog('Remover sua foto de perfil? As iniciais voltarão a aparecer.',{confirmLabel:'Remover'})))return;
   const message=$('#profile-photo-message');
   try{await api('/auth/foto-perfil',{method:'DELETE'});renderProfilePhoto(null);message.textContent='Foto removida.';message.style.color='var(--green)';toast('Foto de perfil removida.');loadFirstUse();}
   catch(error){message.textContent=error.message;message.style.color='var(--red)';}
@@ -493,7 +823,7 @@ function renderUpdateStatus(status) {
   } else if (status.status === 'not-available') {
     msg.style.color = 'var(--green)'; msg.textContent = 'Você já está na versão mais recente.';
   } else if (status.status === 'available') {
-    msg.style.color = 'var(--orange)';
+    msg.style.color = 'var(--accent)';
     const version=String(status.info?.version || '').trim();
     const notes=String(status.info?.releaseNotes || '').trim();
     msg.textContent=`Nova versão disponível: ${version}${notes?`\n\nO que mudou:\n${notes}`:''}\n\nRecomendamos atualizar para ter acesso às correções mais recentes.`;
@@ -530,8 +860,8 @@ async function checkForUpdates() {
   }
 }
 
-$('#btn-verificar-update').addEventListener('click', checkForUpdates);
-$('#btn-download-update').addEventListener('click', async () => {
+$('#btn-verificar-update')?.addEventListener('click', checkForUpdates);
+$('#btn-download-update')?.addEventListener('click', async () => {
   try {
     await api('/update/download', { method: 'POST' });
     renderUpdateStatus({ status: 'downloading', progress: { percent: 0 } });
@@ -546,7 +876,7 @@ $('#btn-download-update').addEventListener('click', async () => {
     renderUpdateStatus({ status: 'error', error: error.message });
   }
 });
-$('#btn-install-update').addEventListener('click', async () => {
+$('#btn-install-update')?.addEventListener('click', async () => {
   if (!confirm('O programa será fechado e a atualização será instalada. Deseja continuar?')) return;
   try {
     await api('/update/install', { method: 'POST' });
@@ -560,15 +890,16 @@ $('#btn-install-update').addEventListener('click', async () => {
 const bugTipoLabel={bug:'Bug',melhoria:'Melhoria',sugestao:'Sugestão'};
 const bugSeveridadeLabel={baixa:'Baixa',media:'Média',alta:'Alta',critica:'Crítica'};
 const bugStatusLabel={aberto:'Aberto','em andamento':'Em andamento',resolvido:'Resolvido',fechado:'Fechado'};
-const bugSeveridadeClass={baixa:'pill',media:'pill pendente',alta:'pill vencido',critica:'pill despesa'};
-const bugStatusClass={aberto:'pill pendente','em andamento':'pill projeto-execucao',resolvido:'pill ativo',fechado:'pill inativo'};
+// Classes proprias do dominio de bug reports (nao reaproveitam pill financeiro/orcamento: pendente/vencido/despesa/projeto-execucao/ativo/inativo).
+const bugSeveridadeClass={baixa:'pill bug-baixa',media:'pill bug-media',alta:'pill bug-alta',critica:'pill bug-critica'};
+const bugStatusClass={aberto:'pill bug-aberto','em andamento':'pill bug-andamento',resolvido:'pill bug-resolvido',fechado:'pill bug-fechado'};
 
 async function loadBugReports(){
   const items=await api('/bug-reports');
   const el=$('#lista-bugreports');
   if(!items.length){el.innerHTML='<div class="empty">Nenhum report cadastrado.</div>';return;}
   const isAdminOrGestor=['admin','gestor'].includes(usuario.role);
-  el.innerHTML=`<div class="table-meta"><span>${items.length} report(s)</span></div><div class="table-scroll"><table><thead><tr><th>#</th><th>Título</th><th>Tipo</th><th>Severidade</th><th>Status</th><th>Autor</th><th>Data</th>${isAdminOrGestor?'<th>Ações</th>':''}</tr></thead><tbody>${items.map((r)=>`<tr><td><strong>${r.id}</strong></td><td>${esc(r.titulo)}</td><td><span class="pill">${bugTipoLabel[r.tipo]||r.tipo}</span></td><td><span class="${bugSeveridadeClass[r.severidade]||'pill'}">${bugSeveridadeLabel[r.severidade]||r.severidade}</span></td><td><span class="${bugStatusClass[r.status]||'pill'}">${bugStatusLabel[r.status]||r.status}</span></td><td>${esc(r.author_name)}</td><td>${dateBr(r.created_at)}</td>${isAdminOrGestor?`<td><div class="row-actions"><button data-edit-bug="${r.id}">Gerenciar</button></div></td>`:''}</tr>`).join('')}</tbody></table></div>`;
+  el.innerHTML=`<div class="table-meta"><span>${items.length} report(s)</span></div><div class="table-scroll"><table class="cc-mobile-table"><thead><tr><th>#</th><th>Título</th><th>Tipo</th><th>Severidade</th><th>Status</th><th>Autor</th><th>Data</th>${isAdminOrGestor?'<th>Ações</th>':''}</tr></thead><tbody>${items.map((r)=>`<tr><td><strong>${r.id}</strong></td><td data-label="Título">${esc(r.titulo)}</td><td data-label="Tipo"><span class="pill">${bugTipoLabel[r.tipo]||r.tipo}</span></td><td data-label="Severidade"><span class="${bugSeveridadeClass[r.severidade]||'pill'}">${bugSeveridadeLabel[r.severidade]||r.severidade}</span></td><td data-label="Status"><span class="${bugStatusClass[r.status]||'pill'}">${bugStatusLabel[r.status]||r.status}</span></td><td data-label="Autor">${esc(r.author_name)}</td><td data-label="Data">${dateBr(r.created_at)}</td>${isAdminOrGestor?`<td data-label="Ações"><div class="row-actions"><button data-edit-bug="${r.id}" aria-label="Gerenciar relato ${r.id}: ${esc(r.titulo)}" title="Alterar status e resposta deste relato">Gerenciar</button></div></td>`:''}</tr>`).join('')}</tbody></table></div>`;
   $$('[data-edit-bug]').forEach((btn)=>btn.addEventListener('click',()=>openBugDetail(items.find((i)=>i.id===Number(btn.dataset.editBug)))));
 }
 
@@ -606,6 +937,18 @@ function openBugDetail(item){
 }
 
 $('#btn-novo-bugreport').addEventListener('click',openBugReportModal);
+
+// Expoe utilitarios e handlers para os modulos de lista paginada (list-panel).
+window.api=api;
+window.toast=toast;
+window.openCategory=openCategory;
+window.openSupplier=openSupplier;
+window.openCenter=openCenter;
+window.openCenterDetail=openCenterDetail;
+window.openRecurring=openRecurring;
+window.loadRecurring=loadRecurring;
+window.getUsuario=()=>usuario;
+Object.defineProperty(window,'usuario',{configurable:true,get(){return usuario;}});
 $('#fab-bugreport').addEventListener('click',openBugReportModal);
 
 function openBugReportModal(){
@@ -638,11 +981,11 @@ const mobileThemeButton=$('#mobile-theme');
 function applyDarkMode(value){
   const dark=value===true;
   document.documentElement.classList.toggle('dark',dark);
-  themeButton.textContent=dark?'☀':'☾';
+  themeButton.textContent=dark?'Modo claro':'Modo noturno';
   themeButton.title=dark?'Ativar modo claro':'Ativar modo noturno';
   themeButton.setAttribute('aria-label',themeButton.title);
   themeButton.setAttribute('aria-pressed',String(dark));
-  if(mobileThemeButton){mobileThemeButton.querySelector('span').textContent=dark?'☀':'☾';mobileThemeButton.setAttribute('aria-label',dark?'Ativar modo claro':'Ativar modo noturno');}
+  if(mobileThemeButton){mobileThemeButton.querySelector('span').textContent=dark?'Modo claro':'Modo noturno';mobileThemeButton.setAttribute('aria-label',dark?'Ativar modo claro':'Ativar modo noturno');}
   localStorage.setItem('cc_dark',String(dark));
 }
 mobileThemeButton?.addEventListener('click',()=>themeButton.click());

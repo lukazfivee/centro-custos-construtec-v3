@@ -48,8 +48,11 @@
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10020;background:rgba(0,0,0,.58);display:grid;place-items:center;padding:20px';
     overlay.innerHTML = `<div class="modal" style="display:block;position:relative;width:min(620px,100%);max-height:90vh;overflow:auto"><div class="modal-head"><h2>${escHtml(title)}</h2><button type="button" class="icon-btn" data-v31-close>×</button></div><div style="padding:20px 22px">${html}</div></div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector('[data-v31-close]').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (event) => { if (event.target === overlay) overlay.remove(); });
+    const close = () => { overlay.remove(); window.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    overlay.querySelector('[data-v31-close]').addEventListener('click', close);
+    overlay.addEventListener('click', (event) => { if (event.target === overlay) close(); });
     return overlay;
   }
 

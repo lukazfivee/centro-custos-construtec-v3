@@ -1,3 +1,4 @@
+const { financialTransactionsSql, allocatedTransactionsSql } = require('../services/financialProjection');
 const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
@@ -13,6 +14,7 @@ router.get('/resumo', asyncRoute(async (req, res) => {
   if (!validMonth(month)) throw httpError(400, 'Mês inválido. Use AAAA-MM.');
   const centerId = req.query.centroId ? positiveId(req.query.centroId, 'Centro de custo') : null;
   const range = monthRange(month);
+  const sourceSql = centerId ? allocatedTransactionsSql : financialTransactionsSql;
   const params = [range.start, range.end, centerId];
   const db = getDb();
   const months = monthsEndingAt(month);
@@ -29,11 +31,11 @@ router.get('/resumo', asyncRoute(async (req, res) => {
         COALESCE(SUM(amount * accounting_sign) FILTER (WHERE type='despesa' AND financial_status='pendente'
           AND COALESCE(due_date,transaction_date) >= $1 AND COALESCE(due_date,transaction_date) < $2),0) AS a_pagar,
         COUNT(*) FILTER (WHERE transaction_date >= $1 AND transaction_date < $2) AS qtd_lancamentos
-      FROM transactions WHERE deleted_at IS NULL AND ($3::integer IS NULL OR cost_center_id=$3)
+      FROM ${sourceSql} t WHERE deleted_at IS NULL AND ($3::integer IS NULL OR cost_center_id=$3)
     `, params),
     db.query(`
       SELECT COALESCE(SUM(amount * accounting_sign),0) AS total,COUNT(*) AS quantidade
-      FROM transactions WHERE deleted_at IS NULL AND financial_status='pendente'
+      FROM ${sourceSql} t WHERE deleted_at IS NULL AND financial_status='pendente'
         AND due_date<CURRENT_DATE AND accounting_sign=1 AND ($1::integer IS NULL OR cost_center_id=$1)
     `, [centerId]),
     db.query(`
@@ -43,14 +45,14 @@ router.get('/resumo', asyncRoute(async (req, res) => {
         COALESCE(SUM(t.amount * t.accounting_sign) FILTER (WHERE t.type='despesa' AND t.financial_status='liquidado'),0) AS despesas,
         COALESCE(SUM(t.amount * t.accounting_sign) FILTER (WHERE t.type='despesa'),0) AS comprometido,
         COUNT(t.id) AS qtd_lancamentos
-      FROM cost_centers cc LEFT JOIN transactions t ON t.cost_center_id=cc.id AND t.deleted_at IS NULL
+      FROM cost_centers cc LEFT JOIN ${allocatedTransactionsSql} t ON t.cost_center_id=cc.id AND t.deleted_at IS NULL
         AND t.transaction_date >= $1 AND t.transaction_date < $2
       WHERE cc.active=TRUE AND ($3::integer IS NULL OR cc.id=$3)
       GROUP BY cc.id ORDER BY despesas DESC,cc.name
     `, params),
     db.query(`
       SELECT c.id,c.name AS categoria,t.type AS tipo,SUM(t.amount * t.accounting_sign) AS total,COUNT(*) AS quantidade
-      FROM transactions t JOIN categories c ON c.id=t.category_id
+      FROM ${sourceSql} t JOIN categories c ON c.id=t.category_id
       WHERE t.deleted_at IS NULL AND t.transaction_date >= $1 AND t.transaction_date < $2
         AND ($3::integer IS NULL OR t.cost_center_id=$3)
       GROUP BY c.id,t.type ORDER BY t.type,total DESC
@@ -62,7 +64,7 @@ router.get('/resumo', asyncRoute(async (req, res) => {
         CASE WHEN t.financial_status='pendente' AND t.due_date<CURRENT_DATE THEN 'vencido'
           ELSE t.financial_status END AS situacao,
         t.amount AS valor,cc.name AS centro_nome,c.name AS categoria
-      FROM transactions t JOIN cost_centers cc ON cc.id=t.cost_center_id
+      FROM ${sourceSql} t JOIN cost_centers cc ON cc.id=t.cost_center_id
       JOIN categories c ON c.id=t.category_id
       WHERE t.deleted_at IS NULL AND t.transaction_date >= $1 AND t.transaction_date < $2
         AND ($3::integer IS NULL OR t.cost_center_id=$3)
@@ -72,7 +74,7 @@ router.get('/resumo', asyncRoute(async (req, res) => {
       SELECT TO_CHAR(DATE_TRUNC('month',transaction_date),'YYYY-MM') AS mes,
         COALESCE(SUM(amount * accounting_sign) FILTER (WHERE type='receita'),0) AS receitas,
         COALESCE(SUM(amount * accounting_sign) FILTER (WHERE type='despesa'),0) AS despesas
-      FROM transactions WHERE deleted_at IS NULL AND financial_status='liquidado'
+      FROM ${sourceSql} t WHERE deleted_at IS NULL AND financial_status='liquidado'
         AND transaction_date >= $1 AND transaction_date < $2
         AND ($3::integer IS NULL OR cost_center_id=$3)
       GROUP BY DATE_TRUNC('month',transaction_date) ORDER BY mes

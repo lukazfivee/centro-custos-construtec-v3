@@ -1,3 +1,4 @@
+const { isMonthClosed } = require('../services/financialPolicy');
 const crypto = require('crypto');
 const express = require('express');
 const { getDb, getInstanceIdentity } = require('../db');
@@ -8,18 +9,10 @@ const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pag
 const { validDate } = require('../lib/dates');
 const { csvLine, decimalBr } = require('../lib/csv');
 const { recordAudit } = require('../services/audit');
+const { recordExpenseAllocation } = require('../services/budgets/budgetAllocations');
 
 const router = express.Router();
 router.use(autenticar);
-
-async function isMonthClosed(dateStr) {
-  if (!dateStr) return false;
-  const d = new Date(`${String(dateStr).slice(0, 10)}T12:00:00`);
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const { rows } = await getDb().query('SELECT id FROM monthly_closings WHERE year=$1 AND month=$2', [year, month]);
-  return Boolean(rows[0]);
-}
 
 const selectSql = `
   SELECT t.id,t.public_id,t.type AS tipo,t.cost_center_id,t.category_id,
@@ -105,6 +98,7 @@ router.post('/', asyncRoute(async (req, res) => {
     entityType:'lancamento',entityId:rows[0].public_id,action:'criado',
     summary:`Lançamento criado: ${data.description}`,data,user:req.usuario,
   });
+  await maybeAutoAllocateExpense(data, rows[0].id);
   res.status(201).json(rows[0]);
 }));
 
@@ -121,10 +115,16 @@ router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (re
   let created;
   await db.transaction(async (tx) => {
     const originalResult = await tx.query(
-      `SELECT * FROM transactions WHERE id=$1 AND deleted_at IS NULL`, [id]
+      `SELECT * FROM transactions WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, [id]
     );
     const original = originalResult.rows[0];
     if (!original) throw httpError(404, 'Lançamento não encontrado.');
+    const originalDateStr = original.transaction_date instanceof Date
+      ? original.transaction_date.toISOString().slice(0,10) : String(original.transaction_date).slice(0,10);
+    if (reversalDate < originalDateStr) {
+      throw httpError(400, 'A data do estorno não pode ser anterior à data do lançamento original.');
+    }
+    if (original.approval_status !== 'aprovado') throw httpError(409, 'Somente lançamentos aprovados podem ser estornados.');
     if (original.reversal_of) throw httpError(409, 'Um estorno não pode ser estornado novamente. Crie um novo lançamento corretivo, se necessário.');
     if (Number(original.accounting_sign || 1) !== 1) throw httpError(409, 'Este registro já é um movimento de estorno.');
     if (original.financial_status !== 'liquidado') {
@@ -158,6 +158,8 @@ router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (re
       [req.usuario.id,instance.id,instance.name,id]
     );
     created = insert.rows[0];
+    await tx.query(`INSERT INTO transaction_allocations(transaction_id,cost_center_id,amount,note)
+      SELECT $1,cost_center_id,amount,note FROM transaction_allocations WHERE transaction_id=$2`,[created.id,id]);
     await recordAudit({
       entityType:'lancamento',entityId:original.public_id,action:'estornado',
       summary:`Lançamento estornado: ${original.description}`,
@@ -208,18 +210,21 @@ router.put('/:id', asyncRoute(async (req, res) => {
        financial_status=$11,document_number=$12,payment_method=$13,last_modified_instance_id=$14,
        last_modified_instance_name=$15,revision=revision+1,updated_by=$16,updated_at=NOW()
      WHERE id=$17 AND revision=$18 AND deleted_at IS NULL AND reversal_of IS NULL AND reversed_at IS NULL
+       AND (NOT EXISTS (SELECT 1 FROM transaction_allocations a WHERE a.transaction_id=transactions.id)
+         OR (amount=$6 AND cost_center_id=$2))
      RETURNING revision`,
     [data.type,data.costCenterId,data.categoryId,data.description,data.counterparty,data.amount,
       data.date,data.notes,data.dueDate,data.settlementDate,data.financialStatus,data.documentNumber,
       data.paymentMethod,instance.id,instance.name,req.usuario.id,id,expectedRevision]
   );
   if (!result.rowCount) {
-    throw httpError(409, 'Este lançamento foi alterado, excluído ou estornado. Atualize a lista antes de editar novamente.');
+    throw httpError(409, 'Este lançamento foi alterado, excluído, estornado ou possui rateio incompatível. Atualize a lista; remova o rateio antes de alterar valor ou obra.');
   }
   await recordAudit({
     entityType:'lancamento',entityId:existing.public_id,action:'atualizado',
     summary:`Lançamento atualizado: ${data.description}`,data,user:req.usuario,
   });
+  await maybeAutoAllocateExpense(data, id);
   res.json({ ok:true, revisao:result.rows[0].revision });
 }));
 
@@ -252,6 +257,24 @@ router.delete('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res)
   });
   res.json({ ok:true });
 }));
+
+// Cria allocation 'unmapped' automática p/ despesa liquidada em centro com contrato ativo e baseline vigente.
+// Idempotente: não cria se já existir allocation para a transação.
+async function maybeAutoAllocateExpense(data, transactionId) {
+  if (data.type !== 'despesa' || data.financialStatus !== 'liquidado') return;
+  const db = getDb();
+  const contract = await db.query(
+    `SELECT id FROM project_contracts
+     WHERE cost_center_id=$1 AND status='active' AND current_baseline_id IS NOT NULL LIMIT 1`,
+    [data.costCenterId]
+  );
+  if (!contract.rows[0]) return;
+  const existing = await db.query('SELECT 1 FROM expense_allocations WHERE transaction_id=$1 LIMIT 1', [transactionId]);
+  if (existing.rowCount) return;
+  await recordExpenseAllocation(db, {
+    transactionId, costCenterId:data.costCenterId, amount:data.amount, contractId:contract.rows[0].id,
+  });
+}
 
 function transactionOrder(query) {
   const fields = {

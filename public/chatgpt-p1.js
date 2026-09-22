@@ -55,7 +55,6 @@
         </select>
       </label>
       <button id="cc-sort-direction" class="cc-sort-direction" type="button" title="Alternar sentido da ordenação" aria-label="Alternar sentido da ordenação">↓</button>
-      <button id="cc-clear-filters" class="text-btn" type="button">Limpar filtros</button>
     `;
     tools.appendChild(exportButton);
     tableMeta.appendChild(tools);
@@ -115,7 +114,7 @@
     element('cc-next-page').addEventListener('click', () => goToPage(state.pagina + 1));
     element('cc-last-page').addEventListener('click', () => goToPage(state.meta?.totalPaginas || 1));
 
-    element('cc-clear-filters').addEventListener('click', () => {
+    element('btn-limpar-filtros')?.addEventListener('click', () => {
       const search = element('filtro-busca');
       if (search) search.value = '';
       filterSelectors.forEach((selector) => {
@@ -204,30 +203,52 @@
   function renderRows(items) {
     const tbody = element('tabela-lancamentos');
     if (!tbody) return;
-    tbody.innerHTML = items.length ? items.map((item) => `<tr>
-      <td>${dateBr(item.data)}</td><td>${dateBr(item.vencimento)}</td>
-      <td><span class="pill ${esc(item.situacao)}">${esc(financialLabel(item))}</span></td>
-      <td><span class="pill ${esc(item.tipo)}">${esc(item.tipo)}</span></td>
-      <td><strong>${esc(item.centro_codigo)}</strong><br>${esc(item.centro_nome)}</td>
-      <td><strong>${esc(item.descricao)}</strong><br><span class="muted">${esc(item.categoria)}${item.favorecido?` · ${esc(item.favorecido)}`:''}</span></td>
-      <td class="money" style="color:var(--${item.tipo==='receita'?'green':'red'})">${item.tipo==='receita'?'+':'-'} ${money(item.valor)}</td>
-      <td><div class="row-actions"><button data-edit-transaction="${item.id}">Editar</button>${['admin','gestor'].includes(usuario.role)?`<button class="danger" data-delete-transaction="${item.id}">Excluir</button>`:''}</div></td>
+    tbody.innerHTML = items.length ? items.map((item) => `<tr data-transaction-id="${item.id}" tabindex="0" role="button" aria-label="Editar lançamento: ${esc(item.descricao)}">
+      <td>${dateBr(item.data)}</td><td data-label="Vencimento">${dateBr(item.vencimento)}</td>
+      <td data-label="Situação"><span class="pill ${esc(item.situacao)}">${esc(financialLabel(item))}</span></td>
+      <td data-label="Tipo"><span class="pill ${esc(item.tipo)}">${esc(item.tipo)}</span></td>
+      <td data-label="Obra / centro"><strong>${esc(item.centro_codigo)}</strong><br>${esc(item.centro_nome)}</td>
+      <td data-label="Descrição"><strong>${esc(item.descricao)}</strong><br><span class="muted">${esc(item.categoria)}${item.favorecido?` · ${esc(item.favorecido)}`:''}</span></td>
+      <td data-label="Valor" class="money" style="color:var(--${item.tipo==='receita'?'green':'red'})">${item.tipo==='receita'?'+':'-'} ${money(item.valor)}</td>
+      <td data-label="Ações"><div class="row-actions"><button data-edit-transaction="${item.id}">Editar</button>${['admin','gestor'].includes(usuario.role)?`<button class="danger" data-delete-transaction="${item.id}">Excluir</button>`:''}</div></td>
     </tr>`).join('') : '<tr><td colspan="8"><div class="empty">Nenhum lançamento encontrado.</div></td></tr>';
 
+    document.querySelectorAll('#tabela-lancamentos tr[data-transaction-id]').forEach((row) => {
+      const id = Number(row.dataset.transactionId);
+      const openRow = (event) => {
+        if (event.target.closest('button')) return;
+        openTransaction(lancamentos.find((item) => item.id === id));
+      };
+      row.addEventListener('click', openRow);
+      row.addEventListener('keydown', (event) => {
+        if (event.target.closest('button')) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openTransaction(lancamentos.find((item) => item.id === id));
+        }
+      });
+    });
     document.querySelectorAll('[data-edit-transaction]').forEach((button) => {
-      button.addEventListener('click', () => openTransaction(lancamentos.find((item) => item.id === Number(button.dataset.editTransaction))));
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        openTransaction(lancamentos.find((item) => item.id === Number(button.dataset.editTransaction)));
+      });
     });
     document.querySelectorAll('[data-delete-transaction]').forEach((button) => {
-      button.addEventListener('click', () => deleteTransaction(Number(button.dataset.deleteTransaction)));
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        deleteTransaction(Number(button.dataset.deleteTransaction));
+      });
     });
   }
 
-  function updatePagination(meta, itemCount) {
+  function updatePagination(meta, items) {
     state.meta = meta;
     state.pagina = Number(meta.pagina || state.pagina);
     state.limite = Number(meta.limite || state.limite);
     persistState();
 
+    const itemCount = items.length;
     const total = Number(meta.total || 0);
     const first = total ? ((state.pagina - 1) * state.limite) + 1 : 0;
     const last = total ? first + itemCount - 1 : 0;
@@ -235,6 +256,12 @@
 
     const totalLabel = element('lancamentos-total');
     if (totalLabel) totalLabel.textContent = `${total} lançamento(s)`;
+
+    const somaLabel = element('soma-filtrada');
+    if (somaLabel) {
+      const somaCents = window.ListFilters ? window.ListFilters.sumTransactionsCents(items) : 0;
+      somaLabel.textContent = `Total líquido (página): ${money(somaCents / 100)}`;
+    }
 
     const summary = element('cc-pagination-summary');
     if (summary) {
@@ -284,7 +311,7 @@
 
       lancamentos = items;
       renderRows(items);
-      updatePagination(meta,items.length);
+      updatePagination(meta,items);
     } finally {
       if (requestId === state.requestSequence) setBusy(false);
     }

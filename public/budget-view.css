@@ -1,0 +1,509 @@
+/* Estilos Premium - Orçado vs. Realizado & Ingestão de Baselines V3 */
+
+.budget-modal-wide,
+.modal.budget-modal-wide,
+#modal-fundo .modal.budget-modal-wide {
+  max-width: 1120px !important;
+  width: 95vw !important;
+}
+
+.budget-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: inherit;
+  color: var(--text, #1e293b);
+}
+
+.budget-header-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.04) 0%, rgba(56, 189, 248, 0.08) 100%);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+html.dark .budget-header-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(14, 116, 144, 0.15) 100%);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.budget-header-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.budget-header-info p {
+  margin: 0;
+  color: var(--muted, #64748b);
+  font-size: 0.875rem;
+}
+
+.budget-pill-rev {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.budget-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.budget-kpi-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.budget-kpi-action {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.budget-kpi-action:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+html.dark .budget-kpi-card {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.budget-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.budget-kpi-card span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted, #64748b);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.budget-kpi-card strong {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text, #0f172a);
+}
+
+html.dark .budget-kpi-card strong {
+  color: #f8fafc;
+}
+
+/* Hierarquia: as metricas puramente de referencia (Valor Contratual, Custo
+   Base, Exposicao) ficam mais discretas - nenhuma informacao removida, so o
+   peso visual redistribuido. */
+.budget-kpi-card.reference strong {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--muted, #64748b);
+}
+
+/* Bolder pass (impeccable bolder, 2026-09-20): o momento de maior risco
+   financeiro da tela - saldo disponivel + consumo do orcamento - vira um
+   painel proprio, fora da grade uniforme de KPIs, amplificando as mesmas
+   cores/formas que o sistema ja usa (danger/success, raio 12-14px, sombra
+   com cor e blur) em vez de inventar vocabulario novo. Tudo o mais na tela
+   permanece intocado. */
+.budget-health-panel {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  border-radius: 14px;
+  padding: 20px 24px;
+  border: 1px solid;
+}
+
+.budget-health-panel.ok {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.18) 100%);
+  border-color: rgba(5, 150, 105, 0.35);
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.12);
+}
+
+.budget-health-panel.danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.18) 100%);
+  border-color: rgba(220, 38, 38, 0.35);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.12);
+}
+
+html.dark .budget-health-panel.ok {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(5, 150, 105, 0.26) 100%);
+}
+
+html.dark .budget-health-panel.danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.14) 0%, rgba(220, 38, 38, 0.26) 100%);
+}
+
+.budget-health-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 170px;
+  padding-right: 24px;
+  border-right: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+html.dark .budget-health-main {
+  border-right-color: rgba(255, 255, 255, 0.12);
+}
+
+.budget-health-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.budget-health-panel.ok .budget-health-label { color: #047857; }
+.budget-health-panel.danger .budget-health-label { color: #b91c1c; }
+html.dark .budget-health-panel.ok .budget-health-label { color: #6ee7b7; }
+html.dark .budget-health-panel.danger .budget-health-label { color: #fca5a5; }
+
+.budget-health-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.budget-health-panel.ok .budget-health-value { color: #059669; }
+.budget-health-panel.danger .budget-health-value { color: #dc2626; }
+html.dark .budget-health-panel.ok .budget-health-value { color: #34d399; }
+html.dark .budget-health-panel.danger .budget-health-value { color: #f87171; }
+
+.budget-health-burn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.budget-health-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #fff;
+}
+
+.budget-health-panel.ok .budget-health-pill { background: #059669; }
+.budget-health-panel.danger .budget-health-pill { background: #dc2626; }
+
+.budget-health-panel .budget-burn-hint {
+  color: inherit;
+}
+
+.budget-health-panel.ok .budget-burn-hint { color: #065f46; }
+.budget-health-panel.danger .budget-burn-hint { color: #991b1b; }
+html.dark .budget-health-panel.ok .budget-burn-hint { color: #a7f3d0; }
+html.dark .budget-health-panel.danger .budget-burn-hint { color: #fecaca; }
+
+.budget-burn-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.budget-burn-track {
+  width: 100%;
+  height: 16px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.1);
+  overflow: hidden;
+}
+
+html.dark .budget-burn-track {
+  background: rgba(255,255,255,0.14);
+}
+
+.budget-burn-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  transform-origin: left center;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 640px) {
+  .budget-health-panel {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .budget-health-main {
+    border-right: none;
+    padding-right: 0;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    padding-bottom: 16px;
+  }
+  html.dark .budget-health-main {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
+}
+
+.budget-burn-fill.ok {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.budget-burn-fill.warn {
+  background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.budget-burn-fill.over {
+  background: linear-gradient(90deg, #ef4444 0%, #b91c1c 100%);
+}
+
+.budget-burn-hint {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--muted, #64748b);
+}
+
+.budget-table-section {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+html.dark .budget-table-section {
+  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.budget-table-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+html.dark .budget-table-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.budget-table-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.budget-table-scroll {
+  overflow-x: auto;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.budget-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+  text-align: left;
+}
+
+.budget-table th {
+  background: rgba(0,0,0,0.02);
+  padding: 10px 14px;
+  font-weight: 700;
+  color: var(--muted, #64748b);
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+html.dark .budget-table th {
+  background: #1e293b;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.budget-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  vertical-align: middle;
+}
+
+html.dark .budget-table td {
+  border-bottom-color: rgba(255, 255, 255, 0.04);
+}
+
+.budget-table tr:hover td {
+  background: rgba(56, 189, 248, 0.04);
+}
+
+.badge-abc {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* Fora do eixo vermelho/ambar/verde de perigo-sucesso desta tela (que ja significa
+   desvio/saldo positivo ou negativo) para nao ler "prioridade A" como "problema". */
+.badge-a { background: rgba(99, 102, 241, 0.15); color: #4f46e5; border: 1px solid rgba(99, 102, 241, 0.3); }
+.badge-b { background: rgba(139, 92, 246, 0.15); color: #7c3aed; border: 1px solid rgba(139, 92, 246, 0.3); }
+.badge-c { background: rgba(100, 116, 139, 0.15); color: #475569; border: 1px solid rgba(100, 116, 139, 0.3); }
+
+/* Colorize (2026-09-20): "Tipo" (Material/Mao de Obra) e uma categoria, nao
+   um status -- antes tomava emprestado o verde de ".pill.ativo" do app
+   principal (que significa "registro ativo"), uma colisao de significado com
+   a Curva ABC e o Saldo/Desvio na mesma tabela. Fica neutro por decisao, nao
+   por esquecimento: o texto ja diferencia Material de Mao de Obra sem
+   precisar de mais uma cor competindo na linha. */
+.badge-kind {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--muted, #64748b);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.budget-unmapped-card {
+  border: 1px dashed #f59e0b;
+  border-radius: 12px;
+  padding: 14px 18px;
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.budget-unmapped-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.budget-unmapped-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+}
+
+html.dark .budget-unmapped-item {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.btn-budget-action {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #0284c7;
+  color: #fff;
+  transition: background 0.15s ease;
+}
+
+.btn-budget-action:hover {
+  background: #0369a1;
+}
+
+.btn-budget-action:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Cores do Modulo de Orcamento aplicadas via classe em vez de style inline,
+   para que :hover funcione (estilo inline vence qualquer :hover de classe). */
+.btn.budget-accent { background: #0284c7 !important; }
+.btn.budget-accent:hover { background: #0369a1 !important; }
+.btn.budget-success { background: #059669 !important; }
+.btn.budget-success:hover { background: #047857 !important; }
+
+/* Variante outline do accent do modulo (borda/texto, sem preenchimento) —
+   reaproveitada em vez de style inline no botao "Importar Orcamento". */
+.btn.budget-accent-outline { border-color: #0284c7 !important; color: #0284c7 !important; }
+.btn.budget-accent-outline:hover { background: rgba(2, 132, 199, 0.08) !important; }
+
+/* Botao pequeno reutilizado nos cabecalhos/toolbar da Analise de Orcamento
+   (Atualizar Revisao, Medicoes, Curva S, Exportar CSV, Relatorio Executivo) —
+   antes repetido como style inline idêntico em cada botao. */
+.btn-budget-sm { font-size: 0.75rem; padding: 4px 10px; }
+
+.modal-head {
+  position: relative;
+  z-index: 10;
+}
+
+.modal-head > div:first-child {
+  min-width: 0;
+  flex: 1;
+  margin-right: 16px;
+}
+
+.modal-head h2 {
+  word-break: break-word;
+}
+
+#modal-fechar {
+  position: relative;
+  z-index: 20;
+  cursor: pointer;
+  flex-shrink: 0;
+  min-width: 38px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  font-size: 24px;
+  line-height: 1;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  color: var(--muted, #64748b);
+  transition: all 0.15s ease;
+}
+
+#modal-fechar:hover,
+#modal-fechar:focus-visible {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--ink, #0f172a);
+  border-color: rgba(0, 0, 0, 0.12);
+}

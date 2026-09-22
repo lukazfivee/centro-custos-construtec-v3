@@ -1,0 +1,166 @@
+/* Camada de feedback assíncrono — skeletons, busy-state e retry.
+   Complementa os módulos chatgpt-pN sem alterar o comportamento existente. */
+
+/* ------------------------------- Skeletons ------------------------------- */
+.cc-skeleton-block {
+  position: relative;
+  overflow: hidden;
+  background: var(--line, #e2e8f0);
+  border-radius: 6px;
+}
+
+.cc-skeleton-line {
+  height: 12px;
+  margin: 8px 0;
+  border-radius: 6px;
+  background: var(--line, #e2e8f0);
+}
+
+.cc-skeleton-line.is-short {
+  width: 45%;
+}
+
+.cc-skeleton-line.is-medium {
+  width: 70%;
+}
+
+.cc-skeleton-card {
+  height: 92px;
+  border-radius: 8px;
+  background: var(--line, #e2e8f0);
+}
+
+.cc-skeleton-row td {
+  padding: 12px 14px;
+}
+
+.cc-skeleton-row .cc-skeleton-line {
+  margin: 0;
+}
+
+.cc-skeleton-kpi {
+  height: 26px;
+  width: 70%;
+  border-radius: 6px;
+  background: var(--line, #e2e8f0);
+}
+
+/* Realce de leitura durante operação sem bloquear o conteúdo já visível. */
+[data-cc-busy="true"] {
+  opacity: .6;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+
+/* --------------------------------- Retry --------------------------------- */
+.cc-retry-toast {
+  position: fixed;
+  z-index: 30;
+  right: 24px;
+  bottom: 24px;
+  max-width: 380px;
+  padding: 14px 16px;
+  color: #fff;
+  background: #172033;
+  border: 1px solid #2a3a55;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(18, 32, 54, .28);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: cc-retry-in .18s cubic-bezier(.2, .8, .2, 1);
+}
+
+.cc-retry-toast .cc-retry-message {
+  line-height: 1.5;
+}
+
+.cc-retry-toast .cc-retry-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cc-retry-toast button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, .28);
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cc-retry-toast button.cc-retry-primary {
+  background: var(--accent, #f97316);
+  border-color: var(--accent, #f97316);
+}
+
+.cc-retry-toast button:disabled {
+  opacity: .55;
+  cursor: progress;
+}
+
+@keyframes cc-retry-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------------------- Ação de botão durante operação -------------------- */
+button.is-loading,
+.btn.is-loading {
+  position: relative;
+  color: transparent !important;
+  cursor: progress;
+}
+
+button.is-loading::after,
+.btn.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid rgba(255, 255, 255, .45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: cc-spin .75s linear infinite;
+}
+
+.btn.secondary.is-loading::after,
+.btn.secondary.is-loading::after {
+  border-color: rgba(18, 32, 54, .25);
+  border-top-color: var(--navy, #172033);
+}
+
+/* --------------------------- Movimento reduzido --------------------------- */
+@media (prefers-reduced-motion: reduce) {
+
+  .cc-skeleton-block,
+  .cc-skeleton-line,
+  .cc-skeleton-card,
+  .cc-skeleton-kpi,
+  button.is-loading::after,
+  .btn.is-loading::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  [data-cc-busy="true"] {
+    transition: none;
+  }
+
+  .cc-retry-toast {
+    animation: none;
+  }
+}

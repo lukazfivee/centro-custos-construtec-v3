@@ -32,6 +32,7 @@ test('P4 envia, lista, baixa, bloqueia duplicata e remove documento', async (con
 
   const { initializeDatabase, closeDatabase } = require('../db');
   const { createApp } = require('../server');
+  delete process.env.DATABASE_URL;
   await initializeDatabase();
   const server = createApp().listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));

@@ -1,7 +1,9 @@
+const { assertMutableTransaction, moneyCents } = require('../services/financialPolicy');
+const { validDate } = require('../lib/dates');
 const express = require('express');
 const { getDb, getInstanceIdentity } = require('../db');
 const { autenticar, exigirPapel } = require('../middleware/auth');
-const { asyncRoute, httpError } = require('../lib/http');
+const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
@@ -40,16 +42,22 @@ router.post('/acoes-em-massa', exigirPapel('admin','gestor'), asyncRoute(async (
   const db=getDb(); const instance=getInstanceIdentity();
   let updated=0;
   await db.transaction(async tx => {
-    for (const id of ids) {
+    // Stable lock order makes the entire batch fail together on a closed entry.
+    for (const id of ids.sort((a,b)=>a-b)) {
+      const row=(await tx.query('SELECT * FROM transactions WHERE id=$1 FOR UPDATE',[id])).rows[0];
+      await assertMutableTransaction(row,tx);
       let result;
       if (action==='categoria') {
         const categoryId=Number(req.body.category_id); if(!categoryId) throw httpError(400,'Categoria inválida.');
         result=await tx.query(`UPDATE transactions SET category_id=$1,revision=revision+1,updated_by=$2,updated_at=NOW(),last_modified_instance_id=$3,last_modified_instance_name=$4 WHERE id=$5 AND deleted_at IS NULL AND reversal_of IS NULL AND reversed_at IS NULL`,[categoryId,req.usuario.id,instance.id,instance.name,id]);
       } else if (action==='centro') {
-        const centerId=Number(req.body.cost_center_id); if(!centerId) throw httpError(400,'Centro de custo inválido.');
+        const centerId=positiveId(req.body.cost_center_id,'Centro de custo');
+        if((await tx.query('SELECT 1 FROM transaction_allocations WHERE transaction_id=$1 LIMIT 1',[id])).rows.length) throw httpError(409,'Edite o rateio para alterar as obras deste lançamento.');
         result=await tx.query(`UPDATE transactions SET cost_center_id=$1,revision=revision+1,updated_by=$2,updated_at=NOW(),last_modified_instance_id=$3,last_modified_instance_name=$4 WHERE id=$5 AND deleted_at IS NULL AND reversal_of IS NULL AND reversed_at IS NULL`,[centerId,req.usuario.id,instance.id,instance.name,id]);
       } else if (action==='liquidar') {
         const date=String(req.body.data_liquidacao||new Date().toISOString().slice(0,10));
+        if(!validDate(date)) throw httpError(400,'Data de liquidação inválida.');
+        if(row.approval_status!=='aprovado') throw httpError(409,'Aprove o lançamento antes de liquidar.');
         result=await tx.query(`UPDATE transactions SET financial_status='liquidado',settlement_date=$1,revision=revision+1,updated_by=$2,updated_at=NOW(),last_modified_instance_id=$3,last_modified_instance_name=$4 WHERE id=$5 AND deleted_at IS NULL AND reversal_of IS NULL AND reversed_at IS NULL`,[date,req.usuario.id,instance.id,instance.name,id]);
       } else {
         result=await tx.query(`UPDATE transactions SET financial_status='pendente',settlement_date=NULL,revision=revision+1,updated_by=$1,updated_at=NOW(),last_modified_instance_id=$2,last_modified_instance_name=$3 WHERE id=$4 AND deleted_at IS NULL AND reversal_of IS NULL AND reversed_at IS NULL`,[req.usuario.id,instance.id,instance.name,id]);
@@ -85,20 +93,32 @@ router.get('/rateio/:transactionId', asyncRoute(async(req,res)=>{
 }));
 
 router.put('/rateio/:transactionId', exigirPapel('admin','gestor'), asyncRoute(async(req,res)=>{
-  const transactionId=Number(req.params.transactionId); const allocations=Array.isArray(req.body.rateios)?req.body.rateios:[];
-  const txRow=(await getDb().query('SELECT id,amount,description FROM transactions WHERE id=$1 AND deleted_at IS NULL',[transactionId])).rows[0];
-  if(!txRow) throw httpError(404,'Lançamento não encontrado.');
-  if(!allocations.length) { await getDb().query('DELETE FROM transaction_allocations WHERE transaction_id=$1',[transactionId]); return res.json({ok:true,total:0}); }
-  const normalized=allocations.map(x=>({costCenterId:Number(x.cost_center_id),amount:Number(x.valor),note:String(x.observacao||'').trim().slice(0,240)}));
-  if(normalized.some(x=>!x.costCenterId||!Number.isFinite(x.amount)||x.amount<=0)) throw httpError(400,'Rateio inválido.');
-  const total=normalized.reduce((s,x)=>s+x.amount,0);
-  if(Math.abs(total-Number(txRow.amount))>0.01) throw httpError(400,`O rateio precisa somar exatamente R$ ${Number(txRow.amount).toFixed(2)}.`);
+  const transactionId=positiveId(req.params.transactionId);
+  if(!Array.isArray(req.body.rateios) || req.body.rateios.length>200) throw httpError(400,'Informe até 200 rateios.');
+  const normalized=req.body.rateios.map(x=>({
+    costCenterId:positiveId(x?.cost_center_id,'Centro de custo'),
+    cents:moneyCents(x?.valor),note:String(x?.observacao||'').trim().slice(0,240),
+  }));
+  if(new Set(normalized.map(x=>x.costCenterId)).size!==normalized.length) throw httpError(400,'Cada obra deve aparecer uma única vez no rateio.');
+  const totalCents=normalized.reduce((sum,x)=>sum+x.cents,0);
+  if(!Number.isSafeInteger(totalCents)) throw httpError(400,'Total do rateio inválido.');
+  const instance=getInstanceIdentity();
+  let revision;
   await getDb().transaction(async tx=>{
+    const row=(await tx.query('SELECT * FROM transactions WHERE id=$1 FOR UPDATE',[transactionId])).rows[0];
+    await assertMutableTransaction(row,tx);
+    if(normalized.length && totalCents!==moneyCents(row.amount)) throw httpError(400,`O rateio precisa somar exatamente R$ ${Number(row.amount).toFixed(2)}.`);
+    for(const item of normalized) {
+      if(!(await tx.query('SELECT id FROM cost_centers WHERE id=$1 AND active=TRUE',[item.costCenterId])).rows[0]) throw httpError(400,'Use uma obra ativa em cada rateio.');
+    }
     await tx.query('DELETE FROM transaction_allocations WHERE transaction_id=$1',[transactionId]);
-    for(const item of normalized) await tx.query('INSERT INTO transaction_allocations(transaction_id,cost_center_id,amount,note) VALUES($1,$2,$3,$4)',[transactionId,item.costCenterId,item.amount,item.note||null]);
-    await recordAudit({entityType:'lancamento',entityId:transactionId,action:'rateado',summary:`Rateio atualizado: ${txRow.description}`,data:{rateios:normalized,total},user:req.usuario,client:tx});
+    for(const item of normalized) await tx.query('INSERT INTO transaction_allocations(transaction_id,cost_center_id,amount,note) VALUES($1,$2,$3,$4)',[transactionId,item.costCenterId,(item.cents/100).toFixed(2),item.note||null]);
+    const result=await tx.query(`UPDATE transactions SET revision=revision+1,updated_at=NOW(),updated_by=$2,
+      last_modified_instance_id=$3,last_modified_instance_name=$4 WHERE id=$1 RETURNING revision`,[transactionId,req.usuario.id,instance.id,instance.name]);
+    revision=result.rows[0].revision;
+    await recordAudit({entityType:'lancamento',entityId:transactionId,action:'rateado',summary:`Rateio atualizado: ${row.description}`,data:{rateios:normalized,total:totalCents/100},user:req.usuario,client:tx});
   });
-  res.json({ok:true,total});
+  res.json({ok:true,total:totalCents/100,revisao:revision});
 }));
 
 module.exports=router;

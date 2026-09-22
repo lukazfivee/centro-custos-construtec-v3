@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const { getDb, getInstanceIdentity } = require('../db');
 const { httpError } = require('../lib/http');
 const { recordAudit } = require('./audit');
+const { readTransactions, normalizeTransaction, sameBusiness, mutationError, writeTransaction } = require('./syncTransactions');
+const jobs = require('../lib/jobs');
 
 const FORMAT_VERSION = 3;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -39,13 +41,7 @@ async function buildPackage() {
       contract_amount,project_status,description,revision,created_at,updated_at FROM cost_centers ORDER BY public_id`),
     db.query(`SELECT public_id,name,document,contact_name,email,phone,notes,active,revision,created_at,updated_at
       FROM suppliers ORDER BY public_id`),
-    db.query(`SELECT t.public_id,t.type,t.description,t.counterparty,t.amount,t.accounting_sign,t.reversal_of,
-      t.reversal_reason,t.reversed_at,t.transaction_date,t.due_date,t.settlement_date,t.financial_status,
-      t.document_number,t.payment_method,t.notes,t.origin_instance_id,t.origin_instance_name,
-      t.last_modified_instance_id,t.last_modified_instance_name,t.origin_user_name,t.revision,t.created_at,
-      t.updated_at,t.deleted_at,cc.public_id AS cost_center_public_id,c.public_id AS category_public_id
-      FROM transactions t JOIN cost_centers cc ON cc.id=t.cost_center_id
-      JOIN categories c ON c.id=t.category_id ORDER BY t.public_id`),
+    readTransactions(db),
   ]);
 
   const payload = {
@@ -63,15 +59,19 @@ async function buildPackage() {
       publicId:r.public_id,name:r.name,document:r.document,contactName:r.contact_name,email:r.email,phone:r.phone,
       notes:r.notes,active:r.active,revision:Number(r.revision || 1),createdAt:iso(r.created_at),updatedAt:iso(r.updated_at),
     })),
-    transactions: transactions.rows.map((r) => ({
-      publicId:r.public_id,type:r.type,costCenterPublicId:r.cost_center_public_id,categoryPublicId:r.category_public_id,
-      description:r.description,counterparty:r.counterparty,amount:Number(r.amount),accountingSign:Number(r.accounting_sign || 1),
-      reversalOf:r.reversal_of,reversalReason:r.reversal_reason,reversedAt:iso(r.reversed_at),transactionDate:dateOnly(r.transaction_date),
-      dueDate:dateOnly(r.due_date),settlementDate:dateOnly(r.settlement_date),financialStatus:r.financial_status,
-      documentNumber:r.document_number,paymentMethod:r.payment_method,notes:r.notes,originInstanceId:r.origin_instance_id,
-      originInstanceName:r.origin_instance_name,lastModifiedInstanceId:r.last_modified_instance_id,
-      lastModifiedInstanceName:r.last_modified_instance_name,originUserName:r.origin_user_name,
-      revision:Number(r.revision || 1),createdAt:iso(r.created_at),updatedAt:iso(r.updated_at),deletedAt:iso(r.deleted_at),
+    transactions: transactions.map((t) => ({
+      publicId:t.publicId,type:t.type,costCenterPublicId:t.costCenterPublicId,categoryPublicId:t.categoryPublicId,
+      description:t.description,counterparty:t.counterparty,amount:Number(t.amount),
+      accountingSign:Number(t.accountingSign || 1), // accounting_sign
+      reversalOf:t.reversalOf, // reversal_of
+      reversalReason:t.reversalReason,reversedAt:iso(t.reversedAt),transactionDate:dateOnly(t.transactionDate),
+      dueDate:dateOnly(t.dueDate),settlementDate:dateOnly(t.settlementDate),financialStatus:t.financialStatus,
+      documentNumber:t.documentNumber,paymentMethod:t.paymentMethod,notes:t.notes,originInstanceId:t.originInstanceId,
+      originInstanceName:t.originInstanceName,lastModifiedInstanceId:t.lastModifiedInstanceId,
+      lastModifiedInstanceName:t.lastModifiedInstanceName,originUserName:t.originUserName,
+      revision:Number(t.revision || 1),createdAt:iso(t.createdAt),updatedAt:iso(t.updatedAt),deletedAt:iso(t.deletedAt),
+      approvalStatus:t.approvalStatus,approvedAt:iso(t.approvedAt),approvedBy:t.approvedBy,
+      allocations:t.allocations || [],
     })),
   };
   const envelope = {
@@ -147,8 +147,19 @@ async function importSimpleEntity(tx, options) {
     'Há alterações diferentes com a mesma revisão ou com revisão local mais recente.', local, item, result);
 }
 
-async function importPackage({ content, filename, user }) {
-  const pack = parsePackage(content);
+// Pacotes pequenos (o caso comum: sincronizar uma obra por vez) continuam
+// respondendo de forma sincrona, como sempre - ver "alternativa simples" em
+// DECISIONS.md. Acima do limite, a importacao vira um job em segundo plano.
+const ASYNC_ITEM_THRESHOLD = 200;
+
+function packageItemCount(pack) {
+  const p = pack.payload;
+  return (p.categories?.length || 0) + (p.costCenters?.length || 0) + (p.suppliers?.length || 0) + (p.transactions?.length || 0);
+}
+
+const noopJobContext = { updateProgress: async () => {}, checkDeadline: () => {} };
+
+async function runImport(pack, filename, user, ctx = noopJobContext) {
   const db = getDb();
   const already = await db.query('SELECT id,summary FROM sync_package_imports WHERE package_id=$1', [pack.packageId]);
   if (already.rows[0]) return { ok:true, duplicado:true, mensagem:'Este pacote já foi importado anteriormente.', resumo:already.rows[0].summary };
@@ -179,6 +190,7 @@ async function importPackage({ content, filename, user }) {
         updateValues:i=>[i.publicId,String(i.name||'').slice(0,100),['receita','despesa','ambos'].includes(i.type)?i.type:'ambos',i.active,i.revision,i.updatedAt||new Date()],
       });
     }
+    ctx.checkDeadline();
 
     for (const item of pack.payload.costCenters) {
       const clean = {...item,revision:validRevision(item),active:item.active !== false};
@@ -193,6 +205,7 @@ async function importPackage({ content, filename, user }) {
         updateValues:i=>[i.publicId,String(i.code||'').slice(0,40),String(i.name||'').slice(0,140),i.responsible||null,Number(i.monthlyBudget||0),i.active,i.client||null,i.contractNumber||null,i.startDate||null,i.endDate||null,Number(i.contractAmount||0),['planejamento','execucao','pausado','concluido'].includes(i.projectStatus)?i.projectStatus:'planejamento',i.description||null,i.revision,i.updatedAt||new Date()],
       });
     }
+    ctx.checkDeadline();
 
     for (const item of pack.payload.suppliers) {
       const clean = {...item,revision:validRevision(item),active:item.active !== false};
@@ -208,60 +221,65 @@ async function importPackage({ content, filename, user }) {
       });
     }
 
+    ctx.checkDeadline();
     const centerMap = new Map((await tx.query('SELECT public_id,id FROM cost_centers')).rows.map(r=>[String(r.public_id),r.id]));
     const categoryMap = new Map((await tx.query('SELECT public_id,id FROM categories')).rows.map(r=>[String(r.public_id),r.id]));
 
     const transactionItems = [...pack.payload.transactions].sort((a,b)=>Number(Boolean(a.reversalOf))-Number(Boolean(b.reversalOf)));
-    for (const item of transactionItems) {
+    for (let idx = 0; idx < transactionItems.length; idx++) {
+      const item = transactionItems[idx];
+      if (idx % 25 === 0) ctx.checkDeadline();
       if (!UUID.test(String(item.publicId||''))) throw httpError(400, 'Lançamento com publicId inválido.');
       const domainError = financialStatusError(item, `Lançamento ${item.publicId}`);
       if (domainError) {
         await addConflict(tx, packageImportId, 'lancamento', item.publicId, domainError, null, item, result);
         continue;
       }
-      const centerId = centerMap.get(String(item.costCenterPublicId));
-      const categoryId = categoryMap.get(String(item.categoryPublicId));
-      if (!centerId || !categoryId) throw httpError(400, `Lançamento ${item.publicId}: obra ou categoria de referência não encontrada.`);
-      const existing = (await tx.query('SELECT * FROM transactions WHERE public_id=$1', [item.publicId])).rows[0];
-      const incomingRevision = validRevision(item);
-      const clean = {
-        ...item,
-        revision:incomingRevision,
-        accountingSign:Number(item.accountingSign) === -1 ? -1 : 1,
-        paymentMethod:String(item.paymentMethod || '').trim().slice(0,40) || null,
-      };
-      if (clean.reversalOf && !UUID.test(String(clean.reversalOf))) throw httpError(400, `Lançamento ${clean.publicId}: vínculo de estorno inválido.`);
-      const businessFields = ['type','description','counterparty','amount','accountingSign','reversalOf','reversalReason','transactionDate','dueDate','settlementDate','financialStatus','documentNumber','paymentMethod','notes','deletedAt'];
-      const local = existing ? {
-        publicId:existing.public_id,type:existing.type,description:existing.description,counterparty:existing.counterparty,amount:Number(existing.amount),accountingSign:Number(existing.accounting_sign||1),reversalOf:existing.reversal_of,reversalReason:existing.reversal_reason,transactionDate:dateOnly(existing.transaction_date),dueDate:dateOnly(existing.due_date),settlementDate:dateOnly(existing.settlement_date),financialStatus:existing.financial_status,documentNumber:existing.document_number,paymentMethod:existing.payment_method,notes:existing.notes,revision:Number(existing.revision||1),deletedAt:iso(existing.deleted_at),lastModifiedInstanceId:existing.last_modified_instance_id
-      } : null;
-      if (existing && sameJson(local, clean, businessFields)) {
+      let clean;
+      try {
+        clean = normalizeTransaction(item);
+      } catch (err) {
+        await addConflict(tx, packageImportId, 'lancamento', item.publicId, err.message || 'Lançamento inválido.', null, item, result);
+        continue;
+      }
+      const centerId = centerMap.get(String(clean.costCenterPublicId));
+      const categoryId = categoryMap.get(String(clean.categoryPublicId));
+      if (!centerId || !categoryId) {
+        await addConflict(tx, packageImportId, 'lancamento', clean.publicId,
+          `Lançamento ${clean.publicId}: obra ou categoria de referência não encontrada.`, null, clean, result);
+        continue;
+      }
+      if (clean.allocations && clean.allocations.length > 0) {
+        const missing = clean.allocations.some(a => !centerMap.has(String(a.costCenterPublicId)));
+        if (missing) {
+          await addConflict(tx, packageImportId, 'lancamento', clean.publicId,
+            `Lançamento ${clean.publicId}: obra de rateio não encontrada no destino.`, null, clean, result);
+          continue;
+        }
+      }
+      const local = (await readTransactions(tx, clean.publicId))[0] || null;
+      if (local && sameBusiness(local, clean)) {
         result.ignorados++; result.porTipo.lancamento.ignorados++; continue;
       }
-      if (existing && incomingRevision <= Number(existing.revision||1)) {
+      const mutError = await mutationError(tx, local, clean);
+      if (mutError) {
+        await addConflict(tx, packageImportId, 'lancamento', clean.publicId, mutError, local, clean, result);
+        continue;
+      }
+      if (local && clean.revision <= Number(local.revision || 1)) {
         await addConflict(tx, packageImportId, 'lancamento', clean.publicId,
           'Lançamento divergente com revisão igual ou mais antiga que a versão local.', local, clean, result);
         continue;
       }
-      if (existing && String(existing.last_modified_instance_id) !== String(clean.lastModifiedInstanceId) && Number(existing.revision||1) > 1) {
+      if (local && String(local.lastModifiedInstanceId) !== String(clean.lastModifiedInstanceId) && Number(local.revision || 1) > 1) {
         await addConflict(tx, packageImportId, 'lancamento', clean.publicId,
           'O lançamento foi alterado em instalações diferentes.', local, clean, result);
         continue;
       }
-      const values = [clean.publicId,clean.type,centerId,categoryId,String(clean.description||'').slice(0,240),clean.counterparty||null,Number(clean.amount),clean.accountingSign,clean.reversalOf||null,clean.reversalReason||null,clean.reversedAt||null,clean.transactionDate,clean.notes||null,clean.dueDate||clean.transactionDate,clean.settlementDate||null,clean.financialStatus,clean.documentNumber||null,clean.paymentMethod||null,clean.originInstanceId,clean.originInstanceName,clean.lastModifiedInstanceId,clean.lastModifiedInstanceName,clean.originUserName,clean.revision,clean.createdAt||new Date(),clean.updatedAt||new Date(),clean.deletedAt||null,user.id];
-      if (!existing) {
-        await tx.query(`INSERT INTO transactions
-          (public_id,type,cost_center_id,category_id,description,counterparty,amount,accounting_sign,reversal_of,reversal_reason,reversed_at,
-           transaction_date,notes,due_date,settlement_date,financial_status,document_number,payment_method,origin_instance_id,origin_instance_name,
-           last_modified_instance_id,last_modified_instance_name,origin_user_name,revision,created_at,updated_at,deleted_at,created_by,updated_by)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$28)`, values);
+      const { created } = await writeTransaction(tx, clean, user);
+      if (created) {
         result.incluidos++; result.porTipo.lancamento.incluidos++;
       } else {
-        await tx.query(`UPDATE transactions SET type=$2,cost_center_id=$3,category_id=$4,description=$5,counterparty=$6,amount=$7,
-          accounting_sign=$8,reversal_of=$9,reversal_reason=$10,reversed_at=$11,transaction_date=$12,notes=$13,due_date=$14,
-          settlement_date=$15,financial_status=$16,document_number=$17,payment_method=$18,origin_instance_id=$19,origin_instance_name=$20,
-          last_modified_instance_id=$21,last_modified_instance_name=$22,origin_user_name=$23,revision=$24,updated_at=$26,deleted_at=$27,updated_by=$28
-          WHERE public_id=$1`, values);
         result.atualizados++; result.porTipo.lancamento.atualizados++;
       }
     }
@@ -274,6 +292,31 @@ async function importPackage({ content, filename, user }) {
 
   return { ok:true,duplicado:false,pacoteId:pack.packageId,origem:pack.source,resumo:result };
 }
+
+// Entrada publica: decide entre executar a importacao de forma sincrona
+// (pacotes pequenos, o caso comum de sincronizar uma obra) ou como job em
+// segundo plano (pacotes grandes, ex.: migracao inicial com anos de
+// lancamentos). Ver ASYNC_ITEM_THRESHOLD e DECISIONS.md.
+async function importPackage({ content, filename, user }) {
+  const pack = parsePackage(content);
+  if (packageItemCount(pack) <= ASYNC_ITEM_THRESHOLD) {
+    return runImport(pack, filename, user);
+  }
+  const { job } = await jobs.submitJob({
+    type: 'smart-sync-import',
+    idempotencyKey: pack.packageId,
+    params: { content, filename, userId: user.id, userName: user.name },
+    createdBy: user.id,
+    timeoutMs: 10 * 60 * 1000,
+  });
+  return { ok:true, async:true, jobId:job.id, status:job.status, itens:packageItemCount(pack) };
+}
+
+jobs.registerHandler('smart-sync-import', async (job, ctx) => {
+  const { content, filename, userId, userName } = job.params || {};
+  const pack = parsePackage(content);
+  return runImport(pack, filename, { id:userId, name:userName }, ctx);
+});
 
 async function listImports() {
   const { rows } = await getDb().query(`SELECT spi.id,spi.package_id,spi.filename,spi.source_instance_name,spi.package_hash,
@@ -330,34 +373,10 @@ async function applyIncomingConflict(tx, conflict, user) {
   }
 
   if (conflict.entity_type === 'lancamento') {
-    const centerId = (await tx.query('SELECT id FROM cost_centers WHERE public_id=$1',[item.costCenterPublicId])).rows[0]?.id;
-    const categoryId = (await tx.query('SELECT id FROM categories WHERE public_id=$1',[item.categoryPublicId])).rows[0]?.id;
-    if (!centerId || !categoryId) throw httpError(400, `Lançamento ${publicId}: obra ou categoria de referência não encontrada.`);
-    const incomingFinancialError = financialStatusError(item, `Lançamento ${publicId}`);
-    if (incomingFinancialError) throw httpError(400, incomingFinancialError);
-    const clean = {
-      ...item,
-      publicId,
-      revision:validRevision(item),
-      accountingSign:Number(item.accountingSign) === -1 ? -1 : 1,
-      paymentMethod:String(item.paymentMethod || '').trim().slice(0,40) || null,
-    };
-    if (clean.reversalOf && !UUID.test(String(clean.reversalOf))) throw httpError(400, `Lançamento ${publicId}: vínculo de estorno inválido.`);
-    const values = [clean.publicId,clean.type,centerId,categoryId,String(clean.description||'').slice(0,240),clean.counterparty||null,Number(clean.amount),clean.accountingSign,clean.reversalOf||null,clean.reversalReason||null,clean.reversedAt||null,clean.transactionDate,clean.notes||null,clean.dueDate||clean.transactionDate,clean.settlementDate||null,clean.financialStatus,clean.documentNumber||null,clean.paymentMethod||null,clean.originInstanceId,clean.originInstanceName,clean.lastModifiedInstanceId,clean.lastModifiedInstanceName,clean.originUserName,clean.revision,clean.createdAt||new Date(),clean.updatedAt||new Date(),clean.deletedAt||null,user.id];
-    const existing = (await tx.query('SELECT id FROM transactions WHERE public_id=$1',[publicId])).rows[0];
-    if (existing) {
-      await tx.query(`UPDATE transactions SET type=$2,cost_center_id=$3,category_id=$4,description=$5,counterparty=$6,amount=$7,
-        accounting_sign=$8,reversal_of=$9,reversal_reason=$10,reversed_at=$11,transaction_date=$12,notes=$13,due_date=$14,
-        settlement_date=$15,financial_status=$16,document_number=$17,payment_method=$18,origin_instance_id=$19,origin_instance_name=$20,
-        last_modified_instance_id=$21,last_modified_instance_name=$22,origin_user_name=$23,revision=$24,updated_at=$26,deleted_at=$27,updated_by=$28
-        WHERE public_id=$1`,values);
-    } else {
-      await tx.query(`INSERT INTO transactions
-        (public_id,type,cost_center_id,category_id,description,counterparty,amount,accounting_sign,reversal_of,reversal_reason,reversed_at,
-         transaction_date,notes,due_date,settlement_date,financial_status,document_number,payment_method,origin_instance_id,origin_instance_name,
-         last_modified_instance_id,last_modified_instance_name,origin_user_name,revision,created_at,updated_at,deleted_at,created_by,updated_by)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$28)`,values);
-    }
+    const item = conflict.incoming_data;
+    if (!item || typeof item !== 'object') throw httpError(400, 'Dados do lançamento ausentes.');
+    const clean = normalizeTransaction(item);
+    await writeTransaction(tx, clean, user, { resolve: true });
     return;
   }
 

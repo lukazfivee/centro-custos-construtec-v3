@@ -21,7 +21,8 @@
       <div class="sync-card">
         <h3>2. Importar pacote</h3>
         <p>Selecione o arquivo recebido da outra instalação.</p>
-        <input id="smart-sync-file" type="file" accept=".ccsync,application/json" style="margin-bottom:10px">
+        <label for="smart-sync-file" id="smart-sync-file-label">Selecionar pacote .ccsync para importar</label>
+        <input id="smart-sync-file" type="file" accept=".ccsync,application/json" aria-label="Pacote inteligente .ccsync de outra instalação" style="margin-bottom:10px">
         <button id="smart-sync-import" class="btn secondary wide" disabled>Validar e importar</button>
       </div>
     </div>
@@ -36,15 +37,33 @@
   let selected = null;
   const file = panel.querySelector('#smart-sync-file');
   const importBtn = panel.querySelector('#smart-sync-import');
+  const exportBtn = panel.querySelector('#smart-sync-export');
   file.addEventListener('change', () => { selected = file.files[0] || null; importBtn.disabled = !selected; });
-  panel.querySelector('#smart-sync-export').addEventListener('click', () => download('/sincronizacao-inteligente/exportar', 'sincronizacao-inteligente.ccsync'));
+  exportBtn.addEventListener('click', async () => {
+    exportBtn.disabled = true;
+    exportBtn.textContent = 'Sincronizando…';
+    try {
+      await download('/sincronizacao-inteligente/exportar', 'sincronizacao-inteligente.ccsync');
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.textContent = 'Exportar pacote inteligente';
+    }
+  });
 
   importBtn.addEventListener('click', async () => {
     if (!selected) return;
     importBtn.disabled = true;
-    importBtn.textContent = 'Importando…';
+    importBtn.textContent = 'Sincronizando…';
     try {
-      const result = await api('/sincronizacao-inteligente/importar', { method:'POST', body:JSON.stringify({ nomeArquivo:selected.name, conteudo:await selected.text() }) });
+      let result = await api('/sincronizacao-inteligente/importar', { method:'POST', body:JSON.stringify({ nomeArquivo:selected.name, conteudo:await selected.text() }) });
+      if (result.async) {
+        importBtn.textContent = 'Processando em segundo plano…';
+        panel.querySelector('#smart-sync-result').innerHTML = `<strong>Pacote grande (${result.itens} itens).</strong> Processando em segundo plano, isso pode levar alguns minutos…`;
+        const job = await pollJob(result.jobId, {
+          onProgress: (j) => { if (j.status === 'running') importBtn.textContent = 'Processando em segundo plano…'; },
+        });
+        result = job.resultado;
+      }
       const r = result.resumo || {};
       panel.querySelector('#smart-sync-result').innerHTML = result.duplicado
         ? '<strong>Este pacote já havia sido importado. Nenhuma duplicidade foi criada.</strong>'
@@ -60,9 +79,12 @@
     }
   });
 
-  panel.querySelector('#smart-sync-refresh').addEventListener('click', refreshSmartSync);
+  const refreshBtn = panel.querySelector('#smart-sync-refresh');
+  refreshBtn.addEventListener('click', () => refreshSmartSync(true));
 
-  async function refreshSmartSync() {
+  async function refreshSmartSync(manual) {
+    if (!localStorage.getItem('cc_token')) return;
+    if (manual) { refreshBtn.disabled = true; refreshBtn.textContent = 'Sincronizando…'; }
     try {
       const [history, conflicts] = await Promise.all([
         api('/sincronizacao-inteligente/historico'),
@@ -82,8 +104,12 @@
           refreshSmartSync();
         } catch(error) { toast(error.message,true); }
       }));
+      if (manual) toast('Histórico e conflitos atualizados.');
     } catch (error) {
       panel.querySelector('#smart-sync-result').textContent = error.message;
+      if (manual) toast(error.message, true);
+    } finally {
+      if (manual) { refreshBtn.disabled = false; refreshBtn.textContent = 'Atualizar histórico e conflitos'; }
     }
   }
 
