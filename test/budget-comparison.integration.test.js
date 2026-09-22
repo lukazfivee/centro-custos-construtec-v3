@@ -46,7 +46,7 @@ test('Fase 3 - Apropriação de Custos, Orçado vs. Realizado e Medições', asy
   let auth = (await request('/auth/login', 'POST', { email: 'budget-comp@teste.local', senha: 'budget-test-123' }, 200, '')).token;
 
   // Carregar fixture normativa
-  const fixturePath = path.resolve(__dirname, '../../INTEGRAÇÃO-ORÇAMENTOS-CENTRO V3/contracts/proposal-approved.v1.example.json');
+  const fixturePath = path.resolve(__dirname, 'fixtures/proposal-approved.v1.example.json');
   const officialEnvelope = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
   let importResult;

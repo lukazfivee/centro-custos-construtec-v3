@@ -48,7 +48,7 @@ test('F2.2 & F2.3 - Ingestão Transacional e Idempotente de Baselines no Centro 
   let auth = (await request('/auth/login', 'POST', { email: 'budget@teste.local', senha: 'budget-test-123' }, 200, '')).token;
 
   // Carregar fixture normativa oficial
-  const fixturePath = path.resolve(__dirname, '../../INTEGRAÇÃO-ORÇAMENTOS-CENTRO V3/contracts/proposal-approved.v1.example.json');
+  const fixturePath = path.resolve(__dirname, 'fixtures/proposal-approved.v1.example.json');
   const officialEnvelope = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
   let previewId = null;

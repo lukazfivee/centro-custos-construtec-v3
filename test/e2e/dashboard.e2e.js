@@ -9,7 +9,7 @@ const { startServer, stopServer, buildDriver, stopDriver, login, collectConsoleE
 
 const SECTIONS = [
   'dashboard', 'lancamentos', 'centros', 'categorias', 'fornecedores',
-  'config', 'sincronizacao', 'historico', 'chamados', 'orcamentos',
+  'config', 'historico', 'chamados', 'orcamentos',
   'recorrentes', 'bugreports', 'usuarios',
 ];
 

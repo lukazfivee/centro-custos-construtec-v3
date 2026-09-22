@@ -48,7 +48,7 @@ test('Orçado vs. Realizado expõe a data de aprovação da proposta em contract
   assert.equal(comparisonWithoutBudget.data.hasBudget, false);
   assert.equal(comparisonWithoutBudget.data.contract, undefined);
 
-  const fixturePath = path.resolve(__dirname, '../../INTEGRAÇÃO-ORÇAMENTOS-CENTRO V3/contracts/proposal-approved.v1.example.json');
+  const fixturePath = path.resolve(__dirname, 'fixtures/proposal-approved.v1.example.json');
   const officialEnvelope = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
   const imported = await request('/integracao/orcamentos/confirmar-direto', 'POST', officialEnvelope, token);
   assert.equal(imported.status, 201);

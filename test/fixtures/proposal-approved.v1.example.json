@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "eventId": "c2b87877-12e8-4d3c-89fe-2a056f74c4a2",
+  "emittedAt": "2026-09-06T15:00:00.000Z",
+  "payloadSha256": "1a9fe792314ef7ce59f3cf36ca9ace9bd4a98c2f8ab62a754b57fab03b571d7b",
+  "payload": {
+    "source": { "system": "construtec-orcamentos", "namespaceId": "a2c86ecf-8fd8-4a82-a07a-7ca1a84ddc52", "installationId": "fixture-installation-v1", "version": "1.0.5" },
+    "proposal": {
+      "id": "proposal-fixture-pa-1001", "seriesId": "series-fixture-pa-1001", "number": "PA-1001", "revision": 0, "status": "approved",
+      "approval": { "approvedAt": "2026-09-06T15:00:00.000Z", "recordedAt": "2026-09-06T15:00:00.000Z", "recordedBy": "Responsável de teste", "evidenceKind": "client_acceptance", "evidenceReference": "ACEITE-PA-1001" },
+      "validUntil": "2026-10-06", "responsibleName": "Responsável de teste",
+      "change": { "kind": "initial", "baseRevision": null, "basePayloadSha256": null }
+    },
+    "client": { "sourceId": "client-fixture-001", "legalName": "Construtora Exemplo Ltda.", "tradeName": "Construtora Exemplo", "document": "00.000.000/0001-00", "contacts": [] },
+    "work": { "sourceId": "work-fixture-001", "name": "Edifício Modelo", "address": "Rua Exemplo, 100 - São Paulo/SP", "scope": "Revestimento e acabamento de unidade modelo" },
+    "pricing": { "currency": "BRL", "calculationVersion": "construtec-decimal-v1", "method": "bdi_multiplier", "bdiMultiplier": "1.2500", "taxPercentage": "0.00" },
+    "materials": [
+      { "id": "material-fixture-001", "position": 1, "code": "MAT-REV-001", "description": "Revestimento cerâmico 60x60 cm", "category": "Acabamento", "unit": "m²", "quantity": "100.0000", "unitCost": "10.0000", "totalCost": "1000.00", "sourceUnitSale": "12.50", "sourceTotalSale": "1250.00", "allocatedSale": "1250.00" }
+    ],
+    "labor": [
+      { "id": "labor-fixture-001", "position": 1, "roleName": "Assentador de revestimento", "costBasis": "composition", "professionalCount": "2.00", "plannedHoursPerProfessional": "44.00", "plannedTeamHours": "88.0000", "monthlySalary": "1760.00", "monthlyFood": "0.00", "monthlyTransport": "0.00", "monthlyOtherCosts": "0.00", "standardMonthlyHours": "176.00", "hourlyRate": "20.0000", "totalCost": "1760.00", "allocatedSale": "2200.00" }
+    ],
+    "totals": { "materialsCost": "1000.00", "laborCost": "1760.00", "baseCost": "2760.00", "contractValueBeforeTax": "3450.00", "taxAmount": "0.00", "contractValue": "3450.00", "additions": "690.00", "salesRoundingAdjustment": "0.00" }
+  }
+}

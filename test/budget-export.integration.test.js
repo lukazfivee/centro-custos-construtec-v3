@@ -45,7 +45,7 @@ test('Exportação Executiva Orçado vs. Realizado (CSV e Curva ABC)', async (co
   let auth = (await request('/auth/login', 'POST', { email: 'budget-export@teste.local', senha: 'budget-test-123' }, 200, '')).token;
 
   // Carregar fixture normativa
-  const fixturePath = path.resolve(__dirname, '../../INTEGRAÇÃO-ORÇAMENTOS-CENTRO V3/contracts/proposal-approved.v1.example.json');
+  const fixturePath = path.resolve(__dirname, 'fixtures/proposal-approved.v1.example.json');
   const officialEnvelope = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
   let costCenterId;

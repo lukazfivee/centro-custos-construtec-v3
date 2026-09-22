@@ -44,7 +44,7 @@ test('Cockpit Consolidado da Carteira de Obras (Multi-Obras)', async (context) =
 
   let auth = (await request('/auth/login', 'POST', { email: 'portf-test@teste.local', senha: 'portf-test-123' }, 200, '')).token;
 
-  const fixturePath = path.resolve(__dirname, '../../INTEGRAÇÃO-ORÇAMENTOS-CENTRO V3/contracts/proposal-approved.v1.example.json');
+  const fixturePath = path.resolve(__dirname, 'fixtures/proposal-approved.v1.example.json');
   const officialEnvelope = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
   let costCenterId;

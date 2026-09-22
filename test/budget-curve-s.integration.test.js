@@ -54,7 +54,7 @@ test.describe('Análise Temporal: Curva S Físico-Financeira e Previsão de Tér
   });
 
   test('1. Ingestão de proposta, setup de despesas e medições físicas', async () => {
-    const fixturePath = path.resolve(__dirname, '../../INTEGRAÇÃO-ORÇAMENTOS-CENTRO V3/contracts/proposal-approved.v1.example.json');
+    const fixturePath = path.resolve(__dirname, 'fixtures/proposal-approved.v1.example.json');
     const envelope = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
     const result = await confirmImport(db, {
