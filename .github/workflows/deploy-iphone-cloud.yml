@@ -33,7 +33,7 @@ jobs:
       D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
     steps:
       - name: Baixar codigo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Configurar Node.js
         uses: actions/setup-node@v6
         with:
@@ -85,7 +85,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Baixar codigo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Configurar Node.js
         uses: actions/setup-node@v6
         with:
