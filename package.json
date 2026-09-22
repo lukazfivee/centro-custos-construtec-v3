@@ -34,7 +34,7 @@
     "electron-updater": "^6.8.9",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^9.0.5",
+    "nodemailer": "^9.1.1",
     "pg": "^8.13.1",
     "qrcode": "^1.5.4",
     "zod": "^4.6.2"
