@@ -19,7 +19,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function getContractSummary(pool, contractId) {
   if (!UUID.test(String(contractId))) return null;
   const found = await pool.query(`
-    SELECT pc.id, pc.cost_center_id, cc.project_status, cc.code, cc.name
+    SELECT pc.id, pc.status, pc.cost_center_id, cc.project_status, cc.code, cc.name
     FROM project_contracts pc
     JOIN cost_centers cc ON cc.id = pc.cost_center_id
     WHERE pc.id = $1
@@ -27,15 +27,19 @@ async function getContractSummary(pool, contractId) {
   const contract = found.rows[0];
   if (!contract) return null;
 
-  const comparison = await getCostCenterBudgetComparison(pool, contract.cost_center_id, { contractId: contract.id });
   const base = {
     contractId: contract.id,
     costCenterId: contract.cost_center_id,
     costCenterCode: contract.code,
     costCenterName: contract.name,
     costCenterStatus: contract.project_status,
+    contractStatus: contract.status,
     updatedAt: new Date().toISOString(),
   };
+  // O comparativo so considera o contrato ativo; um contrato encerrado ou
+  // cancelado e informado como tal, em vez de parecer "sem orcamento".
+  if (contract.status !== 'active') return { ...base, hasBudget: false };
+  const comparison = await getCostCenterBudgetComparison(pool, contract.cost_center_id, { contractId: contract.id });
   if (!comparison.hasBudget) return { ...base, hasBudget: false };
 
   const summary = comparison.summary;

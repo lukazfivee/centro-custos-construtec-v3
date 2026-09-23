@@ -54,6 +54,14 @@ test('resumo de acompanhamento do contrato para o Orcamentos', async context => 
   assert.equal(summary.realizedCents, 0);
   assert.equal(summary.overBudget, false);
   assert.equal('items' in summary, false, 'sem linhas individuais');
+  assert.equal(summary.contractStatus, 'active');
+
+  const { getDb } = require('../db');
+  await getDb().query("UPDATE project_contracts SET status='closed' WHERE id=$1", [imported.contractId]);
+  const closed = await (await call(`/integracao/orcamentos/contratos/${imported.contractId}/resumo`, { key: localKey })).json();
+  assert.equal(closed.contractStatus, 'closed');
+  assert.equal(closed.hasBudget, false);
+  await getDb().query("UPDATE project_contracts SET status='active' WHERE id=$1", [imported.contractId]);
 
   assert.equal((await call('/integracao/orcamentos/contratos/nao-existe/resumo', { key: localKey })).status, 404);
   assert.equal((await call(`/integracao/orcamentos/contratos/${imported.contractId}/resumo`, { key: 'x'.repeat(40) })).status, 401);
