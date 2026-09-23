@@ -9,8 +9,10 @@
 // corporativos reais antes do Container substituir o Worker antigo com o
 // mesmo nome "centro-custos-api" (causa raiz do login corporativo quebrado).
 
+import { handleIdentityAdmin, isIdentityRoute, serviceKeyValid } from './identityAdmin.js';
+
 const PASSWORD_ITERATIONS = 10000;
-const ORG_ID = 'rcconstrutec.com.br';
+export const ORG_ID = 'rcconstrutec.com.br';
 const SESSION_SECONDS = 8 * 3600;
 const MAX_PROFILE_PHOTO_BYTES = 512 * 1024;
 
@@ -32,7 +34,12 @@ export function validCorporateEmail(value) {
   return /^[^\s@]+@rcconstrutec\.com\.br$/i.test(text(value));
 }
 
-function validRole(value) {
+export function validEmail(value) {
+  const email = text(value);
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export function validRole(value) {
   return ['admin', 'gestor', 'supervisor'].includes(text(value));
 }
 
@@ -63,7 +70,7 @@ function validateProfilePhoto(body) {
   return { mime, contentBase64: bytesToBase64(bytes) };
 }
 
-function timingSafeEqual(a, b) {
+export function timingSafeEqual(a, b) {
   const left = String(a || '');
   const right = String(b || '');
   if (left.length !== right.length) return false;
@@ -94,7 +101,7 @@ async function passwordHash(password, saltBase64, iterations = PASSWORD_ITERATIO
   return bytesToBase64(new Uint8Array(bits));
 }
 
-async function makePasswordRecord(password) {
+export async function makePasswordRecord(password) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const salt64 = bytesToBase64(salt);
   return {
@@ -123,7 +130,7 @@ export async function consumeRate(db, ip, scope = 'api', limit = 5000) {
   return true;
 }
 
-function publicUser(row) {
+export function publicUser(row) {
   return {
     id: row.id,
     name: row.name,
@@ -162,7 +169,7 @@ export async function sessionUser(request, env) {
     SELECT s.token_hash,s.expires_at,u.*
     FROM cloud_sessions s
     JOIN cloud_users u ON u.id=s.user_id AND u.org_id=s.org_id
-    WHERE s.token_hash=? AND s.expires_at>? AND u.active=1
+    WHERE s.token_hash=? AND s.expires_at>? AND u.active=1 AND u.deleted_at IS NULL
   `).bind(tokenHash, now).first();
   if (!row) return null;
   await env.DB.prepare('UPDATE cloud_sessions SET last_seen_at=? WHERE token_hash=?')
@@ -182,10 +189,10 @@ async function handleLogin(request, env) {
   try { body = await request.json(); } catch { return json({ ok: false, error: 'JSON invalido.' }, 400); }
   const email = text(body?.email).toLowerCase();
   const password = String(body?.password || '');
-  if (!validCorporateEmail(email) || !password) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
+  if (!validEmail(email) || !password) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
   const count = await env.DB.prepare('SELECT COUNT(*) AS total FROM cloud_users WHERE org_id=?').bind(ORG_ID).first();
   if (Number(count?.total || 0) === 0) return json({ ok: false, error: 'Diretorio corporativo ainda nao inicializado.', code: 'DIRECTORY_EMPTY' }, 409);
-  const user = await env.DB.prepare('SELECT * FROM cloud_users WHERE org_id=? AND email=?').bind(ORG_ID, email).first();
+  const user = await env.DB.prepare('SELECT * FROM cloud_users WHERE org_id=? AND email=? AND deleted_at IS NULL').bind(ORG_ID, email).first();
   if (!user || !user.active) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
   const iterations = Number(user.password_iterations || PASSWORD_ITERATIONS);
   if (iterations > PASSWORD_ITERATIONS) return json({ ok: false, error: 'Credencial central precisa ser reinicializada para o Workers Free.', code: 'PASSWORD_PROFILE_LEGACY' }, 409);
@@ -218,52 +225,6 @@ async function handleBootstrap(request, env) {
     VALUES(?,?,?,?,?,?,?,?,1,?,?)
   `).bind(id, ORG_ID, name, email, record.salt, record.hash, record.iterations, role, now, now).run();
   return json({ ok: true, user: { id, name, email, role, active: true, createdAt: now, updatedAt: now, lastLoginAt: null } }, 201);
-}
-
-async function handleListUsers(request, env) {
-  const auth = await requireSession(request, env, ['admin']);
-  if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
-  const rows = (await env.DB.prepare(`
-    SELECT id,name,email,role,active,created_at,updated_at,last_login_at
-    FROM cloud_users WHERE org_id=? ORDER BY active DESC,name,email
-  `).bind(auth.user.org_id).all()).results || [];
-  return json({ ok: true, users: rows.map(publicUser) });
-}
-
-async function handleCreateUser(request, env) {
-  const auth = await requireSession(request, env, ['admin']);
-  if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
-  let body;
-  try { body = await request.json(); } catch { return json({ ok: false, error: 'JSON invalido.' }, 400); }
-  const name = text(body?.name).slice(0, 120);
-  const email = text(body?.email).toLowerCase();
-  const password = String(body?.password || '');
-  const role = text(body?.role);
-  if (!name || !validCorporateEmail(email) || password.length < 10 || !validRole(role)) return json({ ok: false, error: 'Preencha nome, e-mail corporativo, senha de 10+ caracteres e perfil valido.' }, 400);
-  if (await env.DB.prepare('SELECT id FROM cloud_users WHERE org_id=? AND email=?').bind(auth.user.org_id, email).first()) return json({ ok: false, error: 'Ja existe um usuario com este e-mail.' }, 409);
-  const record = await makePasswordRecord(password);
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  await env.DB.prepare(`
-    INSERT INTO cloud_users(id,org_id,name,email,password_salt,password_hash,password_iterations,role,active,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?,1,?,?)
-  `).bind(id, auth.user.org_id, name, email, record.salt, record.hash, record.iterations, role, now, now).run();
-  return json({ ok: true, user: { id, name, email, role, active: true, createdAt: now, updatedAt: now, lastLoginAt: null } }, 201);
-}
-
-async function handleUserStatus(request, env) {
-  const auth = await requireSession(request, env, ['admin']);
-  if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
-  let body;
-  try { body = await request.json(); } catch { return json({ ok: false, error: 'JSON invalido.' }, 400); }
-  const email = text(body?.email).toLowerCase();
-  const active = body?.active === true ? 1 : 0;
-  if (!validCorporateEmail(email)) return json({ ok: false, error: 'E-mail invalido.' }, 400);
-  if (email === auth.user.email && active === 0) return json({ ok: false, error: 'Voce nao pode desativar o proprio acesso.' }, 400);
-  const result = await env.DB.prepare('UPDATE cloud_users SET active=?,updated_at=? WHERE org_id=? AND email=?').bind(active, new Date().toISOString(), auth.user.org_id, email).run();
-  if (!result.meta?.changes) return json({ ok: false, error: 'Usuario nao encontrado.' }, 404);
-  if (!active) await env.DB.prepare('DELETE FROM cloud_sessions WHERE user_id IN (SELECT id FROM cloud_users WHERE org_id=? AND email=?)').bind(auth.user.org_id, email).run();
-  return json({ ok: true });
 }
 
 async function handleChangePassword(request, env) {
@@ -315,21 +276,23 @@ export async function handleCentralAuth(request, env) {
     || url.pathname === '/v1/auth/bootstrap'
     || url.pathname === '/v1/auth/change-password'
     || url.pathname === '/v1/auth/profile-photo'
-    || url.pathname === '/v1/users'
-    || url.pathname === '/v1/users/status';
+    || isIdentityRoute(url.pathname);
   if (!isAuthRoute) return null;
 
-  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+  // Chamadas do servidor do Orcamentos chegam todas do mesmo IP de saida;
+  // com a chave de servico valida, o limite usa o IP real repassado por ele.
+  const service = await serviceKeyValid(request, env);
+  const forwarded = service ? text(request.headers.get('x-construtec-client-ip')) : '';
+  const ip = forwarded || request.headers.get('cf-connecting-ip') || 'unknown';
   const isLogin = request.method === 'POST' && url.pathname === '/v1/auth/login';
-  const allowed = await consumeRate(env.DB, ip, isLogin ? 'login' : 'api', isLogin ? 60 : 5000);
+  const scope = isLogin ? 'login' : (service ? 'service' : 'api');
+  const allowed = await consumeRate(env.DB, service && !isLogin ? 'orcamentos' : ip, scope, isLogin ? 60 : (service ? 50000 : 5000));
   if (!allowed) return json({ ok: false, error: 'Limite temporario de requisicoes atingido.' }, 429);
 
   if (request.method === 'POST' && url.pathname === '/v1/auth/login') return handleLogin(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/auth/bootstrap') return handleBootstrap(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/auth/change-password') return handleChangePassword(request, env);
   if (['GET', 'POST', 'DELETE'].includes(request.method) && url.pathname === '/v1/auth/profile-photo') return handleProfilePhoto(request, env);
-  if (request.method === 'GET' && url.pathname === '/v1/users') return handleListUsers(request, env);
-  if (request.method === 'POST' && url.pathname === '/v1/users') return handleCreateUser(request, env);
-  if (request.method === 'POST' && url.pathname === '/v1/users/status') return handleUserStatus(request, env);
+  if (isIdentityRoute(url.pathname)) return handleIdentityAdmin(request, env, url, service);
   return json({ ok: false, error: 'Rota nao encontrada.' }, 404);
 }

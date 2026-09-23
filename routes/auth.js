@@ -7,6 +7,7 @@ const { getDb, getInstanceIdentity } = require('../db');
 const { autenticar } = require('../middleware/auth');
 const { asyncRoute, httpError } = require('../lib/http');
 const cloudAuth = require('../services/cloudAuth');
+const { mirrorCloudUser } = require('../services/cloudUserMirror');
 const logger = require('../lib/logger');
 
 const router = express.Router();
@@ -80,32 +81,14 @@ function clearLoginFailures(email) {
 async function localCorporateCandidate(email) {
   const { rows } = await getDb().query(
     `SELECT id,name,email,password_hash,role,active
-     FROM users WHERE LOWER(email)=$1 LIMIT 1`,
+     FROM users WHERE LOWER(email)=$1 AND deleted_at IS NULL LIMIT 1`,
     [email]
   );
   return rows[0] || null;
 }
 
 async function upsertCloudUser(remoteUser, sessionToken) {
-  const email = String(remoteUser.email || '').trim().toLowerCase();
-  const existing = await getDb().query('SELECT id FROM users WHERE LOWER(email)=$1 LIMIT 1', [email]);
-  if (existing.rows[0]) {
-    const updated = await getDb().query(`
-      UPDATE users SET name=$1,email=$2,role=$3,active=TRUE,cloud_managed=TRUE,
-        cloud_session_token=$4,updated_at=NOW()
-      WHERE id=$5
-      RETURNING id,name,email,role,active,cloud_managed,cloud_session_token
-    `,[String(remoteUser.name||email).slice(0,120),email,remoteUser.role,sessionToken,existing.rows[0].id]);
-    return updated.rows[0];
-  }
-
-  const unusablePassword = crypto.randomBytes(48).toString('hex');
-  const inserted = await getDb().query(`
-    INSERT INTO users (name,email,password_hash,role,active,cloud_managed,cloud_session_token)
-    VALUES ($1,$2,$3,$4,TRUE,TRUE,$5)
-    RETURNING id,name,email,role,active,cloud_managed,cloud_session_token
-  `,[String(remoteUser.name||email).slice(0,120),email,await bcrypt.hash(unusablePassword,12),remoteUser.role,sessionToken]);
-  return inserted.rows[0];
+  return mirrorCloudUser(getDb(), remoteUser, { sessionToken });
 }
 
 async function corporateLogin(email, password) {
@@ -139,6 +122,20 @@ async function corporateLogin(email, password) {
   return upsertCloudUser(remote.user,remote.sessionToken);
 }
 
+// E-mail fora do dominio: pode ser conta central autorizada por um admin. Se o
+// diretorio recusar (ou estiver fora do ar), segue para a conta local legada.
+// So na nuvem: no desktop offline a tentativa atrasaria o login local.
+async function externalCloudLogin(email, password) {
+  if (!process.env.DATABASE_URL) return null;
+  try {
+    const remote = await cloudAuth.login(email,password);
+    if (remote?.user && remote?.sessionToken) return upsertCloudUser(remote.user,remote.sessionToken);
+  } catch (error) {
+    if (![400,401,409].includes(error.status)) logger.warn('external_cloud_login_unavailable', { status:error.status || null });
+  }
+  return null;
+}
+
 router.post('/login', asyncRoute(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.senha || '');
@@ -158,9 +155,12 @@ router.post('/login', asyncRoute(async (req, res) => {
         throw httpError(503,'Não foi possível validar o acesso corporativo agora. Verifique a internet e tente novamente.');
       }
     } else {
+      user = await externalCloudLogin(email,password);
+    }
+    if (!user) {
       const { rows } = await getDb().query(
         `SELECT id, name, email, password_hash, role
-         FROM users WHERE LOWER(email) = $1 AND active = TRUE`, [email]
+         FROM users WHERE LOWER(email) = $1 AND active = TRUE AND deleted_at IS NULL`, [email]
       );
       user = rows[0];
       if (!user || !(await bcrypt.compare(password, user.password_hash))) {

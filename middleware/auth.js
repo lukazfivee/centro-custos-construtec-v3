@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { getDb } = require('../db');
+const { cloudSessionAlive } = require('../services/cloudSessionCheck');
 
 async function autenticar(req, res, next) {
   const header = req.headers.authorization || '';
@@ -12,6 +13,9 @@ async function autenticar(req, res, next) {
       [payload.sub]
     );
     if (!rows[0]) return res.status(401).json({ erro: 'Usuário inativo ou inexistente.' });
+    if (rows[0].cloud_managed && !(await cloudSessionAlive(rows[0].cloud_session_token))) {
+      return res.status(401).json({ erro: 'Sua sessão corporativa expirou. Entre novamente.' });
+    }
     req.usuario = rows[0];
     return next();
   } catch (error) {

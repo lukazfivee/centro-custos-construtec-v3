@@ -339,3 +339,12 @@ html body #tela-login[hidden] { display: none !important; }
 .profile-trigger:hover, .profile-trigger[aria-expanded="true"] { background:#233147 !important; border-color:#33445d !important; }
 .profile-trigger > span:first-child { width:34px !important; height:34px !important; display:grid !important; place-items:center !important; border-radius:50% !important; background:#41516a !important; color:#fff !important; font-weight:700 !important; }
 .profile-trigger b { font-size:14px !important; font-weight:700 !important; }
+
+/* E-mails externos autorizados (tela Usuarios) */
+#emails-autorizados-panel { margin-top: 20px; }
+#email-autorizado-form { display: grid; gap: 6px; max-width: 480px; margin: 12px 0; }
+#email-autorizado-form .btn { justify-self: start; margin-top: 6px; }
+.authorized-emails { list-style: none; margin: 0; padding: 0; }
+.authorized-email-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line, #e5e7eb); }
+.authorized-email-row small { display: block; color: var(--muted, #6b7280); }
+.authorized-email-empty { padding: 10px 0; color: var(--muted, #6b7280); }
