@@ -226,7 +226,7 @@ async function handleActivity(request, env) {
   const instanceId = text(request.headers.get('x-instance-id'));
   const rows = (await env.DB.prepare(`
     SELECT e.id,e.entity_type,e.payload,e.resolution,e.created_at,e.source_instance_id,e.source_instance_name,e.source_user_email,
-      (SELECT u.name FROM cloud_users u WHERE u.org_id=e.org_id AND u.email=e.source_user_email ORDER BY (u.deleted_at IS NULL) DESC,u.created_at DESC LIMIT 1) AS source_user_name
+      (SELECT u.name FROM cloud_users u WHERE u.org_id=e.org_id AND u.email=e.source_user_email ORDER BY (u.created_at<=e.created_at AND (u.deleted_at IS NULL OR u.deleted_at>=e.created_at)) DESC,u.created_at DESC LIMIT 1) AS source_user_name
     FROM sync_events e
     WHERE e.org_id=? AND e.id>? AND (e.source_instance_id IS NULL OR e.source_instance_id<>?) ORDER BY e.id ASC LIMIT ?
   `).bind(auth.user.org_id, after, instanceId, limit).all()).results || [];

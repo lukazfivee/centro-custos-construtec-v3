@@ -259,9 +259,12 @@ router.delete('/:id', asyncRoute(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Sem login central (instalacao local) o painel nao se aplica: responde
+// disponivel=false em vez de erro, para a tela so esconder o painel.
 router.get('/emails-autorizados/lista', asyncRoute(async (req, res) => {
-  const token = requireCloudAdmin(req);
-  try { res.json((await cloudAuth.listAuthorizedEmails(token)).emails || []); }
+  if (!req.usuario.cloud_managed || !req.usuario.cloud_session_token) return res.json({ disponivel:false, emails:[] });
+  const token = req.usuario.cloud_session_token;
+  try { res.json({ disponivel:true, emails:(await cloudAuth.listAuthorizedEmails(token)).emails || [] }); }
   catch (error) { throw cloudFailure(error,'Não foi possível carregar os e-mails autorizados agora.'); }
 }));
 

@@ -122,18 +122,19 @@ async function corporateLogin(email, password) {
   return upsertCloudUser(remote.user,remote.sessionToken);
 }
 
-// E-mail fora do dominio: pode ser conta central autorizada por um admin. Se o
-// diretorio recusar (ou estiver fora do ar), segue para a conta local legada.
-// So na nuvem: no desktop offline a tentativa atrasaria o login local.
+// E-mail fora do dominio na nuvem: so conta central autorizada por um admin.
+// O diretorio e a unica fonte de login ali; recusa ou indisponibilidade nao
+// caem para uma senha local antiga. No desktop continua o login local.
 async function externalCloudLogin(email, password) {
-  if (!process.env.DATABASE_URL) return null;
   try {
     const remote = await cloudAuth.login(email,password);
     if (remote?.user && remote?.sessionToken) return upsertCloudUser(remote.user,remote.sessionToken);
   } catch (error) {
-    if (![400,401,409].includes(error.status)) logger.warn('external_cloud_login_unavailable', { status:error.status || null });
+    if ([400,401,409].includes(error.status)) throw httpError(401,'E-mail ou senha inválidos.');
+    logger.warn('external_cloud_login_unavailable', { status:error.status || null });
+    throw httpError(503,'Não foi possível validar o acesso agora. Verifique a internet e tente novamente.');
   }
-  return null;
+  throw httpError(401,'E-mail ou senha inválidos.');
 }
 
 router.post('/login', asyncRoute(async (req, res) => {
@@ -154,7 +155,7 @@ router.post('/login', asyncRoute(async (req, res) => {
         if (error.status === 409) throw httpError(409,error.message);
         throw httpError(503,'Não foi possível validar o acesso corporativo agora. Verifique a internet e tente novamente.');
       }
-    } else {
+    } else if (process.env.DATABASE_URL) {
       user = await externalCloudLogin(email,password);
     }
     if (!user) {

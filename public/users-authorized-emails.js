@@ -10,10 +10,8 @@
   const form = document.getElementById('email-autorizado-form');
   let loading = false;
 
-  // So admin com login corporativo gerencia o diretorio compartilhado.
   function isAdmin() {
-    return typeof usuario !== 'undefined' && usuario && usuario.role === 'admin'
-      && /@rcconstrutec\.com\.br$/i.test(String(usuario.email || ''));
+    return typeof usuario !== 'undefined' && usuario && usuario.role === 'admin';
   }
 
   function render(emails) {
@@ -42,12 +40,14 @@
     loading = true;
     errorBox.textContent = '';
     try {
-      render(await window.api('/usuarios/emails-autorizados/lista'));
+      const result = await window.api('/usuarios/emails-autorizados/lista');
+      // Instalacao sem login central: o painel nao se aplica.
+      if (!result.disponivel) { panel.classList.add('oculto'); return; }
+      render(result.emails);
       panel.classList.remove('oculto');
     } catch (error) {
-      // Instalacao sem login corporativo: o painel nao se aplica.
-      if (error.message && /corporativo/i.test(error.message)) panel.classList.add('oculto');
-      else { panel.classList.remove('oculto'); errorBox.textContent = error.message; }
+      panel.classList.remove('oculto');
+      errorBox.textContent = error.message;
     } finally {
       loading = false;
     }
