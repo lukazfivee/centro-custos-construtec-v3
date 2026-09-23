@@ -1,7 +1,11 @@
 # Migração da suíte para nuvem
 
 Status: Centro de Custos e Orçamentos publicados em Cloudflare Containers.
-Responsável: LEAD-CODEX. Escopo: Centro de Custos, Orçamentos e Portal Hub.
+Responsável: LEAD-CODEX. Escopo: Centro de Custos e Orçamentos. O Portal Hub foi
+descontinuado em 22/09/2026 e saiu do escopo.
+
+O estado atual está na seção "Atualização 2026-09-22", no fim do arquivo. As
+seções anteriores ficam como histórico.
 
 ## Evidências verificadas
 
@@ -68,14 +72,18 @@ deploy, a interface pode continuar servindo o conteúdo anterior por cerca de
 um minuto, até a instância hibernar e reiniciar com a imagem nova.
 
 ### Segredos exigidos
-Centro de Custos: `DATABASE_URL`, `SESSION_SECRET`, `JWT_SECRET`,
-`ADMIN_INITIAL_*`, `CONSTRUTEC_ALLOWED_ORIGINS`, `SYNC_SHARED_KEY`,
-`REPORT_API_URL`, `RESEND_API_KEY`, `MOBILE_APP_URL`, `CONSTRUTEC_INTEGRATION_KEY`
-(mínimo de 32 caracteres, **igual** ao do Worker `construtec-orcamentos-cloud`;
-sem ele, a integração com o Orçamentos responde 503 na nuvem).
+Centro de Custos (Worker `centro-custos-api`): `DATABASE_URL`, `JWT_SECRET`,
+`ADMIN_INITIAL_*`, `SYNC_SHARED_KEY`, `CONSTRUTEC_INTEGRATION_KEY`,
+`CONSTRUTEC_IDENTITY_KEY`, `REPORT_API_URL`, `REPORT_INGEST_KEY`, `MOBILE_APP_URL`.
+Sem `DATABASE_URL` ou `JWT_SECRET`, o Worker responde 503 em vez de subir o
+Container em PGlite.
 
-Orçamentos: `DATABASE_URL`, `SESSION_SECRET`, `CONSTRUTEC_SETUP_TOKEN`,
-`CONSTRUTEC_ALLOWED_ORIGINS`, `ADMIN_INITIAL_*`.
+Orçamentos (Worker `construtec-orcamentos-cloud`): `DATABASE_URL`,
+`SESSION_SECRET`, `CONSTRUTEC_SETUP_TOKEN`, `CONSTRUTEC_ALLOWED_ORIGINS`,
+`CONSTRUTEC_INTEGRATION_KEY`, `CONSTRUTEC_IDENTITY_KEY`.
+
+`CONSTRUTEC_INTEGRATION_KEY` e `CONSTRUTEC_IDENTITY_KEY` têm o mesmo valor nos
+dois Workers, com pelo menos 32 caracteres.
 
 Os valores vivem apenas no Worker (`wrangler secret put`), nunca no frontend
 nem no repositório.
@@ -121,3 +129,33 @@ PostgreSQL gerenciado. Verificações feitas sobre as respostas de produção:
   do Worker e do Pages, além de localhost. A lista é fechada e nomeada
   (`ORCAMENTOS_TRUSTED_ORIGINS`); não usar curinga `*.workers.dev`, que
   permitiria a qualquer Worker de terceiros injetar um envelope financeiro.
+
+## Atualização 2026-09-22
+
+Estado dos pontos que faltavam para a nuvem completa (PRs desta data):
+
+- **Chave de integração**: o valor padrão estava público no repositório e era o
+  aceito em produção. Na nuvem, a chave agora só vem do segredo
+  `CONSTRUTEC_INTEGRATION_KEY` (mínimo de 32 caracteres); sem ele, a integração
+  responde 503.
+- **Workflow legado**: `deploy-iphone-cloud.yml` publicava a PWA antiga com o
+  mesmo nome de Worker (`centro-custos-api`) e sobrescrevia o Container. O job
+  foi removido e fica só o Worker de reports.
+- **Backup**: PITR do Neon mais um dump diário criptografado por GitHub Actions
+  nos dois repositórios. Ver `docs/BACKUP-NUVEM.md`.
+- **Identidade compartilhada**: o Centro (D1, `/v1`) é o dono da conta. O
+  Orçamentos valida login e sessão nele, e nenhum dos dois guarda senha local na
+  nuvem. Ver `docs/superpowers/specs/2026-09-19-identidade-compartilhada-design.md`.
+  Migração D1: `cloudflare/center-container/d1-migrations/006-identidade-compartilhada.sql`.
+- **Reenvio da outbox**: o Cron de hora em hora no Worker do Orçamentos acorda o
+  Container e reenvia as integrações pendentes.
+- **Disco efêmero**: as preferências de tema do Centro saíram de arquivo para
+  `app_settings`. Backup e restauração por arquivo respondem 501 na nuvem.
+- **localhost**: as telas web do Orçamentos não têm mais links para localhost ou
+  para o Hub. Na nuvem, o CSP do Centro aceita como frame pai apenas o Orçamentos
+  publicado.
+- **Pendente de aprovação**: retorno de dados do Centro para a proposta
+  integrada (`docs/superpowers/specs/2026-09-22-sincronizacao-orcamentos-design.md`,
+  no repositório do Orçamentos).
+- **Fora desta rodada**: login offline no desktop do Orçamentos e sincronização
+  desktop ↔ nuvem.

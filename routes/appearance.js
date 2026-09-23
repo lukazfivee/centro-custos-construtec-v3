@@ -1,40 +1,38 @@
 const express = require('express');
+const { getDb } = require('../db');
+const { asyncRoute } = require('../lib/http');
+
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
+// Preferencia de tema da instalacao. Fica no banco (app_settings), e nao em
+// arquivo: na nuvem o disco do Container e efemero.
+const PREFS_KEY = 'appearance.preferences';
 
-function getDataRoot() {
-  return process.env.RESTORE_ROOT_DIR || path.join(process.env.APPDATA || '', 'Construtec', 'CentroCustos', 'dados');
-}
-
-function getPrefsPath() {
-  return path.join(getDataRoot(), 'preferences.json');
-}
-
-function loadPrefs() {
+async function loadPrefs() {
   try {
-    const p = getPrefsPath();
-    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8'));
-  } catch {}
-  return {};
+    const { rows } = await getDb().query('SELECT value FROM app_settings WHERE key=$1', [PREFS_KEY]);
+    return rows[0] ? JSON.parse(rows[0].value) : {};
+  } catch {
+    return {};
+  }
 }
 
-function savePrefs(prefs) {
-  const dir = getDataRoot();
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(getPrefsPath(), JSON.stringify(prefs, null, 2), 'utf8');
+async function savePrefs(prefs) {
+  await getDb().query(
+    'INSERT INTO app_settings (key,value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value',
+    [PREFS_KEY, JSON.stringify(prefs)],
+  );
 }
 
-router.get('/', (req, res) => {
-  const prefs = loadPrefs();
+router.get('/', asyncRoute(async (req, res) => {
+  const prefs = await loadPrefs();
   res.json({ darkMode: prefs.darkMode === true, configured:typeof prefs.darkMode === 'boolean' });
-});
+}));
 
-router.post('/', (req, res) => {
-  const prefs = loadPrefs();
+router.post('/', asyncRoute(async (req, res) => {
+  const prefs = await loadPrefs();
   if (typeof req.body.darkMode === 'boolean') prefs.darkMode = req.body.darkMode;
-  savePrefs(prefs);
+  await savePrefs(prefs);
   res.json({ ok: true });
-});
+}));
 
 module.exports = router;

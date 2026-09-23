@@ -16,7 +16,9 @@ const appRoot = path.join(__dirname, '..');
 const configDir = path.join(appRoot, 'cloudflare', 'center-container');
 const dryRun = process.argv.includes('--dry-run');
 
+// Docker Desktop instalado por usuario fica em %LOCALAPPDATA%\Programs.
 const DOCKER_HINTS = [
+  ...(process.env.LOCALAPPDATA ? [path.join(process.env.LOCALAPPDATA, 'Programs', 'DockerDesktop', 'resources', 'bin')] : []),
   'C:\\Program Files\\Docker\\Docker\\resources\\bin',
   'C:\\Program Files\\Docker\\Docker\\resources',
   '/usr/local/bin',
