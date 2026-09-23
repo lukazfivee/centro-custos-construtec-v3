@@ -1,0 +1,63 @@
+name: Backup PostgreSQL (nuvem)
+
+# Dump diario do banco Neon do Centro de Custos. O repositorio e publico e
+# artifacts podem ser baixados por qualquer usuario logado no GitHub, por isso
+# o arquivo sai sempre criptografado (GPG simetrico, AES256) antes do upload.
+# Segredos: CENTRO_BACKUP_DATABASE_URL (usuario somente leitura) e
+# BACKUP_PASSPHRASE. Restauracao: docs/BACKUP-NUVEM.md.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-postgres
+  cancel-in-progress: false
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.CENTRO_BACKUP_DATABASE_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Verificar segredos
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::error::Configure CENTRO_BACKUP_DATABASE_URL e BACKUP_PASSPHRASE."
+            exit 1
+          fi
+
+      - name: Gerar dump
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+          # Roda como o usuario do runner: arquivos criados como root nao
+          # poderiam ser apagados com shred depois.
+          docker run --rm --user "$(id -u):$(id -g)" -e DATABASE_URL -v "$PWD:/out" postgres:17-alpine \
+            sh -c 'pg_dump --format=custom --no-owner --no-privileges --dbname="$DATABASE_URL" --file=/out/centro.dump \
+              && pg_restore --list /out/centro.dump > /out/centro.list'
+          test -s centro.dump
+          echo "Objetos no dump: $(grep -vc '^;' centro.list)"
+
+      - name: Criptografar
+        run: |
+          set -euo pipefail
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 \
+            --symmetric --cipher-algo AES256 \
+            --output "centro-${STAMP}.dump.gpg" centro.dump 3<<<"$BACKUP_PASSPHRASE"
+          sha256sum "centro-${STAMP}.dump.gpg" > "centro-${STAMP}.dump.gpg.sha256"
+          shred -u centro.dump centro.list
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: centro-postgres-${{ env.STAMP }}
+          path: centro-${{ env.STAMP }}.dump.gpg*
+          retention-days: 30
+          if-no-files-found: error

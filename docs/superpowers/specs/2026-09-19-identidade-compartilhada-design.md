@@ -225,3 +225,50 @@ precisar de nova decisão de produto:
 - Onde fica o segredo compartilhado usado pela chamada servidor-a-servidor
   entre os dois Workers (variável de ambiente/secret do Cloudflare em cada
   lado, nunca no cliente).
+
+## Atualização 2026-09-22 — decisões e implementação
+
+### Arquitetura real (corrige a seção acima)
+
+O Centro de Custos tem duas bases de usuários na nuvem:
+
+- **D1 `centro-custos-producao` (`cloud_users`)**: a fonte da verdade das contas, servida
+  pelo Worker `centro-custos-api` em `/v1/*` (`cloudflare/center-container/centralAuth.js`
+  e `identityAdmin.js`).
+- **PostgreSQL (Neon) `users`**: espelho local usado pela interface do Container
+  (sessão JWT própria de 8h). A linha local é casada pelo id central (`cloud_user_id`).
+  Como a sessão central é revalidada a cada 60s (`services/cloudSessionCheck.js`), um
+  login excluído ou desativado pelo Orçamentos perde o acesso ao Centro em até 1 minuto.
+
+### Decisões do usuário
+
+- Admin do Centro = admin do Orçamentos. As demais contas entram no Orçamentos como
+  `viewer` até um admin do Orçamentos mudar o papel.
+- Admin de **qualquer** produto cria, desativa e exclui contas. O Orçamentos chama o
+  diretório servidor a servidor com a chave `CONSTRUTEC_IDENTITY_KEY` (segredo nos dois
+  Workers) e a sessão Bearer de quem agiu. Por essa via, o diretório só cria contas como
+  `supervisor` no Centro e nunca altera nem exclui um admin do Centro.
+- Login offline no desktop do Orçamentos fica **fora desta rodada**; o desktop passa a
+  exigir internet para logar.
+- As contas de teste do Orçamentos podem ser descartadas.
+
+### Contrato `/v1` do diretório
+
+| Rota | Quem | Efeito |
+| --- | --- | --- |
+| `POST /v1/auth/login` | qualquer | Aceita e-mail corporativo ou externo com conta criada |
+| `GET /v1/auth/session` | Bearer | Valida a sessão e devolve o usuário central |
+| `POST /v1/auth/logout` | Bearer | Encerra a sessão |
+| `GET/POST /v1/users` | admin do Centro, ou chave de serviço + Bearer | Lista/cria contas |
+| `POST /v1/users/status` | idem | Ativa/desativa |
+| `POST /v1/users/delete` | idem | Exclui login (`deleted_at`), libera o e-mail |
+| `GET/POST /v1/authorized-emails`, `POST /v1/authorized-emails/revoke` | idem | E-mails externos autorizados |
+
+Com a chave de serviço, o limite de login usa o IP do usuário repassado em
+`X-Construtec-Client-IP`, e as demais chamadas usam um balde próprio do Orçamentos.
+
+Migrações: D1 `cloudflare/center-container/d1-migrations/006-identidade-compartilhada.sql` (o schema já estava aplicado em produção desde 19/09, pelas migrações 006/007 do branch original; o arquivo serve para instalações novas);
+PostgreSQL `migrations/105_users_shared_identity.sql`.
+
+Revogar a autorização de um e-mail externo não exclui a conta já criada; para
+remover o acesso use "Excluir login".
