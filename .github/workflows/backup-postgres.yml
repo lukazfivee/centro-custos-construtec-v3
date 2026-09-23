@@ -38,7 +38,9 @@ jobs:
           set -euo pipefail
           stamp=$(date -u +%Y%m%dT%H%M%SZ)
           echo "STAMP=$stamp" >> "$GITHUB_ENV"
-          docker run --rm -e DATABASE_URL -v "$PWD:/out" postgres:17-alpine \
+          # Roda como o usuario do runner: arquivos criados como root nao
+          # poderiam ser apagados com shred depois.
+          docker run --rm --user "$(id -u):$(id -g)" -e DATABASE_URL -v "$PWD:/out" postgres:17-alpine \
             sh -c 'pg_dump --format=custom --no-owner --no-privileges --dbname="$DATABASE_URL" --file=/out/centro.dump \
               && pg_restore --list /out/centro.dump > /out/centro.list'
           test -s centro.dump
