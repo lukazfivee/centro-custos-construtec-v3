@@ -143,6 +143,14 @@ router.get('/contratos/:id/baselines', asyncRoute(async (req, res) => {
   res.json(result.rows);
 }));
 
+// Acompanhamento da obra para a proposta integrada no Orcamentos.
+router.get('/contratos/:id/resumo', asyncRoute(async (req, res) => {
+  const { getContractSummary } = require('../services/budgets/budgetContractSummary');
+  const summary = await getContractSummary(getDb(), String(req.params.id));
+  if (!summary) throw httpError(404, 'Contrato não encontrado');
+  res.json(summary);
+}));
+
 router.get('/portfolio-summary', asyncRoute(async (req, res) => {
   const { getPortfolioSummary } = require('../services/budgets/budgetPortfolio');
   res.json(await getPortfolioSummary(getDb()));
