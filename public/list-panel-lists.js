@@ -231,7 +231,7 @@
       <td data-label="E-mail">${esc(item.email)}</td>
       <td data-label="Papel"><span class="pill">${esc(roleName[item.role] || item.role)}</span></td>
       <td data-label="Status"><span class="pill ${item.ativo ? 'ativo' : 'inativo'}">${item.ativo ? 'Ativo' : 'Inativo'}</span></td>
-      <td data-label="Ações"><div class="row-actions">${isAdmin() ? `<button data-user-edit="${item.id}" aria-label="Editar usuário: ${esc(item.nome)}" title="Editar nome, e-mail e perfil deste usuário">Editar</button><button data-user-status="${item.id}" data-user-active="${item.ativo ? 'false' : 'true'}" aria-label="${item.ativo ? 'Desativar' : 'Ativar'} usuário: ${esc(item.nome)}" title="${item.ativo ? 'Bloquear o acesso deste usuário ao sistema' : 'Permitir que este usuário acesse o sistema'}">${item.ativo ? 'Desativar' : 'Ativar'}</button>` : ''}</div></td>
+      <td data-label="Ações"><div class="row-actions">${isAdmin() ? `<button data-user-edit="${item.id}" aria-label="Editar usuário: ${esc(item.nome)}" title="Editar nome, e-mail e perfil deste usuário">Editar</button><button data-user-status="${item.id}" data-user-active="${item.ativo ? 'false' : 'true'}" aria-label="${item.ativo ? 'Desativar' : 'Ativar'} usuário: ${esc(item.nome)}" title="${item.ativo ? 'Bloquear o acesso deste usuário ao sistema' : 'Permitir que este usuário acesse o sistema'}">${item.ativo ? 'Desativar' : 'Ativar'}</button><button data-user-delete="${item.id}" aria-label="Excluir login: ${esc(item.nome)}" title="Excluir o login e liberar o e-mail; o histórico continua com o nome da pessoa">Excluir login</button>` : ''}</div></td>
     </tr>`).join(''),
     bind: (container, items) => {
       if (!isAdmin()) return;
@@ -239,6 +239,23 @@
         button.addEventListener('click', () => {
           const item = items.find((entry) => entry.id === Number(button.dataset.userEdit));
           if (item) openUserEdit(item);
+        });
+      });
+      container.querySelectorAll('[data-user-delete]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const item = items.find((entry) => entry.id === Number(button.dataset.userDelete));
+          if (!item) return;
+          const ok = await confirmDialog(`Excluir o login de ${item.nome}? A pessoa perde o acesso ao Centro de Custos e ao Orçamentos, e o e-mail fica livre para uma conta nova. O histórico não é apagado. Não é possível desfazer.`, { title: 'Excluir login', confirmLabel: 'Excluir login' });
+          if (!ok) return;
+          button.disabled = true;
+          try {
+            await window.api(`/usuarios/${item.id}`, { method: 'DELETE' });
+            window.toast('Login excluído.');
+            await window.loadUsers();
+          } catch (error) {
+            button.disabled = false;
+            window.toast(error.message, true);
+          }
         });
       });
       container.querySelectorAll('[data-user-status]').forEach((button) => {
