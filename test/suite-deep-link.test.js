@@ -19,3 +19,11 @@ test('CSP permite o Orçamentos local como frame pai', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'middleware', 'observability.js'), 'utf8');
   assert.match(source, /frame-ancestors 'self' http:\/\/localhost:5173/);
 });
+
+test('CSP na nuvem nao aceita localhost como frame pai', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'middleware', 'observability.js'), 'utf8');
+  const cloud = source.match(/const CLOUD_FRAME_ANCESTORS = "([^"]+)"/);
+  assert.ok(cloud);
+  assert.doesNotMatch(cloud[1], /localhost|127\.0\.0\.1/);
+  assert.match(source, /process\.env\.DATABASE_URL \? CLOUD_FRAME_ANCESTORS : LOCAL_FRAME_ANCESTORS/);
+});

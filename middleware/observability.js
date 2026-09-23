@@ -7,6 +7,14 @@ function normalizeRequestId(value) {
   return /^[A-Za-z0-9._-]{8,80}$/.test(candidate) ? candidate : crypto.randomUUID();
 }
 
+// Quem pode embutir o Centro em iframe. Na nuvem, so o Orcamentos publicado;
+// origens localhost valem apenas no desktop.
+const CLOUD_FRAME_ANCESTORS = "frame-ancestors 'self' https://construtec-orcamentos-cloud.construtec-reports.workers.dev";
+const LOCAL_FRAME_ANCESTORS = "frame-ancestors 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:* http://127.0.0.1:* https://construtec-orcamentos-cloud.construtec-reports.workers.dev";
+function frameAncestors() {
+  return process.env.DATABASE_URL ? CLOUD_FRAME_ANCESTORS : LOCAL_FRAME_ANCESTORS;
+}
+
 function observability(req, res, next) {
   const started = process.hrtime.bigint();
   const requestId = normalizeRequestId(req.headers['x-request-id']);
@@ -14,7 +22,7 @@ function observability(req, res, next) {
   req.requestId = requestId;
   res.setHeader('X-Request-Id', requestId);
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:* http://127.0.0.1:* https://construtec-orcamentos-cloud.construtec-reports.workers.dev");
+  res.setHeader('Content-Security-Policy', frameAncestors());
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
