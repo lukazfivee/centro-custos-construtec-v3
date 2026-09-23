@@ -267,7 +267,7 @@ O Centro de Custos tem duas bases de usuários na nuvem:
 Com a chave de serviço, o limite de login usa o IP do usuário repassado em
 `X-Construtec-Client-IP`, e as demais chamadas usam um balde próprio do Orçamentos.
 
-Migrações: D1 `cloudflare/center-container/d1-migrations/006-identidade-compartilhada.sql` (aplicada com `wrangler d1 execute --remote --file`);
+Migrações: D1 `cloudflare/center-container/d1-migrations/006-identidade-compartilhada.sql` (o schema já estava aplicado em produção desde 19/09, pelas migrações 006/007 do branch original; o arquivo serve para instalações novas);
 PostgreSQL `migrations/105_users_shared_identity.sql`.
 
 Revogar a autorização de um e-mail externo não exclui a conta já criada; para

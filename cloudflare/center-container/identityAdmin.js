@@ -54,9 +54,10 @@ async function requireAccountAdmin(request, env, service) {
   return { user: auth.user, centroAdmin: !service && auth.user.role === 'admin' };
 }
 
-async function externalAuthorized(env, orgId, email) {
-  const row = await env.DB.prepare('SELECT email FROM authorized_external_emails WHERE org_id=? AND email=?')
-    .bind(orgId, email).first();
+// A tabela de producao nao tem org_id (organizacao unica, ORG_ID).
+async function externalAuthorized(env, email) {
+  const row = await env.DB.prepare('SELECT email FROM authorized_external_emails WHERE email=?')
+    .bind(email).first();
   return Boolean(row);
 }
 
@@ -97,7 +98,7 @@ async function handleCreateUser(request, env, auth) {
   if (!name || !validEmail(email) || password.length < 10 || !validRole(role)) {
     return json({ ok: false, error: 'Preencha nome, e-mail, senha de 10+ caracteres e perfil valido.' }, 400);
   }
-  if (!validCorporateEmail(email) && !(await externalAuthorized(env, orgId, email))) {
+  if (!validCorporateEmail(email) && !(await externalAuthorized(env, email))) {
     return json({ ok: false, error: 'E-mail nao autorizado; peca a um administrador para liberar.', code: 'EMAIL_NOT_AUTHORIZED' }, 403);
   }
   if (await liveUserByEmail(env, orgId, email)) return json({ ok: false, error: 'Ja existe um usuario com este e-mail.' }, 409);
@@ -150,14 +151,13 @@ async function handleDeleteUser(request, env, auth) {
 }
 
 async function handleAuthorizedEmails(request, env, auth, revoke) {
-  const orgId = auth.user.org_id;
   if (request.method === 'GET') {
     const rows = (await env.DB.prepare(`
       SELECT a.email,a.note,a.authorized_at,u.name AS authorized_by_name
       FROM authorized_external_emails a
       LEFT JOIN cloud_users u ON u.id=a.authorized_by
-      WHERE a.org_id=? ORDER BY a.email
-    `).bind(orgId).all()).results || [];
+      ORDER BY a.email
+    `).all()).results || [];
     return json({ ok: true, emails: rows.map((row) => ({ email: row.email, note: row.note || null, authorizedAt: row.authorized_at, authorizedByName: row.authorized_by_name || null })) });
   }
   const body = await readJson(request);
@@ -166,14 +166,14 @@ async function handleAuthorizedEmails(request, env, auth, revoke) {
   if (!validEmail(email)) return json({ ok: false, error: 'E-mail invalido.' }, 400);
   if (validCorporateEmail(email)) return json({ ok: false, error: 'E-mails corporativos ja sao permitidos.' }, 400);
   if (revoke) {
-    await env.DB.prepare('DELETE FROM authorized_external_emails WHERE org_id=? AND email=?').bind(orgId, email).run();
+    await env.DB.prepare('DELETE FROM authorized_external_emails WHERE email=?').bind(email).run();
     return json({ ok: true });
   }
   const now = new Date().toISOString();
   await env.DB.prepare(`
-    INSERT INTO authorized_external_emails(org_id,email,authorized_by,authorized_at,note) VALUES(?,?,?,?,?)
-    ON CONFLICT(org_id,email) DO UPDATE SET note=excluded.note
-  `).bind(orgId, email, auth.user.id, now, text(body.note).slice(0, 200) || null).run();
+    INSERT INTO authorized_external_emails(email,authorized_by,authorized_at,note) VALUES(?,?,?,?)
+    ON CONFLICT(email) DO UPDATE SET note=excluded.note
+  `).bind(email, auth.user.id, now, text(body.note).slice(0, 200) || null).run();
   return json({ ok: true, email }, 201);
 }
 
