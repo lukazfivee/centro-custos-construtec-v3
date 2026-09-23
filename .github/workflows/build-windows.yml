@@ -31,7 +31,7 @@ jobs:
       ADMIN_INITIAL_PASSWORD: senha-build-v3-local-123
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
