@@ -70,7 +70,7 @@ async function upsertRemoteUsers(remoteList) {
         SELECT * FROM unnest($1::int[],$2::text[],$3::text[],$4::text[],$5::boolean[],$6::text[])
           AS t(id,name,email,role,active,cloud_user_id)
       ) AS v
-      WHERE u.id = v.id
+      WHERE u.id = v.id AND u.deleted_at IS NULL
       RETURNING u.id,u.name AS nome,u.email,u.role,u.active AS ativo,u.created_at
     `,[ids,names,emails,roles,actives,cloudIds]);
     for (const row of rows) resultByEmail.set(row.email.toLowerCase(), row);
@@ -106,7 +106,7 @@ async function upsertRemoteUsers(remoteList) {
 }
 
 router.get('/', asyncRoute(async (req, res) => {
-  if (req.usuario.cloud_managed && cloudAuth.corporateEmail(req.usuario.email) && req.usuario.cloud_session_token) {
+  if (req.usuario.cloud_managed && req.usuario.cloud_session_token) {
     try {
       const remote = await cloudAuth.listUsers(req.usuario.cloud_session_token);
       const users = await upsertRemoteUsers(remote.users || []);
@@ -143,7 +143,10 @@ router.post('/', asyncRoute(async (req, res) => {
   if (password.length < 10) throw httpError(400, 'A senha provisória precisa ter pelo menos 10 caracteres.');
   if (!['admin', 'gestor', 'supervisor'].includes(role)) throw httpError(400, 'Perfil inválido.');
 
-  if (req.usuario.cloud_managed && cloudAuth.corporateEmail(req.usuario.email)) {
+  if (process.env.DATABASE_URL && !req.usuario.cloud_managed) {
+    throw httpError(400,'Na nuvem, contas são criadas por um administrador com login corporativo.');
+  }
+  if (req.usuario.cloud_managed) {
     if (!req.usuario.cloud_session_token) throw httpError(401,'Entre novamente para gerenciar usuários corporativos.');
     let remote;
     try {
@@ -205,13 +208,13 @@ router.put('/:id/status', asyncRoute(async (req, res) => {
   const active = req.body.ativo === true;
   if (id === req.usuario.id && !active) throw httpError(400, 'Você não pode desativar o próprio acesso.');
 
-  const target = (await getDb().query('SELECT id,name,email,role,active,cloud_managed FROM users WHERE id=$1',[id])).rows[0];
+  const target = (await getDb().query('SELECT id,name,email,role,active,cloud_managed,cloud_user_id FROM users WHERE id=$1 AND deleted_at IS NULL',[id])).rows[0];
   if (!target) throw httpError(404,'Usuário não encontrado.');
 
   if (target.cloud_managed && req.usuario.cloud_managed) {
     if (!req.usuario.cloud_session_token) throw httpError(401,'Entre novamente para gerenciar usuários corporativos.');
     try {
-      await cloudAuth.setUserStatus(req.usuario.cloud_session_token,target.email,active);
+      await cloudAuth.setUserStatus(req.usuario.cloud_session_token,target.email,active,target.cloud_user_id);
     } catch (error) {
       if ([400,401,403,404].includes(error.status)) throw httpError(error.status,error.message);
       throw httpError(503,'Não foi possível alterar o acesso corporativo agora.');
@@ -243,11 +246,11 @@ function cloudFailure(error, fallback) {
 router.delete('/:id', asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id, 'Usuário');
   if (id === req.usuario.id) throw httpError(400, 'Você não pode excluir o próprio acesso.');
-  const target = (await getDb().query('SELECT id,name,email,cloud_managed FROM users WHERE id=$1 AND deleted_at IS NULL',[id])).rows[0];
+  const target = (await getDb().query('SELECT id,name,email,cloud_managed,cloud_user_id FROM users WHERE id=$1 AND deleted_at IS NULL',[id])).rows[0];
   if (!target) throw httpError(404,'Usuário não encontrado.');
   if (target.cloud_managed) {
     const token = requireCloudAdmin(req);
-    try { await cloudAuth.deleteUser(token,target.email); } catch (error) {
+    try { await cloudAuth.deleteUser(token,target.email,target.cloud_user_id); } catch (error) {
       if (error.status !== 404) throw cloudFailure(error,'Não foi possível excluir o login agora.');
     }
   }

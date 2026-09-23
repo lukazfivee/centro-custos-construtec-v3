@@ -49,7 +49,9 @@ async function readJson(request) {
 async function requireAccountAdmin(request, env, service) {
   const auth = await requireSession(request, env, service ? [] : ['admin']);
   if (auth.error) return auth;
-  return { user: auth.user, centroAdmin: auth.user.role === 'admin' };
+  // Pela via de servico o poder e sempre o do Orcamentos, mesmo que o Bearer
+  // seja de um admin do Centro: nada de criar ou alterar admins por ela.
+  return { user: auth.user, centroAdmin: !service && auth.user.role === 'admin' };
 }
 
 async function externalAuthorized(env, orgId, email) {
@@ -117,7 +119,9 @@ async function targetFor(request, env, auth, verb) {
   const email = text(body.email).toLowerCase();
   if (!validEmail(email)) return { response: json({ ok: false, error: 'E-mail invalido.' }, 400) };
   const target = await liveUserByEmail(env, auth.user.org_id, email);
-  if (!target) return { response: json({ ok: false, error: 'Usuario nao encontrado.' }, 404) };
+  // Com id informado, uma tela desatualizada nao atinge uma conta recriada.
+  const expectedId = text(body.id);
+  if (!target || (expectedId && target.id !== expectedId)) return { response: json({ ok: false, error: 'Usuario nao encontrado.' }, 404) };
   if (target.id === auth.user.id) return { response: json({ ok: false, error: `Voce nao pode ${verb} o proprio acesso.` }, 400) };
   if (target.role === 'admin' && !auth.centroAdmin) {
     return { response: json({ ok: false, error: 'Somente um admin do Centro de Custos pode alterar outro admin.' }, 403) };

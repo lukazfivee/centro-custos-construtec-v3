@@ -160,7 +160,7 @@ router.post('/login', asyncRoute(async (req, res) => {
     if (!user) {
       const { rows } = await getDb().query(
         `SELECT id, name, email, password_hash, role
-         FROM users WHERE LOWER(email) = $1 AND active = TRUE AND deleted_at IS NULL`, [email]
+         FROM users WHERE LOWER(email) = $1 AND active = TRUE AND deleted_at IS NULL AND cloud_managed = FALSE`, [email]
       );
       user = rows[0];
       if (!user || !(await bcrypt.compare(password, user.password_hash))) {
@@ -239,7 +239,7 @@ router.post('/alterar-senha', autenticar, asyncRoute(async (req, res) => {
   const newPassword = String(req.body.novaSenha || '');
   if (newPassword.length < 10) throw httpError(400, 'A nova senha precisa ter pelo menos 10 caracteres.');
 
-  if (req.usuario.cloud_managed && cloudAuth.corporateEmail(req.usuario.email)) {
+  if (req.usuario.cloud_managed) {
     if (!req.usuario.cloud_session_token) throw httpError(401,'Entre novamente para alterar a senha corporativa.');
     try {
       await cloudAuth.changePassword(req.usuario.cloud_session_token,currentPassword,newPassword);

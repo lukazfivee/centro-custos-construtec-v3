@@ -27,7 +27,7 @@ CREATE TABLE cloud_sessions (
 function fakeD1() {
   const db = new sqlite.DatabaseSync(':memory:');
   db.exec(LEGACY_SCHEMA);
-  db.exec(fs.readFileSync(path.join(root, 'cloudflare-sync-worker', 'migrations', '006-identidade-compartilhada.sql'), 'utf8'));
+  db.exec(fs.readFileSync(path.join(root, 'cloudflare', 'center-container', 'd1-migrations', '006-identidade-compartilhada.sql'), 'utf8'));
   const statement = (sql) => ({
     args: [],
     bind(...args) { this.args = args; return this; },
@@ -134,4 +134,24 @@ maybe('chave de servico curta nao e aceita', async () => {
   await call('POST', '/v1/users', { token: adminToken, body: gestor });
   const token = (await call('POST', '/v1/auth/login', { body: gestor })).data.sessionToken;
   assert.equal((await call('GET', '/v1/users', { token, service: 'curta' })).status, 403);
+});
+
+maybe('via de servico com Bearer de admin do Centro continua limitada', async () => {
+  const { call, adminToken } = await setup();
+  const outro = { name: 'Outro Admin', email: 'outro@rcconstrutec.com.br', password: 'senha-outro-123', role: 'admin' };
+  await call('POST', '/v1/users', { token: adminToken, body: outro });
+  const created = await call('POST', '/v1/users', { token: adminToken, service: SERVICE_KEY, body: { ...outro, email: 'novo2@rcconstrutec.com.br' } });
+  assert.equal(created.data.user.role, 'supervisor');
+  assert.equal((await call('POST', '/v1/users/delete', { token: adminToken, service: SERVICE_KEY, body: { email: outro.email } })).status, 403);
+});
+
+maybe('excluir com id desatualizado nao atinge conta recriada', async () => {
+  const { call, adminToken } = await setup();
+  const payload = { name: 'Beltrano', email: 'beltrano@rcconstrutec.com.br', password: 'senha-beltrano-1', role: 'gestor' };
+  const first = await call('POST', '/v1/users', { token: adminToken, body: payload });
+  await call('POST', '/v1/users/delete', { token: adminToken, body: { email: payload.email, id: first.data.user.id } });
+  await call('POST', '/v1/users', { token: adminToken, body: payload });
+  const stale = await call('POST', '/v1/users/delete', { token: adminToken, body: { email: payload.email, id: first.data.user.id } });
+  assert.equal(stale.status, 404);
+  assert.equal((await call('POST', '/v1/auth/login', { body: payload })).status, 200);
 });

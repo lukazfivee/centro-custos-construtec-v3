@@ -22,7 +22,18 @@ async function retire(db, ids) {
 }
 
 // Upsert de uma conta central. sessionToken e opcional (login grava a sessao).
-async function mirrorCloudUser(db, remote, { sessionToken } = {}) {
+// Dois logins simultaneos podem disputar o indice unico; a segunda tentativa
+// encontra a linha criada pela primeira.
+async function mirrorCloudUser(db, remote, options = {}) {
+  try {
+    return await mirrorOnce(db, remote, options);
+  } catch (error) {
+    if (error.code !== '23505' && !/duplicate key|unique/i.test(String(error.message))) throw error;
+    return mirrorOnce(db, remote, options);
+  }
+}
+
+async function mirrorOnce(db, remote, { sessionToken } = {}) {
   const email = String(remote.email || '').trim().toLowerCase();
   const name = String(remote.name || email).slice(0, 120);
   const active = remote.active !== false;
@@ -37,9 +48,9 @@ async function mirrorCloudUser(db, remote, { sessionToken } = {}) {
       UPDATE users SET name=$1,email=$2,role=$3,active=$4,cloud_managed=TRUE,
         cloud_user_id=COALESCE($5,cloud_user_id),
         cloud_session_token=COALESCE($6,cloud_session_token),updated_at=NOW()
-      WHERE id=$7 RETURNING ${RETURNING}
+      WHERE id=$7 AND deleted_at IS NULL RETURNING ${RETURNING}
     `, [name, email, remote.role, active, cloudId, sessionToken || null, existing.id]);
-    return updated.rows[0];
+    if (updated.rows[0]) return updated.rows[0];
   }
   const unusablePassword = await bcrypt.hash(crypto.randomBytes(48).toString('hex'), 4);
   const inserted = await db.query(`

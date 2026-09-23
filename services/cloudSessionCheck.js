@@ -1,33 +1,42 @@
 // Revalida no diretorio central a sessao de contas compartilhadas. Sem isso,
 // um login excluido ou desativado pelo Orcamentos seguiria valido aqui ate o
-// JWT local expirar (8h). Resultado guardado por 60s para nao consultar o
-// diretorio a cada requisicao. Falha de rede nao derruba a sessao: o
-// diretorio roda no mesmo Worker que serve este app.
+// JWT local expirar (8h).
+// - Resposta positiva fica guardada por 60s.
+// - 401 derruba a sessao e fica guardado: uma falha posterior do diretorio
+//   nao a ressuscita.
+// - Falha transitoria (rede, 429, 5xx) so e tolerada para sessao ja
+//   confirmada antes, e nao e guardada; sem historico, nega.
 const cloudAuth = require('./cloudAuth');
 const logger = require('../lib/logger');
 
-const TTL_MS = 60 * 1000;
+const ALIVE_TTL_MS = 60 * 1000;
+const DEAD_TTL_MS = 12 * 3600 * 1000;
 const MAX_ENTRIES = 1000;
 const cache = new Map();
 
+function remember(token, alive) {
+  if (cache.size >= MAX_ENTRIES) cache.clear();
+  cache.set(token, { alive, until: Date.now() + (alive ? ALIVE_TTL_MS : DEAD_TTL_MS), confirmed: alive });
+}
+
 async function cloudSessionAlive(sessionToken) {
-  if (!process.env.DATABASE_URL || !sessionToken) return true;
+  if (!process.env.DATABASE_URL) return true;
+  if (!sessionToken) return false;
   const cached = cache.get(sessionToken);
-  if (cached && cached.until > Date.now()) return cached.alive;
-  let alive = true;
+  if (cached && !cached.alive) return false;
+  if (cached && cached.until > Date.now()) return true;
   try {
     await cloudAuth.session(sessionToken);
+    remember(sessionToken, true);
+    return true;
   } catch (error) {
-    if (error.status === 401) alive = false;
-    else logger.warn('cloud_session_check_unavailable', { status: error.status || null });
+    if (error.status === 401) {
+      remember(sessionToken, false);
+      return false;
+    }
+    logger.warn('cloud_session_check_unavailable', { status: error.status || null });
+    return Boolean(cached?.confirmed);
   }
-  if (cache.size >= MAX_ENTRIES) cache.clear();
-  cache.set(sessionToken, { alive, until: Date.now() + TTL_MS });
-  return alive;
 }
 
-function forgetCloudSession(sessionToken) {
-  cache.delete(sessionToken);
-}
-
-module.exports = { cloudSessionAlive, forgetCloudSession };
+module.exports = { cloudSessionAlive };
