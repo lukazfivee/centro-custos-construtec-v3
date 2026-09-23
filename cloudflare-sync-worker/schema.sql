@@ -68,9 +68,17 @@ CREATE TABLE IF NOT EXISTS cloud_users (
   updated_at TEXT NOT NULL,
   last_login_at TEXT,
   profile_photo_base64 TEXT,
-  profile_photo_mime TEXT
+  profile_photo_mime TEXT,
+  deleted_at TEXT
 );
-CREATE UNIQUE INDEX IF NOT EXISTS cloud_users_email_unique ON cloud_users(org_id, email);
+CREATE UNIQUE INDEX IF NOT EXISTS cloud_users_email_unique ON cloud_users(org_id, email) WHERE deleted_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS authorized_external_emails (
+  email TEXT PRIMARY KEY,
+  authorized_by TEXT NOT NULL,
+  authorized_at TEXT NOT NULL,
+  note TEXT
+);
 
 CREATE TABLE IF NOT EXISTS cloud_sessions (
   token_hash TEXT PRIMARY KEY,

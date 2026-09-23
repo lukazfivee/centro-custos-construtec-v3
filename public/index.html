@@ -256,6 +256,19 @@
       <section id="view-usuarios" class="view oculto">
         <div class="page-head"><div><h1>Usuários do sistema</h1></div><button id="btn-novo-usuario" class="btn primary" type="button" title="Abrir formulário para cadastrar usuário">+ Novo usuário</button></div>
         <div class="table-card"><div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de usuários do sistema; deslize horizontalmente para ver todas as colunas"><table class="cc-mobile-table"><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tabela-usuarios"></tbody></table></div></div>
+        <div class="panel oculto" id="emails-autorizados-panel">
+          <h2>E-mails externos autorizados</h2>
+          <p>Contas fora do domínio @rcconstrutec.com.br só podem ser criadas para e-mails desta lista. Revogar a autorização não exclui uma conta já criada.</p>
+          <form id="email-autorizado-form">
+            <label for="email-autorizado">E-mail</label>
+            <input id="email-autorizado" type="email" required maxlength="254">
+            <label for="email-autorizado-obs">Observação</label>
+            <input id="email-autorizado-obs" maxlength="200" placeholder="Ex.: vendedor terceirizado">
+            <button class="btn primary" type="submit" title="Permitir criar uma conta com este e-mail externo">Autorizar e-mail</button>
+          </form>
+          <div id="emails-autorizados-erro" class="form-error" role="status"></div>
+          <ul id="emails-autorizados-lista" class="authorized-emails" aria-live="polite"></ul>
+        </div>
       </section>
       <section id="view-config" class="view oculto">
         <div class="page-head"><div><h1>Configurações do sistema</h1><p>Instalação: <span id="config-instancia"></span> · Versão: <span id="config-versao"></span></p></div></div>
@@ -366,6 +379,7 @@
    <script src="chatgpt-p1.js"></script>
    <script src="list-panel.js"></script>
    <script src="list-panel-lists.js"></script>
+   <script src="users-authorized-emails.js"></script>
    <script src="chatgpt-p2.js"></script>
    <script src="chatgpt-p3.js"></script>
    <script src="chatgpt-p4.js"></script>

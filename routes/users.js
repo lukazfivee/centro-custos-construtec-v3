@@ -7,27 +7,15 @@ const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { recordAudit } = require('../services/audit');
 const cloudAuth = require('../services/cloudAuth');
+const { mirrorCloudUser, retire } = require('../services/cloudUserMirror');
 
 const router = express.Router();
 router.use(autenticar, exigirPapel('admin'));
 
+const PUBLIC_COLUMNS = row => row && ({ id:row.id, nome:row.name, email:row.email, role:row.role, ativo:row.active, created_at:row.created_at });
+
 async function upsertRemoteUser(remote) {
-  const email = String(remote.email || '').trim().toLowerCase();
-  const existing = await getDb().query('SELECT id FROM users WHERE LOWER(email)=$1 LIMIT 1',[email]);
-  if (existing.rows[0]) {
-    const result = await getDb().query(`
-      UPDATE users SET name=$1,email=$2,role=$3,active=$4,cloud_managed=TRUE,updated_at=NOW()
-      WHERE id=$5 RETURNING id,name AS nome,email,role,active AS ativo,created_at
-    `,[String(remote.name||email).slice(0,120),email,remote.role,remote.active !== false,existing.rows[0].id]);
-    return result.rows[0];
-  }
-  const placeholder = await bcrypt.hash(crypto.randomBytes(48).toString('hex'),12);
-  const result = await getDb().query(`
-    INSERT INTO users (name,email,password_hash,role,active,cloud_managed)
-    VALUES ($1,$2,$3,$4,$5,TRUE)
-    RETURNING id,name AS nome,email,role,active AS ativo,created_at
-  `,[String(remote.name||email).slice(0,120),email,placeholder,remote.role,remote.active !== false]);
-  return result.rows[0];
+  return PUBLIC_COLUMNS(await mirrorCloudUser(getDb(), remote));
 }
 
 // Upsert em lote (evita N+1 quando ha muitos usuarios remotos): normaliza/dedup
@@ -46,18 +34,25 @@ async function upsertRemoteUsers(remoteList) {
 
   const db = getDb();
   const { rows: existingRows } = await db.query(
-    'SELECT id, LOWER(email) AS email FROM users WHERE LOWER(email) = ANY($1::text[])',
+    'SELECT id, LOWER(email) AS email, cloud_user_id FROM users WHERE LOWER(email) = ANY($1::text[]) AND deleted_at IS NULL',
     [order]
   );
-  const existingIdByEmail = new Map(existingRows.map(r => [r.email, r.id]));
+  const existingByEmail = new Map(existingRows.map(r => [r.email, r]));
 
   const toUpdate = [];
   const toInsert = [];
+  const toRetire = [];
   for (const email of order) {
-    const id = existingIdByEmail.get(email);
-    if (id) toUpdate.push({ id, remote: byEmail.get(email), email });
-    else toInsert.push({ remote: byEmail.get(email), email });
+    const remote = byEmail.get(email);
+    const row = existingByEmail.get(email);
+    const cloudId = remote.id ? String(remote.id) : null;
+    if (row && cloudId && row.cloud_user_id && row.cloud_user_id !== cloudId) {
+      toRetire.push(row.id);
+      toInsert.push({ remote, email });
+    } else if (row) toUpdate.push({ id: row.id, remote, email });
+    else toInsert.push({ remote, email });
   }
+  await retire(db, toRetire);
 
   const resultByEmail = new Map();
 
@@ -67,16 +62,17 @@ async function upsertRemoteUsers(remoteList) {
     const emails = toUpdate.map(u => u.email);
     const roles = toUpdate.map(u => u.remote.role);
     const actives = toUpdate.map(u => u.remote.active !== false);
+    const cloudIds = toUpdate.map(u => (u.remote.id ? String(u.remote.id) : null));
     const { rows } = await db.query(`
       UPDATE users AS u SET name=v.name,email=v.email,role=v.role,active=v.active,
-        cloud_managed=TRUE,updated_at=NOW()
+        cloud_managed=TRUE,cloud_user_id=COALESCE(v.cloud_user_id,u.cloud_user_id),updated_at=NOW()
       FROM (
-        SELECT * FROM unnest($1::int[],$2::text[],$3::text[],$4::text[],$5::boolean[])
-          AS t(id,name,email,role,active)
+        SELECT * FROM unnest($1::int[],$2::text[],$3::text[],$4::text[],$5::boolean[],$6::text[])
+          AS t(id,name,email,role,active,cloud_user_id)
       ) AS v
-      WHERE u.id = v.id
+      WHERE u.id = v.id AND u.deleted_at IS NULL
       RETURNING u.id,u.name AS nome,u.email,u.role,u.active AS ativo,u.created_at
-    `,[ids,names,emails,roles,actives]);
+    `,[ids,names,emails,roles,actives,cloudIds]);
     for (const row of rows) resultByEmail.set(row.email.toLowerCase(), row);
   }
 
@@ -93,13 +89,13 @@ async function upsertRemoteUsers(remoteList) {
     const params = [];
     let p = 0;
     toInsert.forEach(({ remote, email }, i) => {
-      const row = [String(remote.name||email).slice(0,120),email,hashes[i],remote.role,remote.active !== false];
+      const row = [String(remote.name||email).slice(0,120),email,hashes[i],remote.role,remote.active !== false,remote.id ? String(remote.id) : null];
       for (const v of row) { params.push(v); p++; }
       const placeholders = Array.from({ length: row.length }, (_, k) => `$${p - row.length + k + 1}`).join(',');
       values.push(`(${placeholders},TRUE)`);
     });
     const { rows } = await db.query(`
-      INSERT INTO users (name,email,password_hash,role,active,cloud_managed)
+      INSERT INTO users (name,email,password_hash,role,active,cloud_user_id,cloud_managed)
       VALUES ${values.join(',')}
       RETURNING id,name AS nome,email,role,active AS ativo,created_at
     `,params);
@@ -110,7 +106,7 @@ async function upsertRemoteUsers(remoteList) {
 }
 
 router.get('/', asyncRoute(async (req, res) => {
-  if (req.usuario.cloud_managed && cloudAuth.corporateEmail(req.usuario.email) && req.usuario.cloud_session_token) {
+  if (req.usuario.cloud_managed && req.usuario.cloud_session_token) {
     try {
       const remote = await cloudAuth.listUsers(req.usuario.cloud_session_token);
       const users = await upsertRemoteUsers(remote.users || []);
@@ -121,7 +117,7 @@ router.get('/', asyncRoute(async (req, res) => {
     }
   }
 
-  const usersSelect = 'SELECT id, name AS nome, email, role, active AS ativo, created_at FROM users';
+  const usersSelect = 'SELECT id, name AS nome, email, role, active AS ativo, created_at FROM users WHERE deleted_at IS NULL';
   const orderBy = 'active DESC, name';
   if (!wantsPagination(req.query)) {
     const { rows } = await getDb().query(`${usersSelect} ORDER BY ${orderBy} LIMIT 500`);
@@ -131,7 +127,7 @@ router.get('/', asyncRoute(async (req, res) => {
   const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
   const [dataResult, countResult] = await Promise.all([
     getDb().query(`${usersSelect} ORDER BY ${orderBy} LIMIT $1 OFFSET $2`, [limit, offset]),
-    getDb().query('SELECT COUNT(*)::int AS total FROM users'),
+    getDb().query('SELECT COUNT(*)::int AS total FROM users WHERE deleted_at IS NULL'),
   ]);
   const total = Number(countResult.rows[0]?.total || 0);
   res.setHeader('X-Total-Count', String(total));
@@ -147,14 +143,16 @@ router.post('/', asyncRoute(async (req, res) => {
   if (password.length < 10) throw httpError(400, 'A senha provisória precisa ter pelo menos 10 caracteres.');
   if (!['admin', 'gestor', 'supervisor'].includes(role)) throw httpError(400, 'Perfil inválido.');
 
-  if (req.usuario.cloud_managed && cloudAuth.corporateEmail(req.usuario.email)) {
-    if (!cloudAuth.corporateEmail(email)) throw httpError(400,'Usuários compartilhados precisam usar e-mail @rcconstrutec.com.br.');
+  if (process.env.DATABASE_URL && !req.usuario.cloud_managed) {
+    throw httpError(400,'Na nuvem, contas são criadas por um administrador com login corporativo.');
+  }
+  if (req.usuario.cloud_managed) {
     if (!req.usuario.cloud_session_token) throw httpError(401,'Entre novamente para gerenciar usuários corporativos.');
     let remote;
     try {
       remote = await cloudAuth.createUser(req.usuario.cloud_session_token,{ name,email,password,role });
     } catch (error) {
-      if ([400,401,403,409].includes(error.status)) throw httpError(error.status,error.message);
+      if ([400,401,403,409].includes(error.status)) throw httpError(error.status,error.code === 'EMAIL_NOT_AUTHORIZED' ? 'E-mail não autorizado. Autorize o e-mail externo antes de criar a conta.' : error.message);
       throw httpError(503,'Não foi possível criar o usuário corporativo agora.');
     }
     const created = await upsertRemoteUser(remote.user);
@@ -185,7 +183,7 @@ router.put('/:id', asyncRoute(async (req, res) => {
     throw httpError(400, 'Usuários corporativos são gerenciados pelo sistema central — edite pelo Construtec Orçamentos/sistema corporativo.');
   }
 
-  const duplicate = (await getDb().query('SELECT id FROM users WHERE LOWER(email)=$1 AND id<>$2 LIMIT 1', [email, id])).rows[0];
+  const duplicate = (await getDb().query('SELECT id FROM users WHERE LOWER(email)=$1 AND id<>$2 AND deleted_at IS NULL LIMIT 1', [email, id])).rows[0];
   if (duplicate) throw httpError(409, 'Já existe um usuário cadastrado com este e-mail.');
 
   if (id === req.usuario.id && target.role === 'admin' && role !== 'admin') {
@@ -210,13 +208,13 @@ router.put('/:id/status', asyncRoute(async (req, res) => {
   const active = req.body.ativo === true;
   if (id === req.usuario.id && !active) throw httpError(400, 'Você não pode desativar o próprio acesso.');
 
-  const target = (await getDb().query('SELECT id,name,email,role,active,cloud_managed FROM users WHERE id=$1',[id])).rows[0];
+  const target = (await getDb().query('SELECT id,name,email,role,active,cloud_managed,cloud_user_id FROM users WHERE id=$1 AND deleted_at IS NULL',[id])).rows[0];
   if (!target) throw httpError(404,'Usuário não encontrado.');
 
   if (target.cloud_managed && req.usuario.cloud_managed) {
     if (!req.usuario.cloud_session_token) throw httpError(401,'Entre novamente para gerenciar usuários corporativos.');
     try {
-      await cloudAuth.setUserStatus(req.usuario.cloud_session_token,target.email,active);
+      await cloudAuth.setUserStatus(req.usuario.cloud_session_token,target.email,active,target.cloud_user_id);
     } catch (error) {
       if ([400,401,403,404].includes(error.status)) throw httpError(error.status,error.message);
       throw httpError(503,'Não foi possível alterar o acesso corporativo agora.');
@@ -227,6 +225,67 @@ router.put('/:id/status', asyncRoute(async (req, res) => {
     'UPDATE users SET active=$1, updated_at=NOW() WHERE id=$2 RETURNING id,name,email,role,active', [active, id]
   );
   await recordAudit({entityType:'usuario',entityId:id,action:active?'ativado':'desativado',summary:`Usuário ${result.rows[0].name} ${active?'ativado':'desativado'}.`,data:result.rows[0],user:req.usuario});
+  res.json({ ok: true });
+}));
+
+function requireCloudAdmin(req) {
+  if (!req.usuario.cloud_managed || !req.usuario.cloud_session_token) {
+    throw httpError(400,'Contas compartilhadas são gerenciadas por um administrador com login corporativo.');
+  }
+  return req.usuario.cloud_session_token;
+}
+
+function cloudFailure(error, fallback) {
+  if ([400,401,403,404,409].includes(error.status)) return httpError(error.status,error.message);
+  return httpError(503,fallback);
+}
+
+// Excluir login: a conta some do diretorio central e o e-mail fica livre para
+// uma conta nova. A linha local fica (deleted_at) para o historico continuar
+// mostrando o nome da pessoa; nada e apagado nem desvinculado.
+router.delete('/:id', asyncRoute(async (req, res) => {
+  const id = positiveId(req.params.id, 'Usuário');
+  if (id === req.usuario.id) throw httpError(400, 'Você não pode excluir o próprio acesso.');
+  const target = (await getDb().query('SELECT id,name,email,cloud_managed,cloud_user_id FROM users WHERE id=$1 AND deleted_at IS NULL',[id])).rows[0];
+  if (!target) throw httpError(404,'Usuário não encontrado.');
+  if (target.cloud_managed) {
+    const token = requireCloudAdmin(req);
+    try { await cloudAuth.deleteUser(token,target.email,target.cloud_user_id); } catch (error) {
+      if (error.status !== 404) throw cloudFailure(error,'Não foi possível excluir o login agora.');
+    }
+  }
+  await retire(getDb(), [id]);
+  await recordAudit({entityType:'usuario',entityId:id,action:'excluido',summary:`Login de ${target.name} excluído; e-mail liberado para nova conta.`,data:{ id, email:target.email },user:req.usuario});
+  res.json({ ok: true });
+}));
+
+// Sem login central (instalacao local) o painel nao se aplica: responde
+// disponivel=false em vez de erro, para a tela so esconder o painel.
+router.get('/emails-autorizados/lista', asyncRoute(async (req, res) => {
+  if (!req.usuario.cloud_managed || !req.usuario.cloud_session_token) return res.json({ disponivel:false, emails:[] });
+  const token = req.usuario.cloud_session_token;
+  try { res.json({ disponivel:true, emails:(await cloudAuth.listAuthorizedEmails(token)).emails || [] }); }
+  catch (error) { throw cloudFailure(error,'Não foi possível carregar os e-mails autorizados agora.'); }
+}));
+
+router.post('/emails-autorizados', asyncRoute(async (req, res) => {
+  const token = requireCloudAdmin(req);
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const note = String(req.body.observacao || '').trim().slice(0,200);
+  if (!email) throw httpError(400,'Informe o e-mail.');
+  try { await cloudAuth.authorizeEmail(token,email,note); }
+  catch (error) { throw cloudFailure(error,'Não foi possível autorizar o e-mail agora.'); }
+  await recordAudit({entityType:'usuario',entityId:null,action:'email_autorizado',summary:`E-mail externo ${email} autorizado.`,data:{ email, note },user:req.usuario});
+  res.status(201).json({ ok: true, email });
+}));
+
+router.post('/emails-autorizados/revogar', asyncRoute(async (req, res) => {
+  const token = requireCloudAdmin(req);
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (!email) throw httpError(400,'Informe o e-mail.');
+  try { await cloudAuth.revokeEmail(token,email); }
+  catch (error) { throw cloudFailure(error,'Não foi possível revogar a autorização agora.'); }
+  await recordAudit({entityType:'usuario',entityId:null,action:'email_revogado',summary:`Autorização do e-mail externo ${email} revogada.`,data:{ email },user:req.usuario});
   res.json({ ok: true });
 }));
 

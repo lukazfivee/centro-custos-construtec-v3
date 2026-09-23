@@ -90,11 +90,43 @@ async function createUser(sessionToken, payload) {
   });
 }
 
-async function setUserStatus(sessionToken, email, active) {
+async function setUserStatus(sessionToken, email, active, id) {
   return request('/v1/users/status', {
     method:'POST',
     headers:{ Authorization:`Bearer ${sessionToken}` },
-    body:JSON.stringify({ email, active }),
+    body:JSON.stringify({ email, active, id:id || undefined }),
+  });
+}
+
+async function session(sessionToken) {
+  return request('/v1/auth/session', { method:'GET', headers:{ Authorization:`Bearer ${sessionToken}` } });
+}
+
+async function deleteUser(sessionToken, email, id) {
+  return request('/v1/users/delete', {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${sessionToken}` },
+    body:JSON.stringify({ email, id:id || undefined }),
+  });
+}
+
+async function listAuthorizedEmails(sessionToken) {
+  return request('/v1/authorized-emails', { method:'GET', headers:{ Authorization:`Bearer ${sessionToken}` } });
+}
+
+async function authorizeEmail(sessionToken, email, note) {
+  return request('/v1/authorized-emails', {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${sessionToken}` },
+    body:JSON.stringify({ email, note }),
+  });
+}
+
+async function revokeEmail(sessionToken, email) {
+  return request('/v1/authorized-emails/revoke', {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${sessionToken}` },
+    body:JSON.stringify({ email }),
   });
 }
 
@@ -129,6 +161,11 @@ async function removeProfilePhoto(sessionToken) {
 }
 
 module.exports = {
+  session,
+  deleteUser,
+  listAuthorizedEmails,
+  authorizeEmail,
+  revokeEmail,
   DEFAULT_API_URL,
   apiUrl,
   configured,
