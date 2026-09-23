@@ -31,6 +31,7 @@ export class CentroCustosApi extends Container {
     REPORT_INGEST_KEY: env.REPORT_INGEST_KEY,
     SYNC_API_URL: env.SYNC_API_URL,
     SYNC_SHARED_KEY: env.SYNC_SHARED_KEY,
+    CONSTRUTEC_INTEGRATION_KEY: env.CONSTRUTEC_INTEGRATION_KEY,
     MOBILE_APP_URL: env.MOBILE_APP_URL,
     NODE_ENV: env.NODE_ENV,
   });
@@ -43,6 +44,11 @@ export default {
       const central = await handleCentralAuth(request, env);
       if (central) return central;
       return handleCommercialSync(request, env);
+    }
+    // Sem DATABASE_URL o servidor cairia no PGlite, em disco efemero e com
+    // a chave de integracao padrao (publica). Nunca subir o Container assim.
+    if (!env.DATABASE_URL || !env.JWT_SECRET) {
+      return Response.json({ erro: 'Serviço aguardando configuração.' }, { status: 503 });
     }
     return env.API.getByName('production').fetch(request);
   },

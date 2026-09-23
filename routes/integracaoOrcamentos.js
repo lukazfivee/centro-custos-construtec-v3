@@ -18,7 +18,18 @@ function safeCompare(a, b) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+// Chave padrao so vale no desktop (PGlite local). Na nuvem (DATABASE_URL
+// definido) o valor e publico no repositorio, entao a chave deve vir do
+// segredo CONSTRUTEC_INTEGRATION_KEY; sem ele a integracao fica desligada.
 const DEFAULT_INTEGRATION_KEY = 'construtec-internal-integration-secret-2026';
+const MIN_CLOUD_KEY_LENGTH = 32;
+
+function expectedIntegrationKey() {
+  const configured = process.env.CONSTRUTEC_INTEGRATION_KEY || '';
+  if (!process.env.DATABASE_URL) return configured || DEFAULT_INTEGRATION_KEY;
+  if (configured.length < MIN_CLOUD_KEY_LENGTH || configured === DEFAULT_INTEGRATION_KEY) return null;
+  return configured;
+}
 
 async function autenticarOuChaveIntegracao(req, res, next) {
   const integrationKey = req.headers['x-construtec-integration-key'];
@@ -27,7 +38,10 @@ async function autenticarOuChaveIntegracao(req, res, next) {
     if (requireLoopback && !isLoopback(req)) {
       return res.status(403).json({ erro: 'Acesso negado: sincronização direta restrita a loopback local (127.0.0.1).' });
     }
-    const expectedKey = process.env.CONSTRUTEC_INTEGRATION_KEY || DEFAULT_INTEGRATION_KEY;
+    const expectedKey = expectedIntegrationKey();
+    if (!expectedKey) {
+      return res.status(503).json({ erro: 'Integração com o Orçamentos não configurada neste servidor.' });
+    }
     if (!safeCompare(integrationKey, expectedKey)) {
       return res.status(401).json({ erro: 'Chave de integração inválida.' });
     }
@@ -135,3 +149,4 @@ router.get('/portfolio-summary', asyncRoute(async (req, res) => {
 }));
 
 module.exports = router;
+module.exports.expectedIntegrationKey = expectedIntegrationKey;

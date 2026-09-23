@@ -1,4 +1,4 @@
-name: Publicar Centro de Custos Cloud para iPhone
+name: Publicar Worker de reports
 
 on:
   workflow_dispatch:
@@ -6,73 +6,19 @@ on:
     branches:
       - main
     paths:
-      - cloudflare-sync-worker/public/**
-      - cloudflare-sync-worker/src/**
-      - cloudflare-sync-worker/migrations/**
-      - cloudflare-sync-worker/wrangler.toml.example
       - cloudflare-report-worker/src/**
       - cloudflare-report-worker/wrangler.toml
-      - public/assets/construtec-logo.png
-      - public/assets/construtec-favicon.png
       - .github/workflows/deploy-iphone-cloud.yml
+
+# O job que publicava a PWA legada (cloudflare-sync-worker) foi removido: ele
+# usava o mesmo nome de Worker "centro-custos-api" e sobrescrevia o Container
+# que serve a interface atual. O Centro de Custos e publicado apenas por
+# "npm run deploy:cloud" (docs/CLOUD-MIGRATION-STATUS.md).
 
 permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: Validar e publicar PWA no Cloudflare
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: cloudflare-sync-worker
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
-    steps:
-      - name: Baixar codigo
-        uses: actions/checkout@v7
-      - name: Configurar Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - name: Copiar identidade visual oficial
-        shell: bash
-        run: |
-          cp ../public/assets/construtec-logo.png public/construtec-logo.png
-          cp ../public/assets/construtec-favicon.png public/construtec-favicon.png
-          test -s public/construtec-logo.png
-          test -s public/construtec-favicon.png
-      - name: Validar segredos de implantacao
-        shell: bash
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Falta CLOUDFLARE_ACCOUNT_ID"; exit 1; }
-          test -n "$D1_DATABASE_ID" || { echo "Falta CLOUDFLARE_D1_DATABASE_ID"; exit 1; }
-      - name: Gerar configuracao do Wrangler
-        shell: bash
-        run: sed "s/__D1_DATABASE_ID__/$D1_DATABASE_ID/g" wrangler.toml.example > wrangler.toml
-      - name: Garantir colunas de foto no D1
-        shell: bash
-        run: |
-          schema="$(npx --yes wrangler@4.34.0 d1 execute centro-custos-producao --remote --command='PRAGMA table_info(cloud_users);' --json --config=./wrangler.toml)"
-          if ! printf '%s' "$schema" | grep -q 'profile_photo_base64'; then
-            npx --yes wrangler@4.34.0 d1 execute centro-custos-producao --remote --command='ALTER TABLE cloud_users ADD COLUMN profile_photo_base64 TEXT;' --config=./wrangler.toml
-          fi
-          if ! printf '%s' "$schema" | grep -q 'profile_photo_mime'; then
-            npx --yes wrangler@4.34.0 d1 execute centro-custos-producao --remote --command='ALTER TABLE cloud_users ADD COLUMN profile_photo_mime TEXT;' --config=./wrangler.toml
-          fi
-      - name: Validar JavaScript
-        run: |
-          node --check public/runtime-compat.js
-          node --check public/app-v2.js
-          node --check public/sw.js
-          node --check src/index.js
-      - name: Publicar Worker, API e PWA
-        run: npx --yes wrangler@4.34.0 deploy --config=./wrangler.toml
-
   deploy-reports:
     name: Validar e publicar suporte no Cloudflare
     runs-on: ubuntu-latest

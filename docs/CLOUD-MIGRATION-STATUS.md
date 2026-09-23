@@ -70,7 +70,9 @@ um minuto, até a instância hibernar e reiniciar com a imagem nova.
 ### Segredos exigidos
 Centro de Custos: `DATABASE_URL`, `SESSION_SECRET`, `JWT_SECRET`,
 `ADMIN_INITIAL_*`, `CONSTRUTEC_ALLOWED_ORIGINS`, `SYNC_SHARED_KEY`,
-`REPORT_API_URL`, `RESEND_API_KEY`, `MOBILE_APP_URL`.
+`REPORT_API_URL`, `RESEND_API_KEY`, `MOBILE_APP_URL`, `CONSTRUTEC_INTEGRATION_KEY`
+(mínimo de 32 caracteres, **igual** ao do Worker `construtec-orcamentos-cloud`;
+sem ele, a integração com o Orçamentos responde 503 na nuvem).
 
 Orçamentos: `DATABASE_URL`, `SESSION_SECRET`, `CONSTRUTEC_SETUP_TOKEN`,
 `CONSTRUTEC_ALLOWED_ORIGINS`, `ADMIN_INITIAL_*`.
