@@ -30,6 +30,7 @@
     WEAK_PASSWORD: MSG.passwordWeak,
     RATE_LIMITED: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
     NOT_AVAILABLE: 'A recuperação de senha ainda não está disponível. Fale com o administrador da Construtec.',
+    FEATURE_UNAVAILABLE: 'Esta função ainda não está disponível no servidor.',
     SESSION_INVALID: 'Sua sessão terminou. Entre com e-mail e senha.',
     SESSION_EXPIRED: 'Sua sessão terminou. Entre com e-mail e senha.',
   };
