@@ -1,6 +1,6 @@
 # STATUS-CODEX — Fase 1 servidor
 
-- Atualizado: 24/09/2026, 19:39 BRT.
+- Atualizado: 24/09/2026, 20:08 BRT.
 - Commit base: `8980682312853d6a4cf785f05d075dfdb01606b3` (`origin/main`).
 - Branch: `feat/auth-central-reset-handoff`.
 
@@ -28,11 +28,13 @@ O login de `public/app.js` chama `POST /api/auth/login` com `{ email, senha }`. 
 
 ## Validação
 
-- Testes novos isolados: 13 passaram. Cobrem redefinição, sessões, handoff válido, expirado e reutilizado, falha da ponte, validação da chave interna e um fluxo integrado Worker → Express → JWT → rota web → revogação no D1.
-- `npm run verify`: verde, 194 testes passaram e 94 arquivos JavaScript verificados.
-- CI usa Node 20 sem `node:sqlite`; os testes novos dependentes de D1 seguem o mesmo padrão de skip dos testes de identidade já existentes nessa versão. Foram executados localmente no Node 24 (13/13). O teste de HTML/App Links continua rodando no Node 20.
+- Testes novos isolados: 14 passaram. Cobrem redefinição, sessões, handoff válido, expirado e reutilizado, falha da ponte, validação da chave interna, ciclo de troca de senha/logout da sessão referenciada e um fluxo integrado Worker → Express → JWT → rota web → revogação no D1.
+- `npm run verify`: verde, 195 testes passaram e 94 arquivos JavaScript verificados.
+- CI usa Node 20 sem `node:sqlite`; os testes novos dependentes de D1 seguem o mesmo padrão de skip dos testes de identidade já existentes nessa versão. Foram executados localmente no Node 24 (14/14). O teste de HTML/App Links continua rodando no Node 20.
 - `npm test -- --test-concurrency=1`: antes da ponte, verde com 191 testes. A primeira execução paralela de `npm test` teve três falhas E2E de Chrome (sessão encerrada/tempo de espera); os mesmos casos passaram na execução sequencial e no `verify`.
 - Migração D1 de produção, deploy e provedor HTTP real: não executados.
+
+Uma segunda revisão corrigiu a resolução de `Bearer hash:<sha256>` em `change-password` e `logout`. Antes, essas rotas calculavam SHA-256 sobre a referência textual e poderiam preservar ou excluir a sessão errada; agora usam diretamente o hash validado com `SYNC_SHARED_KEY`.
 
 ## Pedidos ao Claude / Lucas
 

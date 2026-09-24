@@ -88,6 +88,17 @@ export async function sha256Text(value) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+export async function sessionTokenHash(request, env) {
+  const header = request.headers.get('authorization') || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (!token) return null;
+  if (!token.startsWith('hash:')) return sha256Text(token);
+  const expected = String(env.SYNC_SHARED_KEY || '');
+  const hash = token.slice(5);
+  if (expected.length < 32 || !timingSafeEqual(request.headers.get('x-sync-key'), expected)) return null;
+  return /^[a-f0-9]{64}$/.test(hash) ? hash : null;
+}
+
 async function passwordHash(password, saltBase64, iterations = PASSWORD_ITERATIONS) {
   const key = await crypto.subtle.importKey(
     'raw',
@@ -163,19 +174,8 @@ async function createSession(env, user, request) {
 }
 
 export async function sessionUser(request, env) {
-  const header = request.headers.get('authorization') || '';
-  if (!header.startsWith('Bearer ')) return null;
-  const token = header.slice(7).trim();
-  if (!token) return null;
-  let tokenHash;
-  if (token.startsWith('hash:')) {
-    const expected = String(env.SYNC_SHARED_KEY || '');
-    if (expected.length < 32 || !timingSafeEqual(request.headers.get('x-sync-key'), expected)) return null;
-    tokenHash = token.slice(5);
-    if (!/^[a-f0-9]{64}$/.test(tokenHash)) return null;
-  } else {
-    tokenHash = await sha256Text(token);
-  }
+  const tokenHash = await sessionTokenHash(request, env);
+  if (!tokenHash) return null;
   const now = Math.floor(Date.now() / 1000);
   const row = await env.DB.prepare(`
     SELECT s.token_hash,s.expires_at,u.*
@@ -254,7 +254,8 @@ async function handleChangePassword(request, env) {
   const record = await makePasswordRecord(newPassword);
   const now = new Date().toISOString();
   await env.DB.prepare('UPDATE cloud_users SET password_salt=?,password_hash=?,password_iterations=?,updated_at=? WHERE id=?').bind(record.salt, record.hash, record.iterations, now, auth.user.id).run();
-  const currentTokenHash = await sha256Text((request.headers.get('authorization') || '').slice(7).trim());
+  const currentTokenHash = await sessionTokenHash(request, env);
+  if (!currentTokenHash) return json({ ok: false, code: 'SESSION_INVALID', error: 'Sessao invalida.' }, 401);
   await env.DB.prepare('DELETE FROM cloud_sessions WHERE user_id=? AND token_hash<>?').bind(auth.user.id, currentTokenHash).run();
   return json({ ok: true });
 }

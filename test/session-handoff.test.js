@@ -64,3 +64,23 @@ maybe('consulta interna por hash exige chave e acompanha revogação', async () 
   env.DB.raw.prepare('DELETE FROM cloud_sessions WHERE token_hash=?').run(hash);
   assert.equal((await call('POST', '/v1/auth/session-hash', { body,headers:{ 'x-sync-key':env.SYNC_SHARED_KEY } })).status, 401);
 });
+
+maybe('sessão referenciada por hash troca senha e encerra corretamente', async () => {
+  const { env, call, email, password, token } = await setup();
+  const hash = crypto.createHash('sha256').update(token).digest('hex');
+  const headers = { 'x-sync-key':env.SYNC_SHARED_KEY };
+  const other = await call('POST', '/v1/auth/login', { body:{ email,password } });
+
+  const changed = await call('POST', '/v1/auth/change-password', {
+    token:`hash:${hash}`,headers,body:{ currentPassword:password,newPassword:'NovaSenha9!' },
+  });
+  assert.equal(changed.status, 200);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM cloud_sessions').get().n, 1);
+  assert.equal((await call('GET', '/v1/auth/session', { token:other.data.sessionToken })).status, 401);
+  assert.equal((await call('GET', '/v1/auth/session', { token:`hash:${hash}`,headers })).status, 200);
+  assert.equal((await call('POST', '/v1/auth/login', { body:{ email,password } })).status, 401);
+  assert.equal((await call('POST', '/v1/auth/login', { body:{ email,password:'NovaSenha9!' } })).status, 200);
+
+  assert.equal((await call('POST', '/v1/auth/logout', { token:`hash:${hash}`,headers })).status, 200);
+  assert.equal((await call('GET', '/v1/auth/session', { token:`hash:${hash}`,headers })).status, 401);
+});
