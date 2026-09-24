@@ -139,7 +139,8 @@ export function createMockCentral(options = {}) {
       handoffs.delete(hash);
       if (!item || item.expiresAt * 1000 <= now()) return [400, { ok: false, error: 'Código inválido.', code: 'HANDOFF_INVALID' }];
       const user = userById(item.userId);
-      return [200, { ok: true, token: randomToken(), usuario: publicUser(user), instancia: { nome: item.instanceName } }];
+      // Formato real do login web (STATUS-CODEX): { token, usuario: { id, nome, email, role }, instancia: { id, name } }.
+      return [200, { ok: true, token: randomToken(), usuario: { id: user.id, nome: user.name, email: user.email, role: user.role }, instancia: { id: 'mock', name: item.instanceName } }];
     },
   };
 
@@ -159,7 +160,7 @@ export function createMockCentral(options = {}) {
   const webHome = '<!doctype html><meta charset="utf-8"><title>Centro de Custos (mock)</title><body style="font:16px sans-serif;padding:24px">'
     + '<h1>Centro de Custos (mock)</h1><p id="s">Sem handoff.</p><script>const m=/handoff=([^&]+)/.exec(location.hash);'
     + 'if(m){fetch("/v1/auth/handoff/consume",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:m[1]})})'
-    + '.then(r=>r.json()).then(j=>{history.replaceState(null,"",location.pathname);document.getElementById("s").textContent=j.ok?"Entrou como "+j.usuario.name:"Handoff recusado: "+j.code;});}</script>';
+    + '.then(r=>r.json()).then(j=>{history.replaceState(null,"",location.pathname);document.getElementById("s").textContent=j.ok?"Entrou como "+j.usuario.nome:"Handoff recusado: "+j.code;});}</script>';
   const resetPage = '<!doctype html><meta charset="utf-8"><script>location.replace("/auth/index.html#reset&"+location.hash.slice(1))</script>';
 
   const server = http.createServer((req, res) => {
