@@ -149,7 +149,10 @@ public final class MainActivity extends Activity implements AuthController.Shell
         showAuth("start", "Sua sessão terminou. Entre com e-mail e senha.");
     }
 
-    @Override public void closeOverlay() { if (webView != null) hideAuth(); }
+    @Override public void closeOverlay() {
+        if (webView != null) hideAuth();
+        else if (auth.unlocked()) enterApp(null);
+    }
 
     @Override public void logout(boolean forget) {
         dropApp();

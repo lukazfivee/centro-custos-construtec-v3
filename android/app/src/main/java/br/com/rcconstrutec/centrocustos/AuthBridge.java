@@ -61,7 +61,12 @@ final class AuthBridge {
                 return result;
             }
             case "sessions": return auth.sessions();
-            case "revokeOthers": return auth.revokeOthers();
+            case "revokeOthers": {
+                // O handoff cria uma sessao "Centro de Custos web" neste aparelho; ela tambem cai, entao o site reabre com handoff novo.
+                JSONObject result = auth.revokeOthers();
+                if (result.optBoolean("ok")) ui(shell::dropApp);
+                return result;
+            }
             case "setAutoLock": auth.vault.setAutoLockSeconds(Math.max(0, a.optInt("seconds", 300))); return AuthController.ok();
             case "enterApp": {
                 String notice = a.optString("notice", "");

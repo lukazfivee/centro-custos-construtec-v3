@@ -73,6 +73,8 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
 
 ## Pendências
 
+- Compatibilidade com o #28 final, conferida em 24/09: cada `consume` cria uma sessão central "Centro de Custos web", com duração de 8h. Por isso, depois de "Sair de todos os outros aparelhos", o app descarta a WebView do site e, em "Voltar ao app", reabre o site com um handoff novo. Essas sessões aparecem em "Aparelhos conectados".
+
 - Compilar e rodar no aparelho (roteiro acima). Sem SDK aqui, esse é o primeiro passo.
 - O botão de menu (44dp, canto superior direito) fica por cima do site. Conferir se não cobre algum botão do Centro de Custos web; se cobrir, mudar de lugar na Fase 2.
 - O App Link só abre o app depois que o `assetlinks.json` tiver a impressão digital do certificado de assinatura (`ANDROID_CERT_SHA256`). Com a chave de debug, vale só para testes.
