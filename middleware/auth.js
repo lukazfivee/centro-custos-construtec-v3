@@ -9,12 +9,17 @@ async function autenticar(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const { rows } = await getDb().query(
-      'SELECT id, name, email, role, cloud_managed, cloud_session_token FROM users WHERE id = $1 AND active = TRUE',
+      'SELECT id, name, email, role, cloud_managed, cloud_session_token, cloud_user_id FROM users WHERE id = $1 AND active = TRUE',
       [payload.sub]
     );
     if (!rows[0]) return res.status(401).json({ erro: 'Usuário inativo ou inexistente.' });
-    if (rows[0].cloud_managed && !(await cloudSessionAlive(rows[0].cloud_session_token))) {
-      return res.status(401).json({ erro: 'Sua sessão corporativa expirou. Entre novamente.' });
+    if (rows[0].cloud_managed) {
+      const handoffHash = typeof payload.centralSessionHash === 'string' ? payload.centralSessionHash : null;
+      const sessionValid = handoffHash
+        ? await cloudSessionAlive(handoffHash,{ hashed:true,userId:rows[0].cloud_user_id })
+        : await cloudSessionAlive(rows[0].cloud_session_token);
+      if (!sessionValid) return res.status(401).json({ erro: 'Sua sessão corporativa expirou. Entre novamente.' });
+      if (handoffHash) rows[0].cloud_session_token = `hash:${handoffHash}`;
     }
     req.usuario = rows[0];
     return next();

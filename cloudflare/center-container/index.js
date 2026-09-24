@@ -2,6 +2,7 @@ import { Container } from '@cloudflare/containers';
 import { env } from 'cloudflare:workers';
 import { handleCentralAuth } from './centralAuth.js';
 import { handleCommercialSync } from './commercialSync.js';
+import { assetLinks, resetPage } from './resetPage.js';
 
 // O Container passa cada valor de envVars pelo ambiente do processo, que so
 // aceita string — um valor `undefined` (secret nunca configurado no Worker)
@@ -40,6 +41,9 @@ export class CentroCustosApi extends Container {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (request.method === 'GET' && url.pathname === '/redefinir-senha') return resetPage();
+    if (request.method === 'GET' && url.pathname === '/.well-known/assetlinks.json') return assetLinks(env);
+    if (url.pathname === '/api/auth/handoff-bridge') return new Response(null, { status: 404 });
     if (url.pathname.startsWith('/v1/')) {
       const central = await handleCentralAuth(request, env);
       if (central) return central;

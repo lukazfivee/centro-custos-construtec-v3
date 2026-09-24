@@ -19,9 +19,17 @@ function remember(token, alive) {
   cache.set(token, { alive, until: Date.now() + (alive ? ALIVE_TTL_MS : DEAD_TTL_MS), confirmed: alive });
 }
 
-async function cloudSessionAlive(sessionToken) {
+async function cloudSessionAlive(sessionToken, options = {}) {
   if (!process.env.DATABASE_URL) return true;
   if (!sessionToken) return false;
+  if (options.hashed) {
+    if (!options.userId) return false;
+    try { await cloudAuth.sessionHash(sessionToken, options.userId); return true; }
+    catch (error) {
+      if (error.status !== 401) logger.warn('cloud_session_hash_check_unavailable', { status:error.status || null });
+      return false;
+    }
+  }
   const cached = cache.get(sessionToken);
   if (cached && !cached.alive) return false;
   if (cached && cached.until > Date.now()) return true;
