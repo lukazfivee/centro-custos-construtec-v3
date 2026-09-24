@@ -1,7 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { DatabaseSync } = require('node:sqlite');
+let DatabaseSync;
+try { ({ DatabaseSync } = require('node:sqlite')); } catch { DatabaseSync = null; }
 
 const root = path.join(__dirname, '..');
 const worker = path.join(root, 'cloudflare', 'center-container');
@@ -55,4 +56,4 @@ async function setup() {
   return { env, call, email, password, token: login.data.sessionToken };
 }
 
-module.exports = { setup };
+module.exports = { setup, hasSQLite: Boolean(DatabaseSync) };

@@ -14,9 +14,10 @@ delete process.env.DATABASE_URL;
 
 const express = require('express');
 const { initializeDatabase, closeDatabase, getDb } = require('../db');
-const { setup } = require('./password-reset-fixture.test');
+const { setup, hasSQLite } = require('./password-reset-fixture.test');
+const maybe = hasSQLite ? test : test.skip;
 
-test('ponte emite JWT web válido e a revogação no D1 corta o acesso', async (t) => {
+maybe('ponte emite JWT web válido e a revogação no D1 corta o acesso', async (t) => {
   fs.rmSync(dataDir, { recursive:true, force:true });
   await initializeDatabase();
   process.env.DATABASE_URL = 'postgres://handoff-test';

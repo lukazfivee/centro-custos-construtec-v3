@@ -30,6 +30,7 @@ O login de `public/app.js` chama `POST /api/auth/login` com `{ email, senha }`. 
 
 - Testes novos isolados: 13 passaram. Cobrem redefinição, sessões, handoff válido, expirado e reutilizado, falha da ponte, validação da chave interna e um fluxo integrado Worker → Express → JWT → rota web → revogação no D1.
 - `npm run verify`: verde, 194 testes passaram e 94 arquivos JavaScript verificados.
+- CI usa Node 20 sem `node:sqlite`; os testes novos dependentes de D1 seguem o mesmo padrão de skip dos testes de identidade já existentes nessa versão. Foram executados localmente no Node 24 (13/13). O teste de HTML/App Links continua rodando no Node 20.
 - `npm test -- --test-concurrency=1`: antes da ponte, verde com 191 testes. A primeira execução paralela de `npm test` teve três falhas E2E de Chrome (sessão encerrada/tempo de espera); os mesmos casos passaram na execução sequencial e no `verify`.
 - Migração D1 de produção, deploy e provedor HTTP real: não executados.
 

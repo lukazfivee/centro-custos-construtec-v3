@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { setup } = require('./password-reset-fixture.test');
+const { setup, hasSQLite } = require('./password-reset-fixture.test');
+const maybe = hasSQLite ? test : test.skip;
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -18,7 +19,7 @@ function linkToken(sent, index = 0) {
   return new URL(sent[index].text.match(/https:\/\/[^\s]+/)[0]).hash.slice(3);
 }
 
-test('pedido é genérico inclusive para e-mail inexistente e sem segredo', async () => {
+maybe('pedido é genérico inclusive para e-mail inexistente e sem segredo', async () => {
   const { env, call, email } = await setup();
   assert.deepEqual(await call('POST', '/v1/auth/password-reset/request', { body: { email } }), { status: 202, data: { ok: true } });
   assert.deepEqual(await call('POST', '/v1/auth/password-reset/request', { body: { email: 'ausente@rcconstrutec.com.br' } }), { status: 202, data: { ok: true } });
@@ -27,7 +28,7 @@ test('pedido é genérico inclusive para e-mail inexistente e sem segredo', asyn
   assert.match(rows[0].token_hash, /^[a-f0-9]{64}$/);
 });
 
-test('limites por e-mail e IP respondem 202 sem envio', async (t) => {
+maybe('limites por e-mail e IP respondem 202 sem envio', async (t) => {
   const { env, call, email } = await setup();
   const sent = captureEmail(t, env);
   let now = Date.now();
@@ -51,7 +52,7 @@ test('limites por e-mail e IP respondem 202 sem envio', async (t) => {
   assert.equal(env.DB.raw.prepare("SELECT count FROM mobile_auth_limits WHERE bucket LIKE 'reset-ip:%'").get().count, 12);
 });
 
-test('reenvio antes de 60 s não envia e novo pedido invalida token anterior', async (t) => {
+maybe('reenvio antes de 60 s não envia e novo pedido invalida token anterior', async (t) => {
   const { env, call, email } = await setup();
   const sent = captureEmail(t, env);
   let now = Date.now(); const original = Date.now; Date.now = () => now; t.after(() => { Date.now = original; });
@@ -66,7 +67,7 @@ test('reenvio antes de 60 s não envia e novo pedido invalida token anterior', a
   assert.equal(old.data.code, 'TOKEN_INVALID');
 });
 
-test('confirmação válida troca senha, revoga todas as sessões e impede reuso', async (t) => {
+maybe('confirmação válida troca senha, revoga todas as sessões e impede reuso', async (t) => {
   const { env, call, email, password, token } = await setup();
   const sent = captureEmail(t, env);
   const second = await call('POST', '/v1/auth/login', { body: { email, password } });
@@ -83,7 +84,7 @@ test('confirmação válida troca senha, revoga todas as sessões e impede reuso
   assert.equal((await call('POST', '/v1/auth/login', { body: { email, password: 'NovaSenha1!' } })).status, 200);
 });
 
-test('token expirado retorna TOKEN_EXPIRED', async (t) => {
+maybe('token expirado retorna TOKEN_EXPIRED', async (t) => {
   const { env, call, email } = await setup();
   const sent = captureEmail(t, env);
   await call('POST', '/v1/auth/password-reset/request', { body: { email } });

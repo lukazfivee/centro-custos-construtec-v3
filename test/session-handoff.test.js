@@ -1,9 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { setup } = require('./password-reset-fixture.test');
+const { setup, hasSQLite } = require('./password-reset-fixture.test');
+const maybe = hasSQLite ? test : test.skip;
 
-test('handoff emite código aleatório e guarda somente hash', async () => {
+maybe('handoff emite código aleatório e guarda somente hash', async () => {
   const { env, call, token } = await setup();
   const issued = await call('POST', '/v1/auth/handoff', { token, body: { target: 'centro-custos' } });
   assert.equal(issued.status, 200);
@@ -14,7 +15,7 @@ test('handoff emite código aleatório e guarda somente hash', async () => {
   assert.equal(row.expires_at, issued.data.expiresAt);
 });
 
-test('handoff expirado ou já usado retorna HANDOFF_INVALID', async () => {
+maybe('handoff expirado ou já usado retorna HANDOFF_INVALID', async () => {
   const { env, call, token } = await setup();
   const issued = await call('POST', '/v1/auth/handoff', { token, body: { target: 'centro-custos' } });
   env.DB.raw.exec('UPDATE session_handoffs SET expires_at=0');
@@ -23,7 +24,7 @@ test('handoff expirado ou já usado retorna HANDOFF_INVALID', async () => {
   assert.equal((await call('POST', '/v1/auth/handoff/consume', { body: { code: issued.data.code } })).data.code, 'HANDOFF_INVALID');
 });
 
-test('handoff válido devolve o formato web e impede reutilização', async () => {
+maybe('handoff válido devolve o formato web e impede reutilização', async () => {
   const { env, call, token } = await setup();
   let bridgeCalls = 0;
   env.API = { getByName() { return { fetch: async (request) => {
@@ -41,7 +42,7 @@ test('handoff válido devolve o formato web e impede reutilização', async () =
   assert.equal((await call('POST', '/v1/auth/handoff/consume', { body: { code: issued.data.code } })).data.code, 'HANDOFF_INVALID');
 });
 
-test('falha da ponte consome o código sem deixar sessão web', async () => {
+maybe('falha da ponte consome o código sem deixar sessão web', async () => {
   const { env, call, token } = await setup();
   env.API = { getByName() { return { fetch: async () => Response.json({ ok:false }, { status:503 }) }; } };
   const issued = await call('POST', '/v1/auth/handoff', { token, body: { target:'centro-custos' } });
@@ -51,7 +52,7 @@ test('falha da ponte consome o código sem deixar sessão web', async () => {
   assert.equal((await call('POST', '/v1/auth/handoff/consume', { body: { code:issued.data.code } })).data.code, 'HANDOFF_INVALID');
 });
 
-test('consulta interna por hash exige chave e acompanha revogação', async () => {
+maybe('consulta interna por hash exige chave e acompanha revogação', async () => {
   const { env, call, token } = await setup();
   const hash = crypto.createHash('sha256').update(token).digest('hex');
   const userId = env.DB.raw.prepare('SELECT user_id FROM cloud_sessions').get().user_id;

@@ -1,8 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { setup } = require('./password-reset-fixture.test');
+const { setup, hasSQLite } = require('./password-reset-fixture.test');
+const maybe = hasSQLite ? test : test.skip;
 
-test('revoke-others mantém a sessão atual e lista sem hash ou token', async () => {
+maybe('revoke-others mantém a sessão atual e lista sem hash ou token', async () => {
   const { call, email, password, token } = await setup();
   const other = await call('POST', '/v1/auth/login', { body: { email, password }, headers: { 'x-instance-name': 'Android teste' } });
   const listed = await call('GET', '/v1/auth/sessions', { token });
