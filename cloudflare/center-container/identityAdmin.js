@@ -68,7 +68,7 @@ async function liveUserByEmail(env, orgId, email) {
 
 async function handleSession(request, env) {
   const user = await sessionUser(request, env);
-  if (!user) return json({ ok: false, error: 'Sessao invalida ou expirada.' }, 401);
+  if (!user) return json({ ok: false, code: 'SESSION_INVALID', error: 'Sessao invalida ou expirada.' }, 401);
   return json({ ok: true, user: publicUser(user), expiresAt: Number(user.expires_at) });
 }
 

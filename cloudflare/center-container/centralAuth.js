@@ -10,6 +10,9 @@
 // mesmo nome "centro-custos-api" (causa raiz do login corporativo quebrado).
 
 import { handleIdentityAdmin, isIdentityRoute, serviceKeyValid } from './identityAdmin.js';
+import { requestPasswordReset, confirmPasswordReset } from './passwordReset.js';
+import { listSessions, revokeOtherSessions } from './mobileSessions.js';
+import { issueHandoff, consumeHandoff } from './sessionHandoff.js';
 
 const PASSWORD_ITERATIONS = 10000;
 export const ORG_ID = 'rcconstrutec.com.br';
@@ -272,6 +275,28 @@ async function handleProfilePhoto(request, env) {
 // caso o chamador segue para o roteamento normal (Container).
 export async function handleCentralAuth(request, env) {
   const url = new URL(request.url);
+  const mobileRoutes = {
+    'POST /v1/auth/password-reset/request': requestPasswordReset,
+    'POST /v1/auth/password-reset/confirm': confirmPasswordReset,
+    'GET /v1/auth/sessions': listSessions,
+    'POST /v1/auth/sessions/revoke-others': revokeOtherSessions,
+    'POST /v1/auth/handoff': issueHandoff,
+    'POST /v1/auth/handoff/consume': consumeHandoff,
+  };
+  const mobile = mobileRoutes[`${request.method} ${url.pathname}`];
+  if (mobile) {
+    try {
+      if (mobile !== requestPasswordReset) {
+        const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+        if (!(await consumeRate(env.DB, ip, 'mobile-auth', 5000))) {
+          return json({ ok: false, code: 'RATE_LIMITED', error: 'Limite temporário de requisições atingido.' }, 400);
+        }
+      }
+      return await mobile(request, env);
+    } catch {
+      return json({ ok: false, code: 'SERVER_ERROR', error: 'Não foi possível concluir a operação.' }, 500);
+    }
+  }
   const isAuthRoute = url.pathname === '/v1/auth/login'
     || url.pathname === '/v1/auth/bootstrap'
     || url.pathname === '/v1/auth/change-password'
