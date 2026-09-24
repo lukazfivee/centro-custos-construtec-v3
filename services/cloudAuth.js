@@ -20,6 +20,10 @@ async function request(path, options = {}) {
   timer.unref?.();
   try {
     const headers = { 'content-type':'application/json', ...(options.headers || {}) };
+    if (String(headers.Authorization || '').startsWith('Bearer hash:')
+      && String(process.env.SYNC_SHARED_KEY || '').length >= 32) {
+      headers['x-sync-key'] = process.env.SYNC_SHARED_KEY;
+    }
     const response = await fetch(`${apiUrl()}${path}`, { ...options, headers, signal:controller.signal });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -102,6 +106,19 @@ async function session(sessionToken) {
   return request('/v1/auth/session', { method:'GET', headers:{ Authorization:`Bearer ${sessionToken}` } });
 }
 
+async function sessionHash(sessionHashValue, userId) {
+  if (!process.env.SYNC_SHARED_KEY || process.env.SYNC_SHARED_KEY.length < 32) {
+    const error = new Error('Validação da sessão central indisponível.');
+    error.status = 503;
+    throw error;
+  }
+  return request('/v1/auth/session-hash', {
+    method:'POST',
+    headers:{ 'x-sync-key':process.env.SYNC_SHARED_KEY },
+    body:JSON.stringify({ sessionHash:sessionHashValue,userId }),
+  });
+}
+
 async function deleteUser(sessionToken, email, id) {
   return request('/v1/users/delete', {
     method:'POST',
@@ -162,6 +179,7 @@ async function removeProfilePhoto(sessionToken) {
 
 module.exports = {
   session,
+  sessionHash,
   deleteUser,
   listAuthorizedEmails,
   authorizeEmail,

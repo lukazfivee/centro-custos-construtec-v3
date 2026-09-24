@@ -23,10 +23,43 @@ test('handoff expirado ou já usado retorna HANDOFF_INVALID', async () => {
   assert.equal((await call('POST', '/v1/auth/handoff/consume', { body: { code: issued.data.code } })).data.code, 'HANDOFF_INVALID');
 });
 
-test('handoff válido não cria uma sessão web sem ponte com Express', async () => {
-  const { call, token } = await setup();
+test('handoff válido devolve o formato web e impede reutilização', async () => {
+  const { env, call, token } = await setup();
+  let bridgeCalls = 0;
+  env.API = { getByName() { return { fetch: async (request) => {
+    bridgeCalls += 1;
+    const body = await request.json();
+    assert.match(body.sessionHash, /^[a-f0-9]{64}$/);
+    assert.equal(request.headers.get('x-sync-key'), env.SYNC_SHARED_KEY);
+    return Response.json({ token:'jwt-web',usuario:{ id:7,nome:'Admin',email:body.user.email,role:'admin' },instancia:{ id:'inst',name:'Cloud' } });
+  } }; } };
   const issued = await call('POST', '/v1/auth/handoff', { token, body: { target: 'centro-custos' } });
   const consumed = await call('POST', '/v1/auth/handoff/consume', { body: { code: issued.data.code } });
-  assert.equal(consumed.status, 503);
-  assert.equal(consumed.data.code, 'SERVER_ERROR');
+  assert.deepEqual(consumed, { status:200,data:{ token:'jwt-web',usuario:{ id:7,nome:'Admin',email:'admin@rcconstrutec.com.br',role:'admin' },instancia:{ id:'inst',name:'Cloud' } } });
+  assert.equal(bridgeCalls, 1);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM cloud_sessions').get().n, 2);
+  assert.equal((await call('POST', '/v1/auth/handoff/consume', { body: { code: issued.data.code } })).data.code, 'HANDOFF_INVALID');
+});
+
+test('falha da ponte consome o código sem deixar sessão web', async () => {
+  const { env, call, token } = await setup();
+  env.API = { getByName() { return { fetch: async () => Response.json({ ok:false }, { status:503 }) }; } };
+  const issued = await call('POST', '/v1/auth/handoff', { token, body: { target:'centro-custos' } });
+  const failed = await call('POST', '/v1/auth/handoff/consume', { body: { code:issued.data.code } });
+  assert.equal(failed.status, 503);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM cloud_sessions').get().n, 1);
+  assert.equal((await call('POST', '/v1/auth/handoff/consume', { body: { code:issued.data.code } })).data.code, 'HANDOFF_INVALID');
+});
+
+test('consulta interna por hash exige chave e acompanha revogação', async () => {
+  const { env, call, token } = await setup();
+  const hash = crypto.createHash('sha256').update(token).digest('hex');
+  const userId = env.DB.raw.prepare('SELECT user_id FROM cloud_sessions').get().user_id;
+  const body = { sessionHash:hash,userId };
+  assert.equal((await call('GET', '/v1/auth/session', { token:`hash:${hash}` })).status, 401);
+  assert.equal((await call('GET', '/v1/auth/session', { token:`hash:${hash}`,headers:{ 'x-sync-key':env.SYNC_SHARED_KEY } })).status, 200);
+  assert.equal((await call('POST', '/v1/auth/session-hash', { body })).status, 401);
+  assert.equal((await call('POST', '/v1/auth/session-hash', { body,headers:{ 'x-sync-key':env.SYNC_SHARED_KEY } })).status, 200);
+  env.DB.raw.prepare('DELETE FROM cloud_sessions WHERE token_hash=?').run(hash);
+  assert.equal((await call('POST', '/v1/auth/session-hash', { body,headers:{ 'x-sync-key':env.SYNC_SHARED_KEY } })).status, 401);
 });

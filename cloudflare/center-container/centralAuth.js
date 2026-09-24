@@ -13,6 +13,7 @@ import { handleIdentityAdmin, isIdentityRoute, serviceKeyValid } from './identit
 import { requestPasswordReset, confirmPasswordReset } from './passwordReset.js';
 import { listSessions, revokeOtherSessions } from './mobileSessions.js';
 import { issueHandoff, consumeHandoff } from './sessionHandoff.js';
+import { checkSessionHash } from './sessionHash.js';
 
 const PASSWORD_ITERATIONS = 10000;
 export const ORG_ID = 'rcconstrutec.com.br';
@@ -166,7 +167,15 @@ export async function sessionUser(request, env) {
   if (!header.startsWith('Bearer ')) return null;
   const token = header.slice(7).trim();
   if (!token) return null;
-  const tokenHash = await sha256Text(token);
+  let tokenHash;
+  if (token.startsWith('hash:')) {
+    const expected = String(env.SYNC_SHARED_KEY || '');
+    if (expected.length < 32 || !timingSafeEqual(request.headers.get('x-sync-key'), expected)) return null;
+    tokenHash = token.slice(5);
+    if (!/^[a-f0-9]{64}$/.test(tokenHash)) return null;
+  } else {
+    tokenHash = await sha256Text(token);
+  }
   const now = Math.floor(Date.now() / 1000);
   const row = await env.DB.prepare(`
     SELECT s.token_hash,s.expires_at,u.*
@@ -275,6 +284,10 @@ async function handleProfilePhoto(request, env) {
 // caso o chamador segue para o roteamento normal (Container).
 export async function handleCentralAuth(request, env) {
   const url = new URL(request.url);
+  if (request.method === 'POST' && url.pathname === '/v1/auth/session-hash') {
+    try { return await checkSessionHash(request, env); }
+    catch { return json({ ok: false, code: 'SERVER_ERROR', error: 'Não foi possível validar a sessão.' }, 500); }
+  }
   const mobileRoutes = {
     'POST /v1/auth/password-reset/request': requestPasswordReset,
     'POST /v1/auth/password-reset/confirm': confirmPasswordReset,

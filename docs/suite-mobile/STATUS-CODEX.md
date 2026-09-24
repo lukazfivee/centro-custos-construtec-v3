@@ -1,6 +1,6 @@
 # STATUS-CODEX — Fase 1 servidor
 
-- Atualizado: 24/09/2026, 18:48 BRT.
+- Atualizado: 24/09/2026, 19:39 BRT.
 - Commit base: `8980682312853d6a4cf785f05d075dfdb01606b3` (`origin/main`).
 - Branch: `feat/auth-central-reset-handoff`.
 
@@ -13,26 +13,26 @@
 - `GET /redefinir-senha`: página inline, token no fragmento, checklist e medidor.
 - `GET /.well-known/assetlinks.json`: depende de `ANDROID_CERT_SHA256`; sem ela retorna 404.
 - `POST /v1/auth/handoff`: emite código aleatório de 60 segundos, com somente hash no D1.
-- `POST /v1/auth/handoff/consume`: valida código, expiração, uso e sessão de origem; **um código válido ainda retorna 503 `SERVER_ERROR`**, pois falta a ponte com o Express. Não marca o código como usado nem devolve uma sessão web inválida.
+- `POST /v1/auth/handoff/consume`: valida código, expiração, uso e sessão de origem; marca o código como usado uma vez, cria sessão web cujo hash fica no D1 e devolve o mesmo formato do login web. Se a ponte falhar, remove a nova sessão e devolve 503.
+- Internas: `POST /api/auth/handoff-bridge` no Express recebe somente chamadas do Container protegidas por `SYNC_SHARED_KEY` (o Worker público responde 404 nesse caminho); `POST /v1/auth/session-hash` revalida o hash da sessão no D1 com a mesma chave.
 
 ## Formato real da sessão web
 
-O login de `public/app.js` chama `POST /api/auth/login` com `{ email, senha }`. `routes/auth.js` responde `{ token, usuario: { id, nome, email, role }, instancia: { id, name } }`. O `token` é um JWT assinado com `JWT_SECRET`, cujo `sub` é o ID numérico do usuário espelhado no PostgreSQL. O navegador salva `cc_token`, `cc_usuario` e `cc_instancia` em `localStorage`. O login central `POST /v1/auth/login` retorna `{ ok, sessionToken, expiresAt, user }`, com outro token e ID UUID do D1. O `public/app.js` já detecta `#handoff`, chama o `consume`, grava os três campos web quando houver resposta válida e remove o fragmento.
+O login de `public/app.js` chama `POST /api/auth/login` com `{ email, senha }`. `routes/auth.js` responde `{ token, usuario: { id, nome, email, role }, instancia: { id, name } }`. O `token` é um JWT assinado com `JWT_SECRET`, cujo `sub` é o ID numérico do usuário espelhado no PostgreSQL. O `consume` agora devolve exatamente esses três campos. O navegador salva `cc_token`, `cc_usuario` e `cc_instancia` em `localStorage`. O login central `POST /v1/auth/login` retorna `{ ok, sessionToken, expiresAt, user }`, com outro token e ID UUID do D1. O `public/app.js` detecta `#handoff`, chama o `consume`, grava os três campos web e remove o fragmento. O JWT do handoff leva uma referência assinada ao hash da sessão D1; o Express a valida sem guardar token bruto no PostgreSQL.
 
 ## Segredos e variáveis
 
 - `EMAIL_PROVIDER_API_KEY` e `EMAIL_FROM`: envio HTTP pelo Resend. Sem ambos, não envia; registra apenas evento sem dados sensíveis.
 - `ANDROID_CERT_SHA256`: impressão digital do certificado Android para o App Link.
-- A ponte pendente deve usar um segredo já compartilhado pelo Worker e Container; não registrar valores neste arquivo.
+- `SYNC_SHARED_KEY`: segredo existente, com 32 ou mais caracteres, disponível no Worker e no Container para a ponte interna e para validar a referência hash. `JWT_SECRET` continua sendo o segredo existente usado pelo Express para assinar o JWT.
 
 ## Validação
 
-- Testes novos isolados: 10 passaram. Cobrem resposta genérica, limites por e-mail e IP, reenvio, confirmação, expiração e reuso do token, senha fraca, revogação total, `revoke-others`, emissão e expiração do handoff e o bloqueio seguro de handoff válido sem a ponte.
-- `npm run verify`: verde, 191 testes passaram e 94 arquivos JavaScript verificados.
-- `npm test -- --test-concurrency=1`: verde, 191 testes passaram. A primeira execução paralela de `npm test` teve três falhas E2E de Chrome (sessão encerrada/tempo de espera); os mesmos casos passaram na execução sequencial e no `verify`.
+- Testes novos isolados: 13 passaram. Cobrem redefinição, sessões, handoff válido, expirado e reutilizado, falha da ponte, validação da chave interna e um fluxo integrado Worker → Express → JWT → rota web → revogação no D1.
+- `npm run verify`: verde, 194 testes passaram e 94 arquivos JavaScript verificados.
+- `npm test -- --test-concurrency=1`: antes da ponte, verde com 191 testes. A primeira execução paralela de `npm test` teve três falhas E2E de Chrome (sessão encerrada/tempo de espera); os mesmos casos passaram na execução sequencial e no `verify`.
 - Migração D1 de produção, deploy e provedor HTTP real: não executados.
 
 ## Pedidos ao Claude / Lucas
 
-- **Lucas:** autorizar um ajuste de escopo em `routes/auth.js` para uma rota interna de ponte. Ela deve validar uma credencial de serviço do Worker, espelhar a conta central no PostgreSQL, gravar uma sessão central nova para validação posterior e emitir o JWT e `instancia` reais do Express. Sem esse ajuste, `consume` não pode cumprir o 200 do contrato dentro dos arquivos atribuídos ao Codex. O contrato pode ficar intacto. Após autorização, o Codex conclui a ponte, os testes de handoff válido e reutilizado e atualiza o PR.
-- **Claude:** o formato web real é o descrito acima. Até a ponte ser concluída, tratar 503 de `consume` como falha de entrada no web; o código no fragmento não é uma sessão.
+- **Claude:** o `consume` agora devolve o formato web descrito acima. O app pode seguir o contrato original; o código no fragmento dura 60 segundos e funciona uma vez.

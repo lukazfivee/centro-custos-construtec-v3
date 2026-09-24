@@ -43,6 +43,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/redefinir-senha') return resetPage();
     if (request.method === 'GET' && url.pathname === '/.well-known/assetlinks.json') return assetLinks(env);
+    if (url.pathname === '/api/auth/handoff-bridge') return new Response(null, { status: 404 });
     if (url.pathname.startsWith('/v1/')) {
       const central = await handleCentralAuth(request, env);
       if (central) return central;

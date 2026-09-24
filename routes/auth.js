@@ -137,6 +137,31 @@ async function externalCloudLogin(email, password) {
   throw httpError(401,'E-mail ou senha inválidos.');
 }
 
+// Chamada interna do Worker, bloqueada no roteamento público do Worker.
+// O JWT carrega apenas o hash da sessão D1; a revalidação ocorre no Worker.
+router.post('/handoff-bridge', asyncRoute(async (req, res) => {
+  const expected = String(process.env.SYNC_SHARED_KEY || '');
+  const supplied = String(req.get('x-sync-key') || '');
+  const authorized = expected.length >= 32 && supplied.length === expected.length
+    && crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(expected));
+  if (!process.env.DATABASE_URL || !authorized) return res.status(404).json({ ok:false, code:'HANDOFF_INVALID' });
+  const remote = req.body?.user;
+  const sessionHash = String(req.body?.sessionHash || '');
+  if (!/^[a-f0-9]{64}$/.test(sessionHash)
+    || !/^[a-f0-9-]{36}$/i.test(String(remote?.id || ''))
+    || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(remote?.email || ''))
+    || !['admin','gestor','supervisor'].includes(remote?.role)
+    || remote?.active !== true) return res.status(400).json({ ok:false, code:'HANDOFF_INVALID' });
+  const user = await mirrorCloudUser(getDb(),remote);
+  const token = jwt.sign({ centralSessionHash:sessionHash },process.env.JWT_SECRET,
+    { subject:String(user.id),expiresIn:'8h' });
+  return res.json({
+    token,
+    usuario:{ id:user.id,nome:user.name,email:user.email,role:user.role },
+    instancia:getInstanceIdentity(),
+  });
+}));
+
 router.post('/login', asyncRoute(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.senha || '');
