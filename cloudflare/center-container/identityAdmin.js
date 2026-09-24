@@ -14,7 +14,7 @@
 
 import {
   json, text, validCorporateEmail, validEmail, validRole, requireSession, sessionUser,
-  makePasswordRecord, publicUser, timingSafeEqual, sha256Text,
+  makePasswordRecord, publicUser, timingSafeEqual, sessionTokenHash,
 } from './centralAuth.js';
 
 const MIN_SERVICE_KEY_LENGTH = 32;
@@ -68,14 +68,13 @@ async function liveUserByEmail(env, orgId, email) {
 
 async function handleSession(request, env) {
   const user = await sessionUser(request, env);
-  if (!user) return json({ ok: false, error: 'Sessao invalida ou expirada.' }, 401);
+  if (!user) return json({ ok: false, code: 'SESSION_INVALID', error: 'Sessao invalida ou expirada.' }, 401);
   return json({ ok: true, user: publicUser(user), expiresAt: Number(user.expires_at) });
 }
 
 async function handleLogout(request, env) {
-  const header = request.headers.get('authorization') || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-  if (token) await env.DB.prepare('DELETE FROM cloud_sessions WHERE token_hash=?').bind(await sha256Text(token)).run();
+  const tokenHash = await sessionTokenHash(request, env);
+  if (tokenHash) await env.DB.prepare('DELETE FROM cloud_sessions WHERE token_hash=?').bind(tokenHash).run();
   return json({ ok: true });
 }
 

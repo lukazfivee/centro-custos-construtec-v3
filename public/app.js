@@ -1037,7 +1037,24 @@ try{if(window.electronAPI)applyDarkMode(window.electronAPI.getDarkMode());}catch
 api('/appearance').then((prefs)=>{if(prefs.configured)applyDarkMode(prefs.darkMode);}).catch(()=>{});
 themeButton.addEventListener('click',()=>changeDarkMode(!document.documentElement.classList.contains('dark')));
 
-if(token&&usuario) startApp();
+async function consumeMobileHandoff(code) {
+  history.replaceState(null, '', location.pathname + location.search);
+  try {
+    const response = await fetch('/v1/auth/handoff/consume', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({code}),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.token || !data.usuario || !data.instancia) throw new Error('Não foi possível entrar pelo aplicativo. Tente novamente.');
+    token=data.token; usuario=data.usuario; instancia=data.instancia;
+    localStorage.setItem('cc_token',token);
+    localStorage.setItem('cc_usuario',JSON.stringify(usuario));
+    localStorage.setItem('cc_instancia',JSON.stringify(instancia));
+    await startApp();
+  } catch (error) { $('#login-erro').textContent=error.message; }
+}
+const handoffCode = new URLSearchParams(location.hash.slice(1)).get('handoff');
+if (handoffCode) consumeMobileHandoff(handoffCode);
+else if(token&&usuario) startApp();
 
 
 

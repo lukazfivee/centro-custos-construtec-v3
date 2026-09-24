@@ -10,6 +10,10 @@
 // mesmo nome "centro-custos-api" (causa raiz do login corporativo quebrado).
 
 import { handleIdentityAdmin, isIdentityRoute, serviceKeyValid } from './identityAdmin.js';
+import { requestPasswordReset, confirmPasswordReset } from './passwordReset.js';
+import { listSessions, revokeOtherSessions } from './mobileSessions.js';
+import { issueHandoff, consumeHandoff } from './sessionHandoff.js';
+import { checkSessionHash } from './sessionHash.js';
 
 const PASSWORD_ITERATIONS = 10000;
 export const ORG_ID = 'rcconstrutec.com.br';
@@ -82,6 +86,17 @@ export function timingSafeEqual(a, b) {
 export async function sha256Text(value) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(value)));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function sessionTokenHash(request, env) {
+  const header = request.headers.get('authorization') || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (!token) return null;
+  if (!token.startsWith('hash:')) return sha256Text(token);
+  const expected = String(env.SYNC_SHARED_KEY || '');
+  const hash = token.slice(5);
+  if (expected.length < 32 || !timingSafeEqual(request.headers.get('x-sync-key'), expected)) return null;
+  return /^[a-f0-9]{64}$/.test(hash) ? hash : null;
 }
 
 async function passwordHash(password, saltBase64, iterations = PASSWORD_ITERATIONS) {
@@ -159,11 +174,8 @@ async function createSession(env, user, request) {
 }
 
 export async function sessionUser(request, env) {
-  const header = request.headers.get('authorization') || '';
-  if (!header.startsWith('Bearer ')) return null;
-  const token = header.slice(7).trim();
-  if (!token) return null;
-  const tokenHash = await sha256Text(token);
+  const tokenHash = await sessionTokenHash(request, env);
+  if (!tokenHash) return null;
   const now = Math.floor(Date.now() / 1000);
   const row = await env.DB.prepare(`
     SELECT s.token_hash,s.expires_at,u.*
@@ -242,7 +254,8 @@ async function handleChangePassword(request, env) {
   const record = await makePasswordRecord(newPassword);
   const now = new Date().toISOString();
   await env.DB.prepare('UPDATE cloud_users SET password_salt=?,password_hash=?,password_iterations=?,updated_at=? WHERE id=?').bind(record.salt, record.hash, record.iterations, now, auth.user.id).run();
-  const currentTokenHash = await sha256Text((request.headers.get('authorization') || '').slice(7).trim());
+  const currentTokenHash = await sessionTokenHash(request, env);
+  if (!currentTokenHash) return json({ ok: false, code: 'SESSION_INVALID', error: 'Sessao invalida.' }, 401);
   await env.DB.prepare('DELETE FROM cloud_sessions WHERE user_id=? AND token_hash<>?').bind(auth.user.id, currentTokenHash).run();
   return json({ ok: true });
 }
@@ -272,6 +285,32 @@ async function handleProfilePhoto(request, env) {
 // caso o chamador segue para o roteamento normal (Container).
 export async function handleCentralAuth(request, env) {
   const url = new URL(request.url);
+  if (request.method === 'POST' && url.pathname === '/v1/auth/session-hash') {
+    try { return await checkSessionHash(request, env); }
+    catch { return json({ ok: false, code: 'SERVER_ERROR', error: 'Não foi possível validar a sessão.' }, 500); }
+  }
+  const mobileRoutes = {
+    'POST /v1/auth/password-reset/request': requestPasswordReset,
+    'POST /v1/auth/password-reset/confirm': confirmPasswordReset,
+    'GET /v1/auth/sessions': listSessions,
+    'POST /v1/auth/sessions/revoke-others': revokeOtherSessions,
+    'POST /v1/auth/handoff': issueHandoff,
+    'POST /v1/auth/handoff/consume': consumeHandoff,
+  };
+  const mobile = mobileRoutes[`${request.method} ${url.pathname}`];
+  if (mobile) {
+    try {
+      if (mobile !== requestPasswordReset) {
+        const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+        if (!(await consumeRate(env.DB, ip, 'mobile-auth', 5000))) {
+          return json({ ok: false, code: 'RATE_LIMITED', error: 'Limite temporário de requisições atingido.' }, 400);
+        }
+      }
+      return await mobile(request, env);
+    } catch {
+      return json({ ok: false, code: 'SERVER_ERROR', error: 'Não foi possível concluir a operação.' }, 500);
+    }
+  }
   const isAuthRoute = url.pathname === '/v1/auth/login'
     || url.pathname === '/v1/auth/bootstrap'
     || url.pathname === '/v1/auth/change-password'
