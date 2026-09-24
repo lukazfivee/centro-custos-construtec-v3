@@ -1,14 +1,30 @@
 plugins { id 'com.android.application' }
 
+// Enderecos da nuvem vem da configuracao de build (contrato, cabecalho): -PcentralApiBase=... -PcentralWebBase=...
+// Para testar com o mock no emulador: -PcentralApiBase=http://10.0.2.2:8787
+def centralApiBase = (project.findProperty('centralApiBase') ?: 'https://centro-custos-api.construtec-reports.workers.dev').toString().replaceAll('/+$', '')
+def centralWebBase = (project.findProperty('centralWebBase') ?: centralApiBase).toString().replaceAll('/+$', '')
+def centralHost = new URI(centralApiBase).host
+
 android {
     namespace 'br.com.rcconstrutec.centrocustos'
     compileSdk 35
 
     defaultConfig {
         applicationId 'br.com.rcconstrutec.centrocustos'
-        minSdk 26
+        minSdk 28
         targetSdk 35
         versionCode 31015
         versionName '3.1.0-rc.15'
+        buildConfigField 'String', 'CENTRAL_API_BASE', "\"${centralApiBase}\""
+        buildConfigField 'String', 'CENTRAL_WEB_BASE', "\"${centralWebBase}\""
+        manifestPlaceholders = [centralHost: centralHost]
+    }
+
+    buildFeatures { buildConfig true }
+
+    // A ponte de desenvolvimento (navegador + mock) nao vai para o APK.
+    androidResources {
+        ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:!dev-bridge.js'
     }
 }
