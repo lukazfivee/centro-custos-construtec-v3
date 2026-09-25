@@ -57,6 +57,11 @@ Uma segunda revisão corrigiu a resolução de `Bearer hash:<sha256>` em `change
   - `SYNC_SHARED_KEY` e `JWT_SECRET` existem.
   - `EMAIL_PROVIDER_API_KEY`, `EMAIL_FROM` e `ANDROID_CERT_SHA256` ainda não existem. Já existe um `RESEND_API_KEY` antigo, mas o código novo lê `EMAIL_PROVIDER_API_KEY`; o Lucas decide se reaproveita a mesma chave.
   - Até isso, o pedido de redefinição responde 202 e não envia e-mail.
+- **E-mail configurado em 25/09/2026:**
+  - `EMAIL_FROM` = `Construtec <no-reply@reports.rcconstrutec.com.br>`, domínio verificado no Resend.
+  - `EMAIL_PROVIDER_API_KEY` = chave nova `centro-custos-login` (Sending access), salva pelo Lucas no painel da Cloudflare. A primeira tentativa de salvar a chave gerou 400 no Resend.
+  - `pcm@rcconstrutec.com.br` estava na lista de bloqueio do Resend (bounce de agosto) e foi removido. Os reportes de 18/09 para esse endereço também tinham sido bloqueados.
+  - Teste real: o pedido de redefinição para `pcm@` foi entregue ("Delivered") e recebido pelo Lucas.
 
 ## Pedidos ao Claude / Lucas
 
