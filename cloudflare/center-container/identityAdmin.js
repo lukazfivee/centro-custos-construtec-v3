@@ -72,10 +72,16 @@ async function handleSession(request, env) {
   return json({ ok: true, user: publicUser(user), expiresAt: Number(user.expires_at) });
 }
 
+// Encerra a sessão atual, as sessões web criadas por handoff a partir dela e os códigos pendentes.
+// Continua respondendo 200 sem token, como antes, para não quebrar clientes antigos.
 async function handleLogout(request, env) {
   const tokenHash = await sessionTokenHash(request, env);
-  if (tokenHash) await env.DB.prepare('DELETE FROM cloud_sessions WHERE token_hash=?').bind(tokenHash).run();
-  return json({ ok: true });
+  if (!tokenHash) return json({ ok: true, revoked: 0 });
+  const [sessions] = await env.DB.batch([
+    env.DB.prepare('DELETE FROM cloud_sessions WHERE token_hash=? OR parent_session_hash=?').bind(tokenHash, tokenHash),
+    env.DB.prepare('DELETE FROM session_handoffs WHERE session_hash=?').bind(tokenHash),
+  ]);
+  return json({ ok: true, revoked: Number(sessions?.meta?.changes || 0) });
 }
 
 async function handleListUsers(env, auth) {
