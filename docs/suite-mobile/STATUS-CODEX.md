@@ -76,7 +76,7 @@ O Codex pelo plugin não conseguiu gravar no repositório (`.git` só leitura na
   - Continua 200 mesmo sem token, agora com `{ ok: true, revoked: <n> }`.
 - **`revoke-others`:** passa a preservar as sessões web filhas da sessão atual. Antes derrubava o site aberto no próprio aparelho. As filhas das sessões revogadas caem junto.
 - **Log do Resend:** `password_reset_email_delivery_failed <status> <name>`, em que `name` é o tipo do erro do provedor (ex.: `invalid_api_key`, `validation_error`). Nunca registra e-mail, token, link nem chave.
-- **CI:** matriz Node 20 e 24; no 24 rodam os testes do D1.
+- **CI:** job `test` (Node 20, exigido pela proteção do main) e job novo `test-node24`, onde rodam os testes do D1.
 - **Testes novos:** `test/auth-logout.test.js` (4) e `test/password-reset-provider-log.test.js` (2).
 - **`test/central-identity.test.js`:** passa a aplicar as migrações 007 e 008. O `batch` simulado agora devolve os resultados, como o D1 real.
 
