@@ -54,6 +54,7 @@ final class CentralApi {
     Response sessions(String token) throws IOException { return send("GET", "/v1/auth/sessions", null, token); }
     Response revokeOthers(String token) throws IOException { return send("POST", "/v1/auth/sessions/revoke-others", new JSONObject(), token); }
     Response handoff(String token) throws IOException { return send("POST", "/v1/auth/handoff", json("target", "centro-custos"), token); }
+    Response logout(String token) throws IOException { return send("POST", "/v1/auth/logout", new JSONObject(), token); }
 
     private Response send(String method, String path, JSONObject body, String bearer) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(base + path).openConnection();

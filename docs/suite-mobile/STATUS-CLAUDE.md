@@ -107,6 +107,10 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
 - "Esqueci a senha" some sozinho quando a rota ainda dá 404, com a mensagem "A recuperação de senha ainda não está disponível…". Não fiz sondagem ao abrir o app, para não gastar o limite de 10 pedidos por IP.
 - A WebView remota continua com a barra navy e margem. O Centro de Custos web ainda não trata a área segura (Fase 2).
 
+- **Logout no servidor (26/09):** "Sair" e "Sair e esquecer" chamam `POST /v1/auth/logout` depois da saída local, sem travar a tela e ignorando falta de rede.
+  - Com o #31 publicado, isso encerra também a sessão web criada pelo handoff.
+  - Antes do #31, a rota antiga já apaga a sessão do app.
+
 ## Pedidos ao Codex
 
 1. **`expiresAt` sempre em epoch segundos**, também em `/v1/auth/session` e `/v1/auth/handoff`. O app assume segundos.

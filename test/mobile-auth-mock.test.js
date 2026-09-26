@@ -52,6 +52,9 @@ test('mock: sessao, lista de aparelhos e sair dos outros', async (t) => {
   assert.deepEqual(revoked.json, { ok: true, revoked: 1 });
   assert.equal((await m.call('GET', '/v1/auth/session', null, second)).json.code, 'SESSION_INVALID');
   assert.equal((await m.call('GET', '/v1/auth/session', null, first)).status, 200);
+  assert.deepEqual((await m.call('POST', '/v1/auth/logout', {}, first)).json, { ok: true, revoked: 1 });
+  assert.equal((await m.call('GET', '/v1/auth/session', null, first)).status, 401);
+  assert.deepEqual((await m.call('POST', '/v1/auth/logout', {})).json, { ok: true, revoked: 0 });
 });
 
 test('mock: redefinicao de senha com uso unico, senha fraca e revogacao', async (t) => {

@@ -76,8 +76,11 @@ final class AuthBridge {
             case "close": if (auth.unlocked()) ui(shell::closeOverlay); return AuthController.ok();
             case "logout": {
                 boolean forget = a.optBoolean("forget", false);
+                String token = auth.activeToken();
                 auth.signOut(forget);
                 ui(() -> shell.logout(forget));
+                // Depois da saida local: pede ao servidor para encerrar esta sessao e as do site (sem travar a tela).
+                if (token != null) worker.execute(() -> { try { auth.api.logout(token); } catch (java.io.IOException ignored) { /* sem rede */ } });
                 return AuthController.ok();
             }
             case "moveToBack": ui(shell::moveToBack); return AuthController.ok();

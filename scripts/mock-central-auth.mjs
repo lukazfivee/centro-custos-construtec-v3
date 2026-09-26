@@ -126,6 +126,12 @@ export function createMockCentral(options = {}) {
       }));
       return [200, { ok: true, sessions: list }];
     },
+    'POST /v1/auth/logout': (req) => {
+      const auth = bearer(req);
+      if (auth.error) return [200, { ok: true, revoked: 0 }];
+      sessions.delete(auth.hash);
+      return [200, { ok: true, revoked: 1 }];
+    },
     'POST /v1/auth/handoff': (req, body) => {
       const auth = bearer(req);
       if (auth.error) return auth.error;
