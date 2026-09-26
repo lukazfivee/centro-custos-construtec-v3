@@ -70,7 +70,7 @@ final class AuthWebView {
     boolean trusted() { return trusted; }
     boolean loaded() { return loaded; }
 
-    void attachBridge(Object bridge) { view.addJavascriptInterface(bridge, "AndroidAuth"); }
+    void attachBridge(AuthBridge bridge) { view.addJavascriptInterface(bridge, "AndroidAuth"); }
 
     void load(Runnable afterLoad) {
         onLoaded = afterLoad;

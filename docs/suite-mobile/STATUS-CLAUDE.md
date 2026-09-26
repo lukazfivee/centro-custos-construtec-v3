@@ -42,7 +42,12 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
   - 3 PINs errados, que levam à tela [B2];
   - recuperar senha nos 4 passos, com o link lido do fragmento `#t=`;
   - tela Segurança.
-- **Não validado:** este computador não tem JDK nem Android SDK. `./gradlew assembleDebug` não rodou e o Java não foi compilado. A biometria real, o Keystore e as barras do sistema só foram revisados no código. O primeiro build pode apontar erro de compilação.
+- **Build Android (26/09/2026):**
+  - `gradle -p android assembleDebug` com JDK 17 (Temurin) e Gradle 8.9, as mesmas versões da CI: **BUILD SUCCESSFUL**, APK de 254 KB.
+  - `lintDebug`: 0 erros depois de tipar `attachBridge(AuthBridge)`; antes, o lint não enxergava o `@JavascriptInterface` num parâmetro `Object`. Nenhum uso de API incompatível com o `minSdk 28`.
+  - Os 15 avisos restantes são esperados: `commit()` proposital no cofre (o contador precisa ser gravado na hora), textos fixos em pt-BR e avisos que já existiam no app antigo.
+  - O APK contém `assets/auth/*`, e o `dev-bridge.js` ficou de fora, como planejado.
+- **Ainda não testado em aparelho ou emulador:** biometria real, Keystore e barras do sistema. O roteiro está abaixo.
 
 ## Roteiro de teste manual no aparelho
 
