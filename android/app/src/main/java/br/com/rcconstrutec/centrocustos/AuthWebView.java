@@ -61,7 +61,8 @@ final class AuthWebView {
             }
             @Override public void onPageFinished(WebView v, String url) {
                 loaded = trusted;
-                if (loaded && onLoaded != null) { Runnable run = onLoaded; onLoaded = null; run.run(); }
+                // Roda a cada carregamento (inclusive recarga), para reaplicar as margens do sistema.
+                if (loaded && onLoaded != null) onLoaded.run();
             }
         });
     }
@@ -74,6 +75,12 @@ final class AuthWebView {
 
     void load(Runnable afterLoad) {
         onLoaded = afterLoad;
+        loaded = false;
+        view.loadUrl(START);
+    }
+
+    /** Recarrega a pagina local mantendo o aviso de carregamento ja registrado. */
+    void reload() {
         loaded = false;
         view.loadUrl(START);
     }

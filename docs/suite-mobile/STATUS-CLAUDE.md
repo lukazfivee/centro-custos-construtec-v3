@@ -54,7 +54,21 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
   - Login com `pcm@`, criação do PIN, ativação da digital e animação do símbolo.
   - Handoff: o Centro de Custos web abriu logado, sem pedir senha (`cc_token`, usuário `pcm`, fragmento limpo).
   - Cofre: `pin_iter` 150000, e `pin_blob`, `bio_blob`, `profile` e `attempts` cifrados.
-  - Ainda falta testar no aparelho: bloqueio automático, 3 PINs errados, Sair, e Sair e esquecer.
+  - O bloqueio "Na hora" pediu a digital ao voltar ao app.
+- **Emulador (26/09/2026):** Pixel 7, Android 15, com digital simulada, contra o mock (`-PcentralApiBase=http://10.0.2.2:8787`). Todos os itens abaixo passaram:
+  - login com senha errada ("E-mail ou senha incorretos.") e depois certa;
+  - `123456` recusado, criação do PIN e oferta de biometria;
+  - `BiometricPrompt` do sistema ("Ativar a digital") com `CryptoObject`, animação "Reconhecido" e handoff ("Entrou como Maria Clara Souza");
+  - bloqueio "Na hora": o PIN e a digital aparecem por cima e o site **não recarrega** (a marca posta na página continuou lá);
+  - 3 PINs errados, com as mensagens na ordem certa e a tela [B2]; o cofre apaga o PIN, a sessão e a digital;
+  - entrada de novo por e-mail, com PIN novo;
+  - Sair volta ao PIN e descarta o site; Sair e esquecer, com dupla confirmação, volta ao login com o cofre vazio;
+  - Esqueci a senha abre "Confira seu e-mail", com reenvio em 60s, e o mock recebe o pedido.
+- **Correções saídas desse teste:**
+  - depois de "Sair e esquecer", as telas são recarregadas do zero; antes, o último e-mail ficava na memória da página;
+  - as margens da barra de status são reaplicadas a cada carregamento da página local;
+  - o mock passa a ler `x-instance-name` como UTF-8. O Worker de produção já gravava certo: "Android · Samsung SM-A175F".
+- `npm test`: 215 de 215. Com o emulador ligado, o `test/database-lock.test.js` (de fora deste PR) falha por tempo: o `tasklist.exe` leva 1,4 s, perto do limite de 2 s do `db.js`. Sem o emulador, passa.
 
 ## Roteiro de teste manual no aparelho
 

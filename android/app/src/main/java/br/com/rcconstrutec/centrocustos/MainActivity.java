@@ -90,10 +90,12 @@ public final class MainActivity extends Activity implements AuthController.Shell
     }
 
     // ---- Telas de entrada locais ----
-
-    private void showAuth(String reason, String notice) {
+    private void showAuth(String reason, String notice) { showAuth(reason, notice, false); }
+    /** fresh recarrega as telas, para nao sobrar nada da conta na memoria da pagina (ex.: e-mail digitado). */
+    private void showAuth(String reason, String notice, boolean fresh) {
         auth.setReason(reason);
-        if (authView == null) {
+        if (authView != null && fresh) authView.reload();
+        else if (authView == null) {
             authView = new AuthWebView(this);
             bridge = new AuthBridge(this, authView, auth, this);
             authView.attachBridge(bridge);
@@ -156,7 +158,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
 
     @Override public void logout(boolean forget) {
         dropApp();
-        showAuth("start", forget ? "Este aparelho foi esquecido" : null);
+        showAuth("start", null, forget);
     }
 
     @Override public void openLocalSetup() {

@@ -22,6 +22,8 @@ export const DEMO_USERS = [
 
 const sha = (value) => crypto.createHash('sha256').update(String(value)).digest('hex');
 const randomToken = () => crypto.randomBytes(32).toString('base64url');
+// O Node le cabecalhos como Latin-1; o app manda UTF-8 ("Android · ..."), como os Workers entendem.
+const headerText = (value) => (value ? Buffer.from(String(value), 'latin1').toString('utf8') : '');
 
 export function createMockCentral(options = {}) {
   const now = options.now || (() => Date.now());
@@ -43,7 +45,7 @@ export function createMockCentral(options = {}) {
     const token = randomToken();
     const at = now();
     const expiresAt = Math.floor((at + 30 * 24 * 60 * MIN) / 1000);
-    sessions.set(sha(token), { userId: user.id, instanceName: String(req.headers['x-instance-name'] || 'Desconhecido'), createdAt: at, lastSeenAt: at, expiresAt });
+    sessions.set(sha(token), { userId: user.id, instanceName: headerText(req.headers['x-instance-name']) || 'Desconhecido', createdAt: at, lastSeenAt: at, expiresAt });
     return { token, expiresAt };
   }
 
