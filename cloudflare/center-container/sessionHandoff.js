@@ -42,8 +42,8 @@ export async function consumeHandoff(request, env) {
   const webToken = code();
   const sessionHash = await sha256Text(webToken);
   const nowIso = new Date().toISOString();
-  const inserted = await env.DB.prepare(`INSERT INTO cloud_sessions(token_hash,user_id,org_id,instance_id,instance_name,created_at,expires_at,last_seen_at)
-    SELECT ?,s.user_id,s.org_id,?,'Centro de Custos web',?,?,? FROM session_handoffs h
+  const inserted = await env.DB.prepare(`INSERT INTO cloud_sessions(token_hash,user_id,org_id,instance_id,instance_name,created_at,expires_at,last_seen_at,parent_session_hash)
+    SELECT ?,s.user_id,s.org_id,?,'Centro de Custos web',?,?,?,s.token_hash FROM session_handoffs h
     JOIN cloud_sessions s ON s.token_hash=h.session_hash AND s.user_id=h.user_id
     WHERE h.code_hash=? AND s.expires_at>?`)
     .bind(sessionHash, crypto.randomUUID(), nowIso, now + 8 * 3600, nowIso, hash, now).run();

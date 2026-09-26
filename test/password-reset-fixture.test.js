@@ -19,7 +19,7 @@ CREATE TABLE cloud_sessions (token_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL,o
 function fakeD1() {
   const raw = new DatabaseSync(':memory:');
   raw.exec(schema);
-  for (const name of ['006-identidade-compartilhada.sql', '007-mobile-auth.sql']) {
+  for (const name of ['006-identidade-compartilhada.sql', '007-mobile-auth.sql', '008-sessao-web-vinculada.sql']) {
     raw.exec(fs.readFileSync(path.join(worker, 'd1-migrations', name), 'utf8'));
   }
   const prepare = (sql) => ({

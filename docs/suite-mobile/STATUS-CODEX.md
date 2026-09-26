@@ -63,6 +63,29 @@ Uma segunda revisão corrigiu a resolução de `Bearer hash:<sha256>` em `change
   - `pcm@rcconstrutec.com.br` estava na lista de bloqueio do Resend (bounce de agosto) e foi removido. Os reportes de 18/09 para esse endereço também tinham sido bloqueados.
   - Teste real: o pedido de redefinição para `pcm@` foi entregue ("Delivered") e recebido pelo Lucas.
 
+## Pós Fase 1 (26/09/2026, feito pelo Claude Code com autorização do Lucas, branch `feat/auth-logout-cascade`)
+
+O Codex pelo plugin não conseguiu gravar no repositório (`.git` só leitura na sandbox). Por isso o Lucas pediu que o Claude fizesse.
+
+- **Migração `008-sessao-web-vinculada.sql`**, só aditiva: `cloud_sessions.parent_session_hash` e o índice `cloud_sessions_parent`.
+  - **Aplicar antes do deploy**, porque o `consume` passa a gravar essa coluna.
+  - Não é idempotente: é `ALTER TABLE ADD COLUMN`, então só deve rodar uma vez.
+- **`consume`:** a sessão "Centro de Custos web" guarda o hash da sessão do app que pediu o handoff.
+- **`POST /v1/auth/logout`:** a rota já existia (`identityAdmin.js`) e foi ampliada, sem quebrar clientes antigos.
+  - Além da sessão atual, apaga as sessões web filhas e os códigos de handoff pendentes dela.
+  - Continua 200 mesmo sem token, agora com `{ ok: true, revoked: <n> }`.
+- **`revoke-others`:** passa a preservar as sessões web filhas da sessão atual. Antes derrubava o site aberto no próprio aparelho. As filhas das sessões revogadas caem junto.
+- **Log do Resend:** `password_reset_email_delivery_failed <status> <name>`, em que `name` é o tipo do erro do provedor (ex.: `invalid_api_key`, `validation_error`). Nunca registra e-mail, token, link nem chave.
+- **CI:** job `test` (Node 20, exigido pela proteção do main) e job novo `test-node24`, onde rodam os testes do D1.
+- **Testes novos:** `test/auth-logout.test.js` (4) e `test/password-reset-provider-log.test.js` (2).
+- **`test/central-identity.test.js`:** passa a aplicar as migrações 007 e 008. O `batch` simulado agora devolve os resultados, como o D1 real.
+
+**Contrato** (`04-CONTRATO-API.md`, seção 5): texto aprovado pelo Lucas em 26/09 e já incluído no contrato:
+
+> `POST /v1/auth/logout` (Bearer): 200 `{ ok: true, revoked: <n> }`. Encerra a sessão atual e as sessões web criadas por handoff a partir dela; sem token válido, responde 200 com `revoked: 0`. O app chama no "Sair" e no "Sair e esquecer" e segue com a saída local mesmo se falhar.
+>
+> `revoke-others` preserva as sessões web criadas pela sessão atual.
+
 ## Pedidos ao Claude / Lucas
 
 - **Claude:** o `consume` agora devolve o formato web descrito acima. O app pode seguir o contrato original; o código no fragmento dura 60 segundos e funciona uma vez.

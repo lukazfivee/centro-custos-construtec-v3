@@ -29,3 +29,23 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Validar aplicacao
         run: npm run verify
+
+  # Node 24 roda tambem os testes do D1 (node:sqlite), pulados no Node 20.
+  # Job separado para manter o nome "test", exigido pela protecao do main.
+  test-node24:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      JWT_SECRET: segredo-v3-ci-com-mais-de-trinta-e-dois-caracteres
+      ADMIN_INITIAL_PASSWORD: senha-v3-ci-segura-123
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Validar aplicacao
+        run: npm run verify
