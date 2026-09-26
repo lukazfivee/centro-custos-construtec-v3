@@ -47,7 +47,14 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
   - `lintDebug`: 0 erros depois de tipar `attachBridge(AuthBridge)`; antes, o lint não enxergava o `@JavascriptInterface` num parâmetro `Object`. Nenhum uso de API incompatível com o `minSdk 28`.
   - Os 15 avisos restantes são esperados: `commit()` proposital no cofre (o contador precisa ser gravado na hora), textos fixos em pt-BR e avisos que já existiam no app antigo.
   - O APK contém `assets/auth/*`, e o `dev-bridge.js` ficou de fora, como planejado.
-- **Ainda não testado em aparelho ou emulador:** biometria real, Keystore e barras do sistema. O roteiro está abaixo.
+- **Teste no aparelho (26/09/2026):** Samsung Galaxy A17 (SM-A175F), Android 16, contra o Worker de produção.
+  - O APK antigo (rc.11, assinado pela CI) foi desinstalado com autorização do Lucas; o novo não instala por cima por causa da assinatura diferente.
+  - Login de vidro com a barra de status transparente e margem real de 36px, lida pelo app.
+  - A tela de entrada sai preta nos prints (`FLAG_SECURE`).
+  - Login com `pcm@`, criação do PIN, ativação da digital e animação do símbolo.
+  - Handoff: o Centro de Custos web abriu logado, sem pedir senha (`cc_token`, usuário `pcm`, fragmento limpo).
+  - Cofre: `pin_iter` 150000, e `pin_blob`, `bio_blob`, `profile` e `attempts` cifrados.
+  - Ainda falta testar no aparelho: bloqueio automático, 3 PINs errados, Sair, e Sair e esquecer.
 
 ## Roteiro de teste manual no aparelho
 
@@ -81,7 +88,7 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
 - Compatibilidade com o #28 final, conferida em 24/09: cada `consume` cria uma sessão central "Centro de Custos web", com duração de 8h. Por isso, depois de "Sair de todos os outros aparelhos", o app descarta a WebView do site e, em "Voltar ao app", reabre o site com um handoff novo. Essas sessões aparecem em "Aparelhos conectados".
 
 - Compilar e rodar no aparelho (roteiro acima). Sem SDK aqui, esse é o primeiro passo.
-- O botão de menu (44dp, canto superior direito) fica por cima do site. Conferir se não cobre algum botão do Centro de Custos web; se cobrir, mudar de lugar na Fase 2.
+- **Confirmado no aparelho:** o botão de menu (44dp, canto superior direito) cobre o botão redondo do cabeçalho do site. Decisão do Lucas: resolver na Fase 2, levando "Segurança" para o Menu do site e retirando o botão flutuante.
 - O App Link só abre o app depois que o `assetlinks.json` tiver a impressão digital do certificado de assinatura (`ANDROID_CERT_SHA256`). Com a chave de debug, vale só para testes.
 - "Esqueci a senha" some sozinho quando a rota ainda dá 404, com a mensagem "A recuperação de senha ainda não está disponível…". Não fiz sondagem ao abrir o app, para não gastar o limite de 10 pedidos por IP.
 - A WebView remota continua com a barra navy e margem. O Centro de Custos web ainda não trata a área segura (Fase 2).
