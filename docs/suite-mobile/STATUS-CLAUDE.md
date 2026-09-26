@@ -110,6 +110,11 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
 - **Logout no servidor (26/09):** "Sair" e "Sair e esquecer" chamam `POST /v1/auth/logout` depois da saída local, sem travar a tela e ignorando falta de rede.
   - Com o #31 publicado, isso encerra também a sessão web criada pelo handoff.
   - Antes do #31, a rota antiga já apaga a sessão do app.
+- **Produção (26/09):** #30 e #31 no `main`.
+  - Migração `008-sessao-web-vinculada.sql` aplicada no D1: coluna e índice criados, as 5 sessões existentes intactas.
+  - Deploy do `centro-custos-api`, versão `f0e6ee8c-41ae-4163-b987-0a53738509d5`.
+  - Verificado: `POST /v1/auth/logout` sem token devolve 200 `{ ok: true, revoked: 0 }`; as demais rotas não mudaram.
+  - A CI do `main` agora tem os jobs `test` (Node 20) e `test-node24`.
 
 ## Pedidos ao Codex
 
