@@ -42,7 +42,12 @@ async function sendResetEmail(env, email, token) {
         text: `Para criar uma senha nova, abra este link em até 30 minutos: ${link}\nSe você não pediu a redefinição, ignore esta mensagem.`,
       }),
     });
-    if (!response.ok) console.warn('password_reset_email_delivery_failed', response.status);
+    if (!response.ok) {
+      // Só o tipo do erro do provedor (ex.: invalid_api_key); nunca e-mail, token, link ou chave.
+      const detail = await response.json().catch(() => null);
+      const name = typeof detail?.name === 'string' ? detail.name.replace(/[^a-z_]/gi, '').slice(0, 40) : 'unknown';
+      console.warn('password_reset_email_delivery_failed', response.status, name || 'unknown');
+    }
   } catch { console.warn('password_reset_email_delivery_failed'); }
 }
 

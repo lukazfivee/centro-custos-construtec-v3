@@ -21,7 +21,9 @@ export async function listSessions(request, env) {
 export async function revokeOtherSessions(request, env) {
   const auth = await requireSession(request, env);
   if (auth.error) return unauthorized(auth);
-  const result = await env.DB.prepare('DELETE FROM cloud_sessions WHERE user_id=? AND org_id=? AND token_hash<>?')
-    .bind(auth.user.id, auth.user.org_id, auth.user.token_hash).run();
+  // Preserva a sessão atual e as sessões web abertas a partir dela no mesmo aparelho.
+  const result = await env.DB.prepare(`DELETE FROM cloud_sessions WHERE user_id=? AND org_id=? AND token_hash<>?
+    AND (parent_session_hash IS NULL OR parent_session_hash<>?)`)
+    .bind(auth.user.id, auth.user.org_id, auth.user.token_hash, auth.user.token_hash).run();
   return json({ ok: true, revoked: Number(result.meta?.changes || 0) });
 }

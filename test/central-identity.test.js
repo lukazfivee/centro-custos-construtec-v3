@@ -27,7 +27,9 @@ CREATE TABLE cloud_sessions (
 function fakeD1() {
   const db = new sqlite.DatabaseSync(':memory:');
   db.exec(LEGACY_SCHEMA);
-  db.exec(fs.readFileSync(path.join(root, 'cloudflare', 'center-container', 'd1-migrations', '006-identidade-compartilhada.sql'), 'utf8'));
+  for (const name of ['006-identidade-compartilhada.sql', '007-mobile-auth.sql', '008-sessao-web-vinculada.sql']) {
+    db.exec(fs.readFileSync(path.join(root, 'cloudflare', 'center-container', 'd1-migrations', name), 'utf8'));
+  }
   const statement = (sql) => ({
     args: [],
     bind(...args) { this.args = args; return this; },
@@ -40,7 +42,8 @@ function fakeD1() {
     prepare: statement,
     async batch(list) {
       db.exec('BEGIN');
-      try { for (const item of list) await item.run(); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
+      // Como o D1 real, devolve o resultado de cada comando.
+      try { const out = []; for (const item of list) out.push(await item.run()); db.exec('COMMIT'); return out; } catch (e) { db.exec('ROLLBACK'); throw e; }
     },
   };
 }

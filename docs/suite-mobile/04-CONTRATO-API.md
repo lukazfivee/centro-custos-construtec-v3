@@ -71,7 +71,13 @@ Com o PIN certo mas sem internet, o app entra em modo offline e valida quando a 
 
 `POST /v1/auth/sessions/revoke-others` (Bearer):
 
-- 200: `{ ok: true, revoked: <n> }`. Apaga as sessões do usuário, menos a atual.
+- 200: `{ ok: true, revoked: <n> }`. Apaga as sessões do usuário, menos a atual e as sessões web criadas por handoff a partir dela (o site aberto no mesmo aparelho continua).
+
+`POST /v1/auth/logout` (Bearer):
+
+- 200: `{ ok: true, revoked: <n> }`. Apaga a sessão atual, as sessões web criadas por handoff a partir dela e os códigos de handoff pendentes dela;
+- sem token válido, responde 200 com `revoked: 0` (compatível com os clientes antigos);
+- o app chama no "Sair" e no "Sair e esquecer", depois da saída local, e ignora falha de rede.
 
 `GET /v1/auth/sessions` (Bearer):
 
