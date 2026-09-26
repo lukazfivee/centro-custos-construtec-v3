@@ -53,7 +53,7 @@ O Codex pelo plugin não conseguiu gravar no repositório (`.git` só leitura na
 - **Testes novos:** `test/auth-logout.test.js` (4) e `test/password-reset-provider-log.test.js` (2).
 - **`test/central-identity.test.js`:** passa a aplicar as migrações 007 e 008. O `batch` simulado agora devolve os resultados, como o D1 real.
 
-**Proposta para o contrato** (`04-CONTRATO-API.md`, seção 5), depende do ok do Lucas:
+**Contrato** (`04-CONTRATO-API.md`, seção 5): texto aprovado pelo Lucas em 26/09 e já incluído no contrato:
 
 > `POST /v1/auth/logout` (Bearer): 200 `{ ok: true, revoked: <n> }`. Encerra a sessão atual e as sessões web criadas por handoff a partir dela; sem token válido, responde 200 com `revoked: 0`. O app chama no "Sair" e no "Sair e esquecer" e segue com a saída local mesmo se falhar.
 >
