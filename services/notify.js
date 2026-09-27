@@ -22,6 +22,7 @@ async function workerCall(path, body) {
   if (!response.ok) {
     const error = new Error(data.error || `Central de notificações respondeu HTTP ${response.status}.`);
     error.status = response.status === 404 ? 404 : 502;
+    error.upstream = response.status;
     throw error;
   }
   return data;
@@ -39,4 +40,4 @@ function userAction(cloudUserId, action, extra = {}) {
   return workerCall('/v1/internal/notifications', { ...extra, action, userId: cloudUserId });
 }
 
-module.exports = { notifyAll, userAction, notificationsConfigured: configured };
+module.exports = { notifyAll, userAction, workerCall, notificationsConfigured: configured };

@@ -9,7 +9,7 @@ const { asyncRoute, httpError } = require('../lib/http');
 const { userAction } = require('../services/notify');
 const { computeDailyNotices } = require('../services/dailyNotices');
 
-const TYPES = ['proposta_aprovada', 'acima_orcado', 'conta_vencer', 'novo_acesso'];
+const TYPES = ['proposta_aprovada', 'acima_orcado', 'conta_vencer', 'novo_acesso', 'pedido_acesso'];
 
 const router = express.Router();
 router.use(autenticar);
