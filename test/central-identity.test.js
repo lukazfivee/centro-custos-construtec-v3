@@ -27,7 +27,7 @@ CREATE TABLE cloud_sessions (
 function fakeD1() {
   const db = new sqlite.DatabaseSync(':memory:');
   db.exec(LEGACY_SCHEMA);
-  for (const name of ['006-identidade-compartilhada.sql', '007-mobile-auth.sql', '008-sessao-web-vinculada.sql']) {
+  for (const name of ['006-identidade-compartilhada.sql', '007-mobile-auth.sql', '008-sessao-web-vinculada.sql', '009-handoff-alvo.sql']) {
     db.exec(fs.readFileSync(path.join(root, 'cloudflare', 'center-container', 'd1-migrations', name), 'utf8'));
   }
   const statement = (sql) => ({
