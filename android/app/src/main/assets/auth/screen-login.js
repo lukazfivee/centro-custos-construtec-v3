@@ -60,6 +60,7 @@
       UI.busy(button, false);
       if (!result.ok) return fail(R.messageForCode(result.code));
       senha.value = '';
+      App.tourPending = Boolean(result.tour);
       await App.refresh();
       // Com PIN ja definido, o PIN guarda a sessao nova no cofre (a senha nunca fica no aparelho).
       if (App.state.hasPin) return App.go('pin', { mode: 'rewrap' });
@@ -67,7 +68,7 @@
       UI.toast('Senha certa · agora crie seu PIN');
     });
 
-    UI.$('#cadastro', el).addEventListener('click', () => UI.toast('Peça seu acesso ao administrador da Construtec', 'shield-check'));
+    UI.$('#cadastro', el).addEventListener('click', () => App.go('signup', { email: email.value.trim() }));
     const forgot = UI.$('#esqueci', el);
     if (forgot) forgot.addEventListener('click', () => App.go('recover', { step: 1, email: email.value.trim() }));
     const usePin = UI.$('#usepin', el);

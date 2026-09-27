@@ -32,6 +32,7 @@
     try { data = (params.data) || (await CC.api('/cadastros')).data; } catch (error) {
       return back(CC.render(`${top}<p class="sub">${esc(error.message)}</p>`, true, params));
     }
+    if (data.disponivel === false) return back(CC.render(`${top}<p class="sub">${esc(data.motivo || '')}</p>`, true, params));
     const reqs = data.requests || [], invites = data.invites || [];
     const page = CC.render(`${top}
       <div class="card" style="margin-bottom:6px"><span class="label">Código da empresa</span>

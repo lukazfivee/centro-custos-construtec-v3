@@ -47,7 +47,10 @@ test('pedidos de acesso pelo Centro de Custos', async (context) => {
 
   assert.equal((await request('/cadastros')).status, 401);
   const token = (await request('/auth/login', { method: 'POST', body: { email: 'cad@teste.local', senha: 'cad-test-123' } })).data.token;
-  assert.equal((await request('/cadastros', { token })).status, 409, 'sem conta central');
+  const semConta = await request('/cadastros', { token });
+  assert.equal(semConta.status, 200, 'sem conta central a lista não é erro');
+  assert.equal(semConta.data.disponivel, false);
+  assert.equal((await request('/cadastros/p1/aprovar', { method: 'POST', token })).status, 409, 'ações exigem conta central');
   assert.equal(calls.length, 0);
 
   await getDb().query("UPDATE users SET cloud_user_id='admin-central' WHERE email='cad@teste.local'");

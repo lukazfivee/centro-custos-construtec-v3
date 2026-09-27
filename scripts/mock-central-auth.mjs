@@ -75,7 +75,20 @@ export function createMockCentral(options = {}) {
       if (!user || user.password !== body.password) return [401, { ok: false, error: 'E-mail ou senha inválidos.', code: 'INVALID_CREDENTIALS' }];
       if (user.legacy) return [409, { ok: false, error: 'Conta legada.', code: 'PASSWORD_PROFILE_LEGACY' }];
       const { token, expiresAt } = newSession(user, req);
-      return [200, { ok: true, sessionToken: token, expiresAt, user: publicUser(user) }];
+      const tour = Boolean(user.tourPending);
+      user.tourPending = false;
+      return [200, { ok: true, sessionToken: token, expiresAt, user: publicUser(user), tour }];
+    },
+    // Fase 5: codigo CONST-DEMO42 deixa o pedido pendente; qualquer convite valido cria a conta.
+    'POST /v1/signup/request': (req, body) => {
+      const email = String(body.email || '').trim().toLowerCase();
+      if (users.has(email)) return [409, { ok: false, code: 'EMAIL_IN_USE', error: 'Este e-mail já tem conta. Use Entrar ou Esqueci a senha.' }];
+      if (body.inviteToken) {
+        users.set(email, { id: 'u-' + randomToken().slice(0, 8), name: body.name, email, role: 'supervisor', password: body.password, tourPending: true });
+        return [200, { ok: true, status: 'approved' }];
+      }
+      if (String(body.companyCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '') !== 'CONSTDEMO42') return [400, { ok: false, code: 'CODE_INVALID', error: 'Código da empresa incorreto. Confira com o administrador.' }];
+      return [200, { ok: true, status: 'pending' }];
     },
     'GET /v1/auth/session': (req) => {
       const auth = bearer(req);
@@ -196,6 +209,7 @@ export function createMockCentral(options = {}) {
     if (req.method === 'GET' && (pathname === '/' || pathname === '/m/')) return send(res, 200, webHome, 'text/html; charset=utf-8');
     if (req.method === 'GET' && pathname === '/orc/') return send(res, 200, orcHome, 'text/html; charset=utf-8');
     if (req.method === 'GET' && pathname === '/redefinir-senha') return send(res, 200, resetPage, 'text/html; charset=utf-8');
+    if (req.method === 'GET' && pathname === '/cadastro') return send(res, 200, '<!doctype html><meta charset="utf-8"><script>location.replace("/auth/index.html"+location.hash)</script>', 'text/html; charset=utf-8');
     const route = routes[`${req.method} ${pathname}`];
     if (!route) return send(res, 404, { ok: false, error: 'Rota não encontrada.', code: 'NOT_FOUND' });
     let raw = '';

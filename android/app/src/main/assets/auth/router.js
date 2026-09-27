@@ -29,7 +29,13 @@
     return root.AuthRules.firstName(App.state.profile && App.state.profile.name);
   };
 
+  // Conta nova (tour:true no primeiro login): o tour aparece uma vez antes de abrir o app.
+  App.tourPending = false;
   App.enter = function (notice) {
+    if (App.tourPending) { App.tourPending = false; return App.go('tour', { notice }); }
+    return App.enterNow(notice);
+  };
+  App.enterNow = function (notice) {
     return root.Native.call('enterApp', { notice: notice || '' });
   };
 
@@ -38,6 +44,12 @@
     const st = App.state;
     const token = (extra && extra.resetToken) || st.resetToken || root.AuthRules.parseResetFragment(location.hash);
     if (reason === 'reset' || token) return App.go('recover', { step: 3, token });
+    // O nativo entrega o convite uma vez; apaga do estado para nao reabrir o cadastro depois.
+    const invite = root.AuthRules.parseInviteFragment((extra && extra.inviteFragment) || st.inviteFragment || location.hash);
+    delete st.inviteFragment;
+    if (invite && /convite=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+    if (reason === 'signup' || invite) return App.go('signup', { invite });
+    if (reason === 'tour') return App.go('tour', { review: true });
     if (reason === 'security') return App.go('security');
     if (reason === 'menu') return App.go('menu');
     if (reason === 'lock' && st.hasPin) return App.go('pin', { mode: 'lock' });

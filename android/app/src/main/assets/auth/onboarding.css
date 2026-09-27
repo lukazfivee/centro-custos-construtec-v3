@@ -1,0 +1,14 @@
+/* Cadastro e tour do primeiro uso (Fase 5), no mesmo vidro das telas de entrada. */
+.accept { display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.accept input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--accent); }
+
+.tour-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; margin-right: -12px; font-size: 12.5px; font-weight: 600; }
+.tour-art { width: 112px; height: 112px; border-radius: 32px; display: grid; place-items: center; color: var(--accent-light);
+  background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: inset 0 0 0 1px var(--glass-bd), 0 18px 40px rgba(0,0,0,.3); }
+.tour-logo { width: 64px; height: 64px; object-fit: contain; }
+.tour-dots { display: flex; justify-content: center; gap: 8px; }
+.tour-dots span { width: 7px; height: 7px; border-radius: 4px; background: rgba(255,255,255,.22); transition: width .25s var(--ease), background-color .25s ease; }
+.tour-dots span.on { width: 22px; background: var(--accent-light); }
+
+/* O roteador foca o titulo para leitores de tela; sem a moldura visual. */
+[tabindex="-1"]:focus { outline: none; }

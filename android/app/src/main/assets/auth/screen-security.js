@@ -97,12 +97,14 @@
       <div class="sheet" role="dialog" aria-label="Menu da Suíte">
         <span class="grab" aria-hidden="true"></span>
         <button class="sheet-item" id="m-seg" type="button">${icon('shield-check', 22)}Segurança</button>
+        <button class="sheet-item" id="m-tour" type="button">${icon('lightning', 22)}Rever o tour</button>
         <button class="sheet-item" id="m-sair" type="button">${icon('sign-out', 22)}Sair</button>
         <button class="sheet-item danger" id="m-esquecer" type="button">${icon('x', 22)}<span>Sair e esquecer este aparelho</span></button>
       </div>`;
     const close = () => { document.body.classList.remove('see-through'); Native.call('close'); };
     UI.$('#scrim').addEventListener('click', close);
     UI.$('#m-seg').addEventListener('click', () => { document.body.classList.remove('see-through'); App.go('security'); });
+    UI.$('#m-tour').addEventListener('click', () => { document.body.classList.remove('see-through'); App.go('tour', { review: true }); });
     UI.$('#m-sair').addEventListener('click', () => { document.body.classList.remove('see-through'); Native.call('logout', { forget: false }); });
     confirmTwice(UI.$('#m-esquecer'), 'Toque de novo para esquecer este aparelho', () => {
       document.body.classList.remove('see-through');

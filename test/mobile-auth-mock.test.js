@@ -118,3 +118,16 @@ test('mock: serve as telas locais sem sair da pasta de assets', async (t) => {
   const escape = await fetch(`http://127.0.0.1:${port}/auth/..%2F..%2FAndroidManifest.xml`);
   assert.equal(escape.status, 404);
 });
+
+test('mock: cadastro com código fica pendente; convite cria a conta e o 1o login pede o tour', async (t) => {
+  const m = await start();
+  t.after(m.close);
+  const form = { name: 'Ana Lima', email: 'ana@exemplo.com', phone: '11987654321', password: 'Obra@2026', acceptTerms: true };
+  assert.equal((await m.call('POST', '/v1/signup/request', { ...form, companyCode: 'errado' })).json.code, 'CODE_INVALID');
+  assert.equal((await m.call('POST', '/v1/signup/request', { ...form, companyCode: 'CONST-DEMO42' })).json.status, 'pending');
+  assert.equal((await m.call('POST', '/v1/signup/request', { ...form, inviteToken: 'x'.repeat(40) })).json.status, 'approved');
+  assert.equal((await m.call('POST', '/v1/signup/request', { ...form, inviteToken: 'x'.repeat(40) })).json.code, 'EMAIL_IN_USE');
+  const first = await m.call('POST', '/v1/auth/login', { email: form.email, password: form.password });
+  assert.equal(first.json.tour, true);
+  assert.equal((await m.call('POST', '/v1/auth/login', { email: form.email, password: form.password })).json.tour, false);
+});

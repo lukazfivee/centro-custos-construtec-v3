@@ -77,7 +77,9 @@
     if (loading || !isAdmin()) return;
     loading = true;
     try {
-      render(await window.api('/cadastros'));
+      const data = await window.api('/cadastros');
+      if (data.disponivel === false) { panel.classList.add('oculto'); return; }
+      render(data);
       panel.classList.remove('oculto');
     } catch (error) {
       // Sem conta central ou Worker nao configurado: o painel nao se aplica.

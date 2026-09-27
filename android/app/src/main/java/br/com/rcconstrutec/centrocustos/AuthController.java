@@ -21,6 +21,7 @@ final class AuthController {
         void moveToBack();
         void dropApp();
         void openSecurity();
+        void openTour();
         void sessionExpired();
         boolean online();
     }
@@ -32,6 +33,7 @@ final class AuthController {
     private byte[] activeKey;
     private volatile String reason = "start";
     private volatile String resetToken;
+    private volatile String invite;
     private volatile boolean enteredOffline;
 
     AuthController(SessionVault vault, CentralApi api) { this.vault = vault; this.api = api; }
@@ -41,6 +43,7 @@ final class AuthController {
     synchronized boolean hasActiveKey() { return activeKey != null; }
     void setReason(String value) { reason = value; }
     void setResetToken(String token) { resetToken = token; }
+    void setInvite(String fragment) { invite = fragment; }
     void markEnteredOffline(boolean offline) { enteredOffline = offline; }
     boolean enteredOffline() { return enteredOffline; }
 
@@ -76,6 +79,7 @@ final class AuthController {
             .put("autoLock", vault.autoLockSeconds()).put("online", online)
             .put("profile", profile == null ? JSONObject.NULL : new JSONObject(profile));
         if (resetToken != null) { out.put("resetToken", resetToken); resetToken = null; }
+        if (invite != null) { out.put("inviteFragment", invite); invite = null; }
         reason = "start";
         return out;
     }
@@ -93,7 +97,8 @@ final class AuthController {
         if (user != null) vault.saveProfile(new JSONObject().put("name", user.optString("name")).put("email", user.optString("email")).toString());
         vault.clearLocked();
         if (vault.hasPin()) pending = session; else active = session;
-        return ok().put("user", publicUser());
+        // Conta nova (cadastro ou convite): as telas mostram o tour uma vez.
+        return ok().put("user", publicUser()).put("tour", r.body.optBoolean("tour", false));
     }
 
     synchronized JSONObject createPin(String pin) throws JSONException, GeneralSecurityException {
@@ -153,6 +158,20 @@ final class AuthController {
             if (r.status == 404) return fail("NOT_AVAILABLE");
             if (r.status == 202 || r.ok()) return ok();
             return fail(r.code());
+        } catch (IOException offline) { return fail("OFFLINE"); }
+    }
+
+    /** Devolve status "pending" (aguarda um admin) ou "approved" (convite); nos erros, a mensagem do servidor. */
+    JSONObject signup(JSONObject a) throws JSONException {
+        JSONObject body = new JSONObject();
+        for (String key : new String[] { "name", "email", "phone", "companyCode", "password", "inviteToken" }) body.put(key, a.optString(key, ""));
+        body.put("acceptTerms", a.optBoolean("acceptTerms", false));
+        if (body.optString("inviteToken").isEmpty()) body.remove("inviteToken");
+        try {
+            CentralApi.Response r = api.signup(body);
+            if (r.status == 404 && r.code().isEmpty()) return fail("NOT_AVAILABLE");
+            if (!r.ok()) return fail(r.code().isEmpty() ? "SERVER_ERROR" : r.code()).put("message", r.body.optString("error", ""));
+            return ok().put("status", r.body.optString("status", "pending"));
         } catch (IOException offline) { return fail("OFFLINE"); }
     }
 

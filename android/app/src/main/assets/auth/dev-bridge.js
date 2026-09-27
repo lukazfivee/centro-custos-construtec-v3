@@ -57,7 +57,14 @@
       delete v.pinLocked;
       save(v);
       if (!v.pin) active = pending;
-      return { ok: true, user: r.user };
+      return { ok: true, user: r.user, tour: Boolean(r.tour) };
+    },
+    async signup(body) {
+      try {
+        const res = await fetch('/v1/signup/request', { method: 'POST', headers: headers(), body: JSON.stringify({ ...body, inviteToken: body.inviteToken || undefined }) });
+        const json = await res.json().catch(() => ({}));
+        return json.ok ? { ok: true, status: json.status } : { ok: false, code: json.code || 'SERVER_ERROR', message: json.error || '' };
+      } catch { return { ok: false, code: 'OFFLINE' }; }
     },
     async createPin({ pin }) {
       const v = load();

@@ -60,6 +60,7 @@ final class AuthBridge {
                 if (result.optBoolean("ok")) ui(shell::dropApp);
                 return result;
             }
+            case "signup": return auth.signup(a);
             case "sessions": return auth.sessions();
             case "revokeOthers": {
                 // O handoff cria uma sessao "Centro de Custos web" neste aparelho; ela tambem cai, entao o site reabre com handoff novo.
@@ -92,6 +93,7 @@ final class AuthBridge {
     /** Acoes pedidas pelo site do celular (suite://). So o que o app ja permite pelo menu nativo. */
     void webAction(String action) {
         if ("seguranca".equals(action) && auth.unlocked()) shell.openSecurity();
+        else if ("tour".equals(action) && auth.unlocked()) shell.openTour();
         else if ("entrar".equals(action)) shell.sessionExpired();
         else if ("sair".equals(action)) worker.execute(() -> {
             String token = auth.activeToken();

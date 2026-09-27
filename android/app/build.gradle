@@ -19,8 +19,8 @@ android {
         applicationId 'br.com.rcconstrutec.centrocustos'
         minSdk 28
         targetSdk 35
-        versionCode 31018
-        versionName '3.1.0-rc.18'
+        versionCode 31019
+        versionName '3.1.0-rc.19'
         buildConfigField 'String', 'CENTRAL_API_BASE', "\"${centralApiBase}\""
         buildConfigField 'String', 'CENTRAL_WEB_BASE', "\"${centralWebBase}\""
         buildConfigField 'String', 'ORC_WEB_BASE', "\"${orcWebBase}\""

@@ -19,7 +19,7 @@ final class AppWebView {
         boolean openFileChooser(ValueCallback<Uri[]> callback, WebChromeClient.FileChooserParams params);
         void loadFailed(String message);
         void message(String message);
-        /** Links suite://seguranca, suite://sair, suite://entrar e suite://app/<id> vindos dos sites; action e "host" ou "host/caminho". */
+        /** Links suite://seguranca, suite://tour, suite://sair, suite://entrar e suite://app/<id> vindos dos sites; action e "host" ou "host/caminho". */
         void suiteLink(String action);
     }
 
