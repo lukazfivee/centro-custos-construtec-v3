@@ -1,6 +1,7 @@
 const express = require('express');
 const { autenticar } = require('../middleware/auth');
 const { asyncRoute, httpError } = require('../lib/http');
+const { todayIso } = require('../lib/dates');
 const { buildTransactionFilters } = require('../lib/transactionFilters');
 const { exportTransactions, importTransactions } = require('../services/sync');
 const { getDb } = require('../db');
@@ -21,7 +22,7 @@ router.get('/exportar.csv', asyncRoute(async (req, res) => {
   }
   const filter = buildTransactionFilters(req.query,'t',req.query.sincronizar === '1');
   const csv = await exportTransactions(filter);
-  const suffix = new Date().toISOString().slice(0,10);
+  const suffix = todayIso();
   res.setHeader('Content-Type','text/csv; charset=utf-8');
   res.setHeader('Content-Disposition',`attachment; filename="sincronizacao-${suffix}.csv"`);
   res.send(csv);

@@ -6,7 +6,7 @@ const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { buildTransactionFilters } = require('../lib/transactionFilters');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
-const { validDate, todaySql } = require('../lib/dates');
+const { validDate, todaySql, todayIso } = require('../lib/dates');
 const { csvLine, decimalBr } = require('../lib/csv');
 const { recordAudit } = require('../services/audit');
 const { recordExpenseAllocation } = require('../services/budgets/budgetAllocations');
@@ -110,7 +110,7 @@ router.post('/', asyncRoute(async (req, res) => {
 router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const reason = String(req.body.motivo || '').trim();
-  const reversalDate = String(req.body.data_estorno || new Date().toISOString().slice(0,10));
+  const reversalDate = String(req.body.data_estorno || todayIso());
   if (reason.length < 5) throw httpError(400, 'Informe o motivo do estorno com pelo menos 5 caracteres.');
   if (!validDate(reversalDate)) throw httpError(400, 'Informe uma data de estorno válida.');
   if (await isMonthClosed(reversalDate)) throw httpError(403, 'A competência escolhida para o estorno está fechada. Escolha uma competência aberta.');

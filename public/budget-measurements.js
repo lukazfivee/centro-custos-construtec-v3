@@ -151,8 +151,10 @@
       const lastDay = new Date(now.setDate(firstDay.getDate() + 5));
       const startEl = document.getElementById('labor-period-start');
       const endEl = document.getElementById('labor-period-end');
-      if (startEl) startEl.value = firstDay.toISOString().split('T')[0];
-      if (endEl) endEl.value = lastDay.toISOString().split('T')[0];
+      // Data local (toISOString usa UTC e, depois das 21h, daria o dia seguinte).
+      const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (startEl) startEl.value = ymd(firstDay);
+      if (endEl) endEl.value = ymd(lastDay);
 
       document.getElementById('form-labor-measurement')?.addEventListener('submit', async (e) => {
         e.preventDefault();

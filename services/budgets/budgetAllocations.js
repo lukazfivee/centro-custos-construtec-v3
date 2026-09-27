@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { todayIso } = require('../../lib/dates');
 
 /**
  * Cria ou atualiza alocação de despesa vinculada a um item de controle orçamentário
@@ -74,7 +75,7 @@ async function recordExpenseAllocation(pool, params) {
   // Se for mapeado, criar reconhecimento de custo direto
   if (mappingStatus === 'mapped') {
     const tx = await pool.query('SELECT transaction_date, type FROM transactions WHERE id = $1', [transactionId]);
-    const recDate = tx.rows[0]?.transaction_date || new Date().toISOString().slice(0, 10);
+    const recDate = tx.rows[0]?.transaction_date || todayIso();
     const sign = tx.rows[0]?.type === 'estorno' ? -1 : 1;
 
     await pool.query(`
@@ -146,7 +147,7 @@ async function mapExistingAllocation(pool, params) {
 
   // Atualizar ou criar cost_recognition
   const tx = await pool.query('SELECT transaction_date, type FROM transactions WHERE id = $1', [alloc.transaction_id]);
-  const recDate = tx.rows[0]?.transaction_date || new Date().toISOString().slice(0, 10);
+  const recDate = tx.rows[0]?.transaction_date || todayIso();
   const sign = tx.rows[0]?.type === 'estorno' ? -1 : 1;
 
   await pool.query('DELETE FROM cost_recognitions WHERE allocation_id = $1', [allocationId]);

@@ -1,6 +1,7 @@
 const express = require('express');
 const { autenticar } = require('../middleware/auth');
 const { asyncRoute } = require('../lib/http');
+const { todayIso } = require('../lib/dates');
 const { getDb, getInstanceIdentity } = require('../db');
 const { parseCsv, csvLine } = require('../lib/csv');
 const { httpError } = require('../lib/http');
@@ -39,7 +40,7 @@ router.get('/exportar.csv', asyncRoute(async (req, res) => {
     r.project_status, r.active ? 'sim' : 'nao', r.revision || 1, new Date(r.updated_at).toISOString(),
   ])));
 
-  const suffix = new Date().toISOString().slice(0,10);
+  const suffix = todayIso();
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="cadastros-${suffix}.csv"`);
   res.send(`\uFEFF${lines.join('\r\n')}`);
