@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; font-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Carregando</title>
+<!--
+  Tela de carregamento da Suite Construtec: o simbolo no centro e as disciplinas
+  da Construtec (engenhariaconstrutec.com.br) em volta, ligadas por trilhas de
+  circuito com pulsos de energia. O app nativo chama setProgress(0-100) e finish().
+  Sem rede, sem armazenamento; com "reduzir movimento" fica parada.
+-->
+<style>
+  @font-face { font-family: 'IBM Plex Sans'; font-weight: 500; src: url(../auth/fonts/plex-500.woff2) format('woff2'); }
+  @font-face { font-family: 'IBM Plex Sans'; font-weight: 600; src: url(../auth/fonts/plex-600.woff2) format('woff2'); }
+  :root { --navy: #021820; --accent: #12a9d1; --ice: #b9e8f5; --muted: #6f8f9b; }
+  html, body { margin: 0; height: 100%; background: var(--navy); color: #fefefe; overflow: hidden; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+  body { transition: opacity .38s ease; }
+  body.done { opacity: 0; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #logo { position: fixed; left: 50%; top: var(--cy, 42%); width: 76px; height: auto; transform: translate(-50%, -50%) scale(var(--s, 1)); filter: drop-shadow(0 0 18px rgba(18, 169, 209, .45)); opacity: 0; transition: opacity .6s ease; }
+  #logo.on { opacity: 1; }
+  .info { position: fixed; left: 24px; right: 24px; bottom: calc(56px + env(safe-area-inset-bottom)); text-align: center; }
+  #disc { height: 22px; margin: 0 0 18px; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ice); transition: opacity .32s ease, transform .32s ease; }
+  #disc.out { opacity: 0; transform: translateY(6px); }
+  #title { margin: 0 0 14px; font-size: 17px; font-weight: 600; }
+  .bar { position: relative; height: 4px; max-width: 260px; margin: 0 auto; border-radius: 2px; background: rgba(185, 232, 245, .12); overflow: hidden; }
+  #fill { position: absolute; inset: 0 auto 0 0; width: 4%; border-radius: 2px; background: linear-gradient(90deg, #0a7896, var(--accent) 60%, #6fdcf5); transition: width .35s ease; }
+  #fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); transform: translateX(-100%); animation: shine 1.4s ease-in-out infinite; }
+  #tag { margin: 16px 0 0; font-size: 12px; color: var(--muted); }
+  @keyframes shine { to { transform: translateX(100%); } }
+  @media (prefers-reduced-motion: reduce) { #fill::after { animation: none; } #disc { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="c" aria-hidden="true"></canvas>
+<img id="logo" src="../auth/img/simbolo.png" alt="">
+<div class="info" role="status" aria-live="polite">
+  <p id="disc"></p>
+  <p id="title">Abrindo a Suíte Construtec</p>
+  <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar"><div id="fill"></div></div>
+  <p id="tag">Protegendo e conectando espaços com confiança</p>
+</div>
+<script>
+(function () {
+  'use strict';
+  // Disciplinas da Construtec, com icones de traco desenhados numa grade de 24x24.
+  var DISCIPLINAS = [
+    ['Instalações Elétricas', 'M13 2L5 13.5H11L10 22L19 10H13Z'],
+    ['Climatização', 'M12 2V22M4.5 6.5L19.5 17.5M19.5 6.5L4.5 17.5M9 3.5L12 6L15 3.5M9 20.5L12 18L15 20.5M3 10L5.5 12L3 14M21 10L18.5 12L21 14'],
+    ['Detecção de Incêndio', 'M12 22C8 22 5.5 19.2 5.5 15.6C5.5 11.5 9 9.5 9.5 5C12 6.8 13 9 13 11C14.5 10 15.2 8.5 15.3 7C17.5 9 18.5 12 18.5 15.2C18.5 19.2 16 22 12 22ZM12 22C10.2 22 9 20.6 9 18.9C9 16.8 11 15.8 11.5 14C13.5 15.4 15 17 15 19C15 20.8 13.8 22 12 22Z'],
+    ['Vigilância Eletrônica', 'M3 7.5L15.5 4.5L17.5 10.5L5 13.5ZM16.8 8.6L21 11M5 13.5L6.5 17.5H10.5M10.5 17.5V21M7.5 21H13.5M8 9.5H8.01'],
+    ['Dados, Voz e Imagem', 'M2.5 9A14 14 0 0 1 21.5 9M5.5 12.5A9.5 9.5 0 0 1 18.5 12.5M8.5 16A5 5 0 0 1 15.5 16M12 19.5V20'],
+    ['Tecnologia Médica', 'M2 12H6.5L9 6L13 18L15.5 12H22M12 3V6M10.5 4.5H13.5'],
+    ['Automação Predial', 'M4 21V7L12 3L20 7V21M9.5 21V16.5H14.5V21M8 10H10M14 10H16M8 13.2H10M14 13.2H16M2 21H22']
+  ];
+  var params = new URLSearchParams(location.search);
+  var app = params.get('app');
+  if (app) document.getElementById('title').textContent = 'Abrindo ' + (app === 'Orçamentos' ? 'o Orçamentos' : 'o ' + app);
+
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+  var logo = document.getElementById('logo'), disc = document.getElementById('disc');
+  var fill = document.getElementById('fill'), bar = document.getElementById('bar');
+  var W = 0, H = 0, cx = 0, cy = 0, R = 0, dpr = 1;
+  var icons = DISCIPLINAS.map(function (d) { return new Path2D(d[1]); });
+  var nodes = [], pulses = [], start = performance.now(), active = -1, progress = 4, finished = false;
+
+  function layout() {
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx = W / 2; cy = Math.min(H * 0.42, H - 250);
+    R = Math.max(96, Math.min(W * 0.36, H * 0.24, 150));
+    document.documentElement.style.setProperty('--cy', cy + 'px');
+    nodes = DISCIPLINAS.map(function (d, i) {
+      var a = -Math.PI / 2 + (i * 2 * Math.PI) / DISCIPLINAS.length;
+      var x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R;
+      // Trilha de circuito: sai do simbolo em linha reta e dobra a 45 graus ate a disciplina.
+      var r1 = 52, mid = R * 0.62;
+      var p0 = [cx + Math.cos(a) * r1, cy + Math.sin(a) * r1];
+      var p1 = [cx + Math.cos(a) * mid, cy + Math.sin(a) * mid];
+      var kink = a + (i % 2 ? 0.22 : -0.22);
+      var p2 = [cx + Math.cos(kink) * (R - 24), cy + Math.sin(kink) * (R - 24)];
+      var p3 = [x - Math.cos(a) * 21, y - Math.sin(a) * 21];
+      var pts = [p0, p1, p2, p3], lengths = [0];
+      for (var k = 1; k < pts.length; k++) lengths.push(lengths[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
+      return { x: x, y: y, pts: pts, lengths: lengths, total: lengths[lengths.length - 1], born: 280 + i * 190 };
+    });
+  }
+
+  function along(n, dist) {
+    for (var k = 1; k < n.pts.length; k++) {
+      if (dist <= n.lengths[k]) {
+        var t = (dist - n.lengths[k - 1]) / (n.lengths[k] - n.lengths[k - 1] || 1);
+        return [n.pts[k - 1][0] + (n.pts[k][0] - n.pts[k - 1][0]) * t, n.pts[k - 1][1] + (n.pts[k][1] - n.pts[k - 1][1]) * t];
+      }
+    }
+    return n.pts[n.pts.length - 1];
+  }
+
+  function trace(n, amount) {
+    var dist = n.total * amount;
+    ctx.beginPath(); ctx.moveTo(n.pts[0][0], n.pts[0][1]);
+    for (var k = 1; k < n.pts.length; k++) {
+      if (dist >= n.lengths[k]) { ctx.lineTo(n.pts[k][0], n.pts[k][1]); continue; }
+      var p = along(n, dist); ctx.lineTo(p[0], p[1]); break;
+    }
+    ctx.stroke();
+  }
+
+  function grid(t) {
+    var step = 28, off = reduce ? 0 : (t * 0.006) % step;
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(18,169,209,0.055)';
+    ctx.beginPath();
+    for (var x = -step + off; x < W + step; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+    for (var y = -step + off; y < H + step; y += step) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+    ctx.stroke();
+    var glow = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(W, H) * 0.7);
+    glow.addColorStop(0, 'rgba(18,169,209,0.16)'); glow.addColorStop(0.35, 'rgba(6,42,54,0.35)'); glow.addColorStop(1, 'rgba(2,24,32,0.95)');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  }
+
+  function node(n, i, t) {
+    var age = reduce ? 1 : Math.min(1, Math.max(0, (t - n.born - 420) / 380));
+    if (age <= 0) return;
+    var on = i === active, s = 0.6 + 0.4 * easeOut(age) + (on && !reduce ? 0.06 * Math.sin(t / 160) : 0);
+    ctx.save(); ctx.translate(n.x, n.y); ctx.scale(s, s);
+    ctx.globalAlpha = age;
+    ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2);
+    ctx.fillStyle = on ? 'rgba(18,169,209,0.28)' : 'rgba(11,47,59,0.9)'; ctx.fill();
+    ctx.lineWidth = on ? 1.6 : 1; ctx.strokeStyle = on ? 'rgba(111,220,245,0.95)' : 'rgba(18,169,209,0.45)'; ctx.stroke();
+    if (on) { ctx.shadowColor = 'rgba(18,169,209,0.9)'; ctx.shadowBlur = 16; }
+    ctx.translate(-10.5, -10.5); ctx.scale(0.875, 0.875);
+    ctx.lineWidth = 1.7; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = on ? '#e9fbff' : '#8fd6ea'; ctx.stroke(icons[i]);
+    ctx.restore();
+  }
+
+  var easeOut = function (x) { return 1 - Math.pow(1 - x, 3); };
+
+  function frame(now) {
+    var t = now - start;
+    ctx.clearRect(0, 0, W, H);
+    grid(t);
+    nodes.forEach(function (n, i) {
+      var grow = reduce ? 1 : Math.min(1, Math.max(0, (t - n.born) / 520));
+      if (grow <= 0) return;
+      ctx.lineWidth = i === active ? 1.8 : 1.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = i === active ? 'rgba(111,220,245,0.85)' : 'rgba(18,169,209,0.32)';
+      trace(n, easeOut(grow));
+      var endPoint = n.pts[n.pts.length - 1];
+      if (grow >= 1) { ctx.fillStyle = 'rgba(18,169,209,0.6)'; ctx.fillRect(n.pts[1][0] - 1.5, n.pts[1][1] - 1.5, 3, 3); ctx.fillRect(n.pts[2][0] - 1.5, n.pts[2][1] - 1.5, 3, 3); }
+      if (!reduce && grow >= 1 && Math.random() < (i === active ? 0.05 : 0.012)) pulses.push({ n: n, d: 0, v: 1.6 + Math.random() * 1.4 });
+      void endPoint;
+    });
+    pulses = pulses.filter(function (p) {
+      p.d += p.v * 1.6;
+      if (p.d >= p.n.total) return false;
+      var q = along(p.n, p.d);
+      var g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], 7);
+      g.addColorStop(0, 'rgba(233,251,255,0.95)'); g.addColorStop(1, 'rgba(18,169,209,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], 7, 0, Math.PI * 2); ctx.fill();
+      return true;
+    });
+    // Halo do simbolo, respirando.
+    var breath = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(t / 620);
+    ctx.beginPath(); ctx.arc(cx, cy, 44 + breath * 6, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(18,169,209,' + (0.22 + breath * 0.2) + ')'; ctx.lineWidth = 1.4; ctx.stroke();
+    if (!reduce) {
+      ctx.beginPath(); ctx.arc(cx, cy, 58, t / 900, t / 900 + Math.PI * 0.5);
+      ctx.strokeStyle = 'rgba(111,220,245,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    logo.style.setProperty('--s', reduce ? 1 : (1 + breath * 0.035).toFixed(3));
+    nodes.forEach(function (n, i) { node(n, i, t); });
+    if (!finished) requestAnimationFrame(frame);
+  }
+
+  function highlight(i) {
+    active = i;
+    disc.classList.add('out');
+    setTimeout(function () { disc.textContent = DISCIPLINAS[i][0]; disc.classList.remove('out'); }, reduce ? 0 : 200);
+  }
+
+  window.setProgress = function (value) {
+    progress = Math.max(progress, Math.min(100, Number(value) || 0));
+    fill.style.width = Math.max(4, progress) + '%';
+    bar.setAttribute('aria-valuenow', String(Math.round(progress)));
+  };
+  window.finish = function () {
+    window.setProgress(100);
+    setTimeout(function () { document.body.classList.add('done'); }, 160);
+    setTimeout(function () { finished = true; }, 600);
+  };
+
+  layout();
+  window.addEventListener('resize', layout);
+  setTimeout(function () { logo.classList.add('on'); }, 60);
+  var turn = 0;
+  highlight(0);
+  setInterval(function () { turn = (turn + 1) % DISCIPLINAS.length; highlight(turn); }, reduce ? 1800 : 1150);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

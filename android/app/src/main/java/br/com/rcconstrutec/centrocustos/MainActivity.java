@@ -243,7 +243,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true); settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(false); settings.setAllowContentAccess(true); settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setMediaPlaybackRequiresUserGesture(true); settings.setBuiltInZoomControls(false); settings.setDisplayZoomControls(false);
-        AppWebView.attach(this, webView, frame, url, new AppWebView.Host() {
+        AppWebView.attach(this, webView, frame, url, SuiteViews.ORCAMENTOS.equals(app) ? "Orçamentos" : "Centro de Custos", new AppWebView.Host() {
             @Override public boolean openFileChooser(ValueCallback<Uri[]> callback, WebChromeClient.FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
                 fileCallback = callback;
