@@ -10,15 +10,25 @@
     ['menu', 'Menu', 'list', ['menu']],
   ];
   let current = 'home', currentParams = {};
+  let lensTimer;
   CC.nav = 0;
 
   function paintTabs() {
     const nav = document.getElementById('tabs');
-    nav.innerHTML = TABS.map(([key, label, ic, owns]) => {
+    const activeIndex = TABS.findIndex(([, , , owns]) => owns.includes(current));
+    if (nav.dataset.activeIndex !== undefined && Number(nav.dataset.activeIndex) !== activeIndex) {
+      nav.classList.add('is-moving');
+      clearTimeout(lensTimer);
+      lensTimer = setTimeout(() => nav.classList.remove('is-moving'), 340);
+    }
+    nav.dataset.activeIndex = String(activeIndex);
+    nav.style.setProperty('--active-x', `${Math.max(0, activeIndex) * 100}%`);
+    nav.innerHTML = '<span class="tabs-refraction" aria-hidden="true"></span>' + TABS.map(([key, label, ic, owns]) => {
       const on = owns.includes(current);
       return `<button class="tab" type="button" data-go="${key}"${on ? ' aria-current="page"' : ''}>${icon(on ? `${ic}-fill` : ic, 22)}<span>${label}</span></button>`;
     }).join('');
     CC.$$('[data-go]', nav).forEach((b) => b.addEventListener('click', () => CC.go(b.dataset.go, b.dataset.go === 'lancar' ? { novo: true, from: [current] } : undefined)));
+    if (!nav.classList.contains('is-ready')) requestAnimationFrame(() => nav.classList.add('is-ready'));
   }
 
   CC.go = function (name, params) {
