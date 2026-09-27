@@ -61,11 +61,12 @@
 
   function signedOut(message) {
     document.body.classList.add('no-tabs');
-    const inApp = /SuiteConstrutec/.test(navigator.userAgent);
+    // No iPhone e no navegador o login e aqui mesmo; no app Android volta para a tela do app.
+    if (!/SuiteConstrutec/.test(navigator.userAgent)) return CC.loginScreen(message, () => start());
     CC.render(`${CC.header('')}<div class="empty" style="padding-top:60px">${icon('shield-check', 32)}
       <b style="color:var(--text);font-size:17px">${esc(message || 'Entre para usar o Centro de Custos')}</b>
-      <span>${inApp ? 'Entre de novo no aplicativo.' : 'Entre pela versão completa e volte para esta página.'}</span>
-      <a class="btn" href="${inApp ? 'suite://entrar' : '/'}" style="padding:0 22px;text-decoration:none">Entrar</a></div>`);
+      <span>Entre de novo no aplicativo.</span>
+      <a class="btn" href="suite://entrar" style="padding:0 22px;text-decoration:none">Entrar</a></div>`);
   }
   CC.onUnauthorized = () => { if (CC.ia && CC.ia.reset) CC.ia.reset(); signedOut('Sua sessão terminou'); };
   CC.onQueueSent = () => { if (['home', 'lancamentos', 'obra'].includes(current)) CC.go(current, currentParams); };
@@ -87,8 +88,16 @@
     if (code) {
       try { await consumeHandoff(code); } catch (error) { if (!CC.session.token()) return signedOut(error.message); }
     }
-    if (!CC.session.token()) return signedOut();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => { /* segue sem modo offline */ });
+    if (!CC.session.token()) return signedOut();
+    return start(obra, pedidos);
+  }
+
+  let started = false;
+  // Depois de entrar pela tela do /m/, sem recarregar: so abre o Inicio se ja tinha aberto antes.
+  async function start(obra, pedidos) {
+    if (started) return CC.go('home');
+    started = true;
     await CC.queue.refresh();
     CC.queue.paint();
     CC.queue.run();
@@ -106,8 +115,8 @@
     });
     if (obra > 0) return CC.go('obra', { id: obra });
     if (pedidos) return CC.go('pedidos');
-    const start = location.hash.slice(1);
-    CC.go(CC.screens[start] && !['ok', 'obra'].includes(start) ? start : 'home');
+    const first = location.hash.slice(1);
+    CC.go(CC.screens[first] && !['ok', 'obra', 'login'].includes(first) ? first : 'home');
   }
 
   document.addEventListener('DOMContentLoaded', boot);

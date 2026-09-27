@@ -100,7 +100,7 @@
       if (CC.ia) CC.ia.reset();
       CC.session.clear(); // a fila do celular continua guardada para quando esta conta voltar
       if (inApp) { location.href = 'suite://sair'; return; }
-      location.href = '/';
+      location.replace('/m/'); // volta para a tela de entrar do celular
     });
   };
 })(window.CC = window.CC || {});
