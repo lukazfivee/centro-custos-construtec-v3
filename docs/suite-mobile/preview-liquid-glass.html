@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="claro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Prévia da navegação · Centro de Custos</title>
+  <link rel="stylesheet" href="../../public/m/m.css">
+  <style>
+    .preview-note { margin: 0; color: var(--n300); font-size: 12px; }
+    .preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .preview-head .brand img { width: 17px; height: 17px; object-fit: contain; }
+    .theme-switch { min-height: 44px; padding: 0 12px; border: 1px solid var(--divider); border-radius: 10px; background: var(--surface); font-size: 12px; font-weight: 600; }
+    .preview-card { min-height: 110px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+    .preview-card strong { font-size: 15px; }
+    .preview-card p { margin: 0; font-size: 13px; color: var(--n300); }
+    .preview-panel { min-height: 430px; padding: 18px; border-radius: 18px; background: linear-gradient(150deg, var(--accent-900) 5%, #b9d4dd 42%, #12a9d1 70%, #031f29 100%); border: 1px solid var(--divider); }
+    .preview-panel p { max-width: 260px; color: var(--n300); }
+  </style>
+</head>
+<body>
+  <main class="screen">
+    <div class="preview-head">
+      <div class="top"><span class="brand"><img src="../../public/m/simbolo.png" alt="">Construtec</span></div>
+      <button class="theme-switch" type="button" id="theme-switch">Tema escuro</button>
+    </div>
+    <p class="preview-note">Prévia visual · dados ilustrativos</p>
+    <h1 class="title" id="preview-title">Início</h1>
+    <p class="hello" id="preview-description">Toque nas abas para ver a lente deslizar.</p>
+    <div class="card preview-card"><strong>Atividades do dia</strong><p>Uma área de conteúdo atrás da barra mostra o desfoque do vidro.</p></div>
+    <div class="card preview-card"><strong>Suas obras</strong><p>Os ícones e os rótulos são os mesmos do site mobile.</p></div>
+    <div class="preview-panel"><strong>Teste de refração</strong><p>As cores sob a barra deixam o deslocamento do vidro visível.</p></div>
+    <div class="card preview-card"><strong>Lançamentos</strong><p>A prévia não acessa dados financeiros nem faz chamadas à API.</p></div>
+  </main>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute">
+    <filter id="cc-glass-distortion" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves="2" seed="92" result="noise" />
+      <feGaussianBlur in="noise" stdDeviation="2" result="soft-noise" />
+      <feDisplacementMap in="SourceGraphic" in2="soft-noise" scale="48" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </svg>
+  <nav id="tabs" class="tabs" aria-label="Navegação principal"></nav>
+  <script src="../../public/m/icons.js"></script>
+  <script>
+    const tabs = [
+      ['Início', 'squares-four'], ['Obras', 'buildings'], ['Lançar', 'plus-circle'],
+      ['Lançamentos', 'list-bullets'], ['Menu', 'list']
+    ];
+    const nav = document.getElementById('tabs');
+    let active = 0;
+    let lensTimer;
+    function select(index) {
+      if (nav.dataset.activeIndex !== undefined && active !== index) {
+        nav.classList.add('is-moving');
+        clearTimeout(lensTimer);
+        lensTimer = setTimeout(() => nav.classList.remove('is-moving'), 340);
+      }
+      active = index;
+      nav.dataset.activeIndex = String(index);
+      nav.style.setProperty('--active-x', `${index * 100}%`);
+      nav.innerHTML = '<span class="tabs-refraction" aria-hidden="true"></span>' + tabs.map(([label, icon], i) =>
+        `<button class="tab" type="button" data-index="${i}"${i === index ? ' aria-current="page"' : ''}>${CC.icon(i === index ? `${icon}-fill` : icon, 22)}<span>${label}</span></button>`
+      ).join('');
+      nav.querySelectorAll('.tab').forEach((button) => button.addEventListener('click', () => select(Number(button.dataset.index))));
+      document.getElementById('preview-title').textContent = tabs[index][0];
+      if (!nav.classList.contains('is-ready')) requestAnimationFrame(() => nav.classList.add('is-ready'));
+    }
+    document.getElementById('theme-switch').addEventListener('click', (event) => {
+      const dark = document.documentElement.dataset.theme !== 'escuro';
+      document.documentElement.dataset.theme = dark ? 'escuro' : 'claro';
+      event.currentTarget.textContent = dark ? 'Tema claro' : 'Tema escuro';
+    });
+    select(0);
+  </script>
+</body>
+</html>

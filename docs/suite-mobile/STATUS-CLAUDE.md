@@ -163,6 +163,15 @@ Decisões do Lucas:
   - Verificado: `POST /v1/auth/logout` sem token devolve 200 `{ ok: true, revoked: 0 }`; as demais rotas não mudaram.
   - A CI do `main` agora tem os jobs `test` (Node 20) e `test-node24`.
 
+- **Barra Liquid Glass no WebView (27/09, branch `codex/mobile-liquid-glass-nav`):**
+  - Emulador Pixel 7, Android 15, WebView 124, GPU do PC (`-gpu host`), dentro do próprio app em modo "Servidor local".
+  - Página de teste com 120 cartões, rolagem automática de 6 s. Comparadas: barra atual, barra sem a distorção SVG e distorção desligada só durante a rolagem.
+  - Com o emulador aquecido, as três ficam entre 57 e 59 fps, com diferença dentro do ruído. Desligar a distorção durante a rolagem não ajudou, então não entrou no código.
+  - Visual conferido nos dois temas: o vidro, a lente e a refração aparecem certos.
+  - Fallback sem `backdrop-filter` trocado de cor sólida para `rgba(…, .86)`.
+  - Falta medir no Galaxy A17, porque a GPU do emulador não representa um celular intermediário.
+- **Melhorar a tela de carregamento (pedido do Lucas, 27/09):** hoje, enquanto a página do site carrega, o app mostra só um `ProgressBar` nativo girando sobre fundo branco (`AppWebView.java`, linha 33), entre a barra de status navy e a barra de navegação. Destoa das telas de entrada de vidro. Ainda sem proposta de desenho.
+
 - **Celular da Fase 1 (resolvido em 26/09):** APK final instalado no perfil principal, com cofre, PIN e digital intactos. A cópia do Dual App foi removida (`pm uninstall --user 95`) e ficou `installed=false`.
 
 ## Pedidos ao Codex
