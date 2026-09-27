@@ -190,11 +190,11 @@ final class AuthController {
         } catch (IOException offline) { return fail("OFFLINE"); }
     }
 
-    /** Pede o codigo de uso unico para o Centro de Custos web. Nulo se o servidor ainda nao tiver a rota. */
-    String handoffCode() throws IOException, SessionRejected {
+    /** Pede o codigo de uso unico para o app web de destino (centro-custos ou orcamentos). Nulo se o servidor ainda nao tiver a rota. */
+    String handoffCode(String target) throws IOException, SessionRejected {
         String token = activeToken();
         if (token == null) return null;
-        CentralApi.Response r = api.handoff(token);
+        CentralApi.Response r = api.handoff(token, target);
         if (r.status == 401) throw new SessionRejected();
         return r.ok() ? r.body.optString("code", null) : null;
     }

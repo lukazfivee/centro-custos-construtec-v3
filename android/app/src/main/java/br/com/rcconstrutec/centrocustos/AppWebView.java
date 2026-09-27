@@ -22,7 +22,7 @@ final class AppWebView {
         boolean openFileChooser(ValueCallback<Uri[]> callback, WebChromeClient.FileChooserParams params);
         void loadFailed(String message);
         void message(String message);
-        /** Links suite://seguranca, suite://sair e suite://entrar vindos do site do celular. */
+        /** Links suite://seguranca, suite://sair, suite://entrar e suite://app/<id> vindos dos sites; action e "host" ou "host/caminho". */
         void suiteLink(String action);
     }
 
@@ -42,7 +42,7 @@ final class AppWebView {
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri target = request.getUrl();
-                if ("suite".equals(target.getScheme())) { host.suiteLink(String.valueOf(target.getHost())); return true; }
+                if ("suite".equals(target.getScheme())) { String path = target.getPath() == null ? "" : target.getPath(); host.suiteLink(target.getHost() + path); return true; }
                 if (allowed.getHost().equalsIgnoreCase(target.getHost()) && allowed.getScheme().equalsIgnoreCase(target.getScheme())) return false;
                 try { activity.startActivity(new Intent(Intent.ACTION_VIEW, target)); } catch (ActivityNotFoundException ignored) { /* sem app para abrir */ }
                 return true;

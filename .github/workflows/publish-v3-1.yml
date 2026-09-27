@@ -27,7 +27,7 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
       - name: Definir versao do pre-lancamento
-        run: npm version 3.1.0-rc.15 --no-git-tag-version
+        run: npm version 3.1.0-rc.16 --no-git-tag-version
       - name: Validar aplicacao
         run: npm run verify
       - name: Gerar instalador Windows
@@ -44,23 +44,23 @@ jobs:
       - name: Gerar APK Android
         run: |
           gradle -p android assembleDebug --no-daemon
-          Copy-Item android/app/build/outputs/apk/debug/app-debug.apk dist/Centro-de-Custos-Construtec-Android-3.1.0-rc.15.apk
+          Copy-Item android/app/build/outputs/apk/debug/app-debug.apk dist/Centro-de-Custos-Construtec-Android-3.1.0-rc.16.apk
       - name: Publicar pre-lancamento no GitHub
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.0-rc.15
-          name: Centro de Custos Construtec V3.1.0 RC15
+          tag_name: v3.1.0-rc.16
+          name: Centro de Custos Construtec V3.1.0 RC16
           target_commitish: ${{ github.sha }}
           prerelease: true
           make_latest: false
           body: |
-            Pre-lancamento RC15 da V3.1 para validacao interna.
+            Pre-lancamento RC16 da V3.1 para validacao interna.
 
             Melhorias desta versao:
-            - corrige o QR Code do aplicativo Windows para abrir diretamente a versao mobile publica em HTTPS;
-            - separa claramente o acesso mobile pela internet do endereco local usado pelo APK Android;
-            - permite configurar o destino do QR Code pela variavel MOBILE_APP_URL;
-            - inclui teste automatizado que rejeita destinos HTTP no QR Code mobile.
+            - Suite Construtec no Android: login central com PIN e digital, e o Centro de Custos no celular (site /m/);
+            - Orcamentos dentro do app, ja logado pela mesma conta (Menu > Orcamentos), sem perder a tela aberta ao trocar de app;
+            - barra inferior de vidro no site do celular;
+            - o APK desta versao e assinado pela CI: quem instalou um APK gerado em outro computador precisa desinstalar antes.
           files: |
             dist/*.exe
             dist/*.apk

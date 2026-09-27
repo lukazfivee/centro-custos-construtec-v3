@@ -39,7 +39,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private FrameLayout root;
     private FrameLayout appLayer;
-    private WebView webView;
+    private SuiteViews views;
     private AuthWebView authView;
     private AuthBridge bridge;
     private AuthController auth;
@@ -59,6 +59,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         root.setBackgroundColor(Color.rgb(2, 24, 32));
         appLayer = new FrameLayout(this);
         appLayer.setBackgroundColor(navy);
+        views = new SuiteViews(this, appLayer);
         root.addView(appLayer, match());
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             SystemBars.Insets bars = SystemBars.read(insets);
@@ -77,7 +78,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         centralMode = !"local".equals(preferences.getString(MODE, saved.isEmpty() ? "central" : "local"));
         boolean resetLink = handleLink(getIntent());
         if (!centralMode && !resetLink) {
-            if (saved.isEmpty()) showSetup(null); else showWebApp(saved, false);
+            if (saved.isEmpty()) showSetup(null); else showWebApp(SuiteViews.CENTRO_CUSTOS, saved, false);
         } else {
             centralMode = true;
             showAuth(resetLink ? "reset" : "start", null);
@@ -124,24 +125,25 @@ public final class MainActivity extends Activity implements AuthController.Shell
         authView.evaluate("window.__setInsets&&window.__setInsets(" + Math.round(bars.top / density) + "," + Math.round(bottom / density) + ")");
     }
 
-    @Override public void enterApp(String notice) {
-        if (webView != null) { hideAuth(); toast(notice); return; }
-        String base = BuildConfig.CENTRAL_WEB_BASE.replaceAll("/+$", "");
+    @Override public void enterApp(String notice) { openApp(views.activeApp() == null ? SuiteViews.CENTRO_CUSTOS : views.activeApp(), notice); }
+
+    /** Abre (ou so mostra, sem recarregar) o app da Suite; a primeira abertura entra pelo handoff do destino certo. */
+    private void openApp(String app, String notice) {
+        if (views.has(app)) { views.show(app); hideAuth(); toast(notice); return; }
+        String start = SuiteViews.ORCAMENTOS.equals(app) ? BuildConfig.ORC_WEB_BASE.replaceAll("/+$", "") + "/" : BuildConfig.CENTRAL_WEB_BASE.replaceAll("/+$", "") + "/m/";
         io.execute(() -> {
-            String url = base + "/m/";
+            String url = start;
             boolean offline = false;
             try {
-                String code = auth.handoffCode();
-                if (code != null) url = base + "/m/#handoff=" + Uri.encode(code);
+                String code = auth.handoffCode(app);
+                if (code != null) url = start + "#handoff=" + Uri.encode(code);
             } catch (AuthController.SessionRejected rejected) {
                 runOnUiThread(this::sessionRejected);
                 return;
-            } catch (IOException noNetwork) {
-                offline = true;
-            }
+            } catch (IOException noNetwork) { offline = true; }
             auth.markEnteredOffline(offline);
             String target = url;
-            runOnUiThread(() -> { showWebApp(target, true); hideAuth(); toast(notice); });
+            runOnUiThread(() -> { showWebApp(app, target, true); hideAuth(); toast(notice); });
         });
     }
 
@@ -154,7 +156,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
     }
 
     @Override public void closeOverlay() {
-        if (webView != null) hideAuth();
+        if (!views.isEmpty()) hideAuth();
         else if (auth.unlocked()) enterApp(null);
     }
 
@@ -176,7 +178,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
     @Override public void moveToBack() { moveTaskToBack(true); }
 
     @Override public void dropApp() {
-        destroyWebView();
+        views.destroyAll();
         appLayer.removeAllViews(); // o armazenamento do site (fila offline) so e apagado ao esquecer o aparelho
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
@@ -206,14 +208,14 @@ public final class MainActivity extends Activity implements AuthController.Shell
     }
 
     private void showSetup(String error) {
-        destroyWebView();
+        views.destroyAll();
         appLayer.removeAllViews();
         appLayer.addView(LocalSetup.build(this, preferences.getString(SERVER_URL, ""), error, new LocalSetup.Listener() {
             @Override public String connect(String rawUrl) {
                 String normalized = normalizeUrl(rawUrl);
                 if (normalized == null) return "Use HTTPS ou um endereço privado da rede Wi-Fi.";
                 preferences.edit().putString(SERVER_URL, normalized).putString(MODE, "local").apply();
-                showWebApp(normalized, false);
+                showWebApp(SuiteViews.CENTRO_CUSTOS, normalized, false);
                 return null;
             }
             @Override public void useCentral() {
@@ -248,16 +250,15 @@ public final class MainActivity extends Activity implements AuthController.Shell
     }
 
     // ---- App web (remoto): nunca recebe a ponte AndroidAuth ----
-    private void showWebApp(String url, boolean central) {
-        destroyWebView();
-        appLayer.removeAllViews();
-        webView = new WebView(this);
-        appLayer.addView(webView, match());
+    private void showWebApp(String app, String url, boolean central) {
+        if (!central) { views.destroyAll(); appLayer.removeAllViews(); }
+        WebView webView = new WebView(this);
+        FrameLayout frame = views.create(app, webView);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true); settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(false); settings.setAllowContentAccess(true); settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setMediaPlaybackRequiresUserGesture(true); settings.setBuiltInZoomControls(false); settings.setDisplayZoomControls(false);
-        AppWebView.attach(this, webView, appLayer, url, new AppWebView.Host() {
+        AppWebView.attach(this, webView, frame, url, new AppWebView.Host() {
             @Override public boolean openFileChooser(ValueCallback<Uri[]> callback, WebChromeClient.FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
                 fileCallback = callback;
@@ -267,11 +268,15 @@ public final class MainActivity extends Activity implements AuthController.Shell
                 return true;
             }
             @Override public void loadFailed(String message) {
-                if (central) toast(message != null ? message : "Sem conexão com o Centro de Custos. Tente de novo quando conectar.");
+                if (central) toast(message != null ? message : "Sem conexão com " + (SuiteViews.ORCAMENTOS.equals(app) ? "o Orçamentos" : "o Centro de Custos") + ". Tente de novo quando conectar.");
                 else showSetup(message != null ? message : "Não foi possível acessar esta instalação. Confirme o endereço e a rede Wi-Fi.");
             }
             @Override public void message(String message) { toast(message); }
-            @Override public void suiteLink(String action) { if (central && bridge != null) bridge.webAction(action); }
+            @Override public void suiteLink(String action) {
+                String other = action.startsWith("app/") ? action.substring(4) : null; // suite://app/<id>: troca de app
+                if (central && other != null && SuiteViews.known(other) && auth.unlocked()) openApp(other, null);
+                else if (central && other == null && bridge != null) bridge.webAction(action);
+            }
         });
         if (central) settings.setUserAgentString(settings.getUserAgentString() + " SuiteConstrutec/" + BuildConfig.VERSION_NAME);
         webView.loadUrl(url);
@@ -296,7 +301,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         long away = SystemClock.elapsedRealtime() - backgroundAt;
         backgroundAt = 0;
         if (suppressLock) { suppressLock = false; return; }
-        boolean canLock = centralMode && webView != null && auth.unlocked() && auth.vault.hasPin();
+        boolean canLock = centralMode && !views.isEmpty() && auth.unlocked() && auth.vault.hasPin();
         if (canLock && away >= auth.vault.autoLockSeconds() * 1000L) {
             auth.lock();
             showAuth("lock", null);
@@ -307,13 +312,13 @@ public final class MainActivity extends Activity implements AuthController.Shell
         if (authVisible()) {
             authView.back(handled -> {
                 if ("true".equals(handled)) return;
-                if (auth.unlocked() && webView != null) hideAuth(); else moveTaskToBack(true);
+                if (auth.unlocked() && !views.isEmpty()) hideAuth(); else moveTaskToBack(true);
             });
-        } else if (webView != null && webView.canGoBack()) {
-            webView.goBack();
+        } else if (views.active() != null && views.active().canGoBack()) {
+            views.active().goBack();
         } else if (centralMode) {
             moveTaskToBack(true);
-        } else if (webView != null) {
+        } else if (!views.isEmpty()) {
             showSetup(null);
         } else {
             super.onBackPressed();
@@ -332,15 +337,10 @@ public final class MainActivity extends Activity implements AuthController.Shell
         });
     }
 
-    private void destroyWebView() {
-        if (webView == null) return;
-        webView.stopLoading(); webView.loadUrl("about:blank"); webView.destroy(); webView = null;
-    }
-
     @Override protected void onDestroy() {
         ConnectivityManager manager = getSystemService(ConnectivityManager.class);
         if (manager != null && networkCallback != null) manager.unregisterNetworkCallback(networkCallback);
-        destroyWebView();
+        views.destroyAll();
         if (authView != null) authView.destroy();
         if (bridge != null) bridge.shutdown();
         io.shutdownNow();

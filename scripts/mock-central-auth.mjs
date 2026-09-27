@@ -135,7 +135,7 @@ export function createMockCentral(options = {}) {
     'POST /v1/auth/handoff': (req, body) => {
       const auth = bearer(req);
       if (auth.error) return auth.error;
-      if (body.target !== 'centro-custos') return [400, { ok: false, error: 'Destino inválido.', code: 'HANDOFF_INVALID' }];
+      if (!['centro-custos', 'orcamentos'].includes(body.target)) return [400, { ok: false, error: 'Destino inválido.', code: 'HANDOFF_INVALID' }];
       const code = randomToken();
       const expiresAt = Math.floor((now() + MIN) / 1000);
       handoffs.set(sha(code), { userId: auth.user.id, expiresAt, instanceName: auth.session.instanceName });
