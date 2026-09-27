@@ -3,8 +3,6 @@ package br.com.rcconstrutec.centrocustos;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.view.Gravity;
 import android.view.View;
@@ -16,7 +14,6 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.ProgressBar;
 
 /** Clientes da WebView remota (Centro de Custos web) e o botao de menu do shell. Sem ponte JavaScript. */
@@ -25,6 +22,8 @@ final class AppWebView {
         boolean openFileChooser(ValueCallback<Uri[]> callback, WebChromeClient.FileChooserParams params);
         void loadFailed(String message);
         void message(String message);
+        /** Links suite://seguranca, suite://sair e suite://entrar vindos do site do celular. */
+        void suiteLink(String action);
     }
 
     private AppWebView() {}
@@ -43,6 +42,7 @@ final class AppWebView {
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri target = request.getUrl();
+                if ("suite".equals(target.getScheme())) { host.suiteLink(String.valueOf(target.getHost())); return true; }
                 if (allowed.getHost().equalsIgnoreCase(target.getHost()) && allowed.getScheme().equalsIgnoreCase(target.getScheme())) return false;
                 try { activity.startActivity(new Intent(Intent.ACTION_VIEW, target)); } catch (ActivityNotFoundException ignored) { /* sem app para abrir */ }
                 return true;
@@ -62,23 +62,5 @@ final class AppWebView {
                 host.message("Use a versão Windows para baixar este arquivo.");
             }
         });
-    }
-
-    static void addMenuButton(Activity activity, FrameLayout layer, View.OnClickListener onClick) {
-        float density = activity.getResources().getDisplayMetrics().density;
-        ImageButton menu = new ImageButton(activity);
-        menu.setImageResource(R.drawable.ic_menu);
-        menu.setContentDescription("Menu da Suíte");
-        GradientDrawable bg = new GradientDrawable();
-        bg.setShape(GradientDrawable.OVAL);
-        bg.setColor(Color.argb(170, 2, 24, 32));
-        bg.setStroke(Math.max(1, Math.round(density)), Color.argb(60, 255, 255, 255));
-        menu.setBackground(bg);
-        int size = Math.round(44 * density);
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(size, size, Gravity.TOP | Gravity.END);
-        lp.topMargin = Math.round(8 * density);
-        lp.rightMargin = Math.round(8 * density);
-        menu.setOnClickListener(onClick);
-        layer.addView(menu, lp);
     }
 }

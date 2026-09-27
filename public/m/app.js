@@ -1,0 +1,78 @@
+// Navegacao, barra de abas, entrada pelo app (handoff) e modo offline do site do celular.
+(function (CC) {
+  const { esc, icon } = CC;
+  CC.screens = CC.screens || {};
+  const TABS = [
+    ['home', 'Início', 'squares-four', ['home']],
+    ['obras', 'Obras', 'buildings', ['obras', 'obra']],
+    ['lancar', 'Lançar', 'plus-circle', ['lancar', 'ok']],
+    ['lancamentos', 'Lançamentos', 'list-bullets', ['lancamentos']],
+    ['menu', 'Menu', 'list', ['menu']],
+  ];
+  let current = 'home';
+
+  function paintTabs() {
+    const nav = document.getElementById('tabs');
+    nav.innerHTML = TABS.map(([key, label, ic, owns]) => {
+      const on = owns.includes(current);
+      return `<button class="tab" type="button" data-go="${key}"${on ? ' aria-current="page"' : ''}>${icon(on ? `${ic}-fill` : ic, 22)}<span>${label}</span></button>`;
+    }).join('');
+    CC.$$('[data-go]', nav).forEach((b) => b.addEventListener('click', () => CC.go(b.dataset.go, b.dataset.go === 'lancar' ? { novo: true, from: [current] } : undefined)));
+  }
+
+  CC.go = function (name, params) {
+    const screen = CC.screens[name];
+    if (!screen) return;
+    current = name;
+    document.body.classList.remove('no-tabs');
+    paintTabs();
+    history.replaceState(null, '', `#${name}`);
+    Promise.resolve(screen(params || {})).catch((error) => CC.errorScreen(document.getElementById('view'), error, () => CC.go(name, params)));
+  };
+
+  CC.errorScreen = function (el, error, retry) {
+    const offline = error && error.status === 0;
+    const text = offline ? 'Sem internet e sem dados salvos para esta tela ainda.' : (error && error.message) || 'Não foi possível carregar agora.';
+    const main = el && el.tagName === 'MAIN' ? el : document.getElementById('view');
+    main.innerHTML = `${CC.header('')}<div class="empty">${icon(offline ? 'wifi-slash' : 'warning-circle', 28)}${esc(text)}
+      <button class="btn2" type="button" id="retry" style="padding:0 18px">Tentar de novo</button></div>`;
+    CC.$('#retry', main).addEventListener('click', retry);
+  };
+
+  function signedOut(message) {
+    document.body.classList.add('no-tabs');
+    const inApp = /SuiteConstrutec/.test(navigator.userAgent);
+    CC.render(`${CC.header('')}<div class="empty" style="padding-top:60px">${icon('shield-check', 32)}
+      <b style="color:var(--text);font-size:17px">${esc(message || 'Entre para usar o Centro de Custos')}</b>
+      <span>${inApp ? 'Entre de novo no aplicativo.' : 'Entre pela versão completa e volte para esta página.'}</span>
+      <a class="btn" href="${inApp ? 'suite://entrar' : '/'}" style="padding:0 22px;text-decoration:none">Entrar</a></div>`);
+  }
+  CC.onUnauthorized = () => signedOut('Sua sessão terminou');
+  CC.onQueueSent = () => { if (['home', 'lancamentos', 'obra'].includes(current)) CC.go(current); };
+
+  async function consumeHandoff(code) {
+    history.replaceState(null, '', location.pathname + location.search);
+    const response = await fetch('/v1/auth/handoff/consume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.token || !data.usuario || !data.instancia) throw new Error('Não foi possível entrar pelo aplicativo.');
+    CC.session.save(data);
+  }
+
+  async function boot() {
+    CC.theme.apply(CC.theme.get());
+    const hash = new URLSearchParams(location.hash.slice(1));
+    const code = hash.get('handoff');
+    if (code) {
+      try { await consumeHandoff(code); } catch (error) { if (!CC.session.token()) return signedOut(error.message); }
+    }
+    if (!CC.session.token()) return signedOut();
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => { /* segue sem modo offline */ });
+    await CC.queue.refresh();
+    CC.queue.paint();
+    CC.queue.run();
+    const start = location.hash.slice(1);
+    CC.go(CC.screens[start] && !['ok', 'obra'].includes(start) ? start : 'home');
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
+})(window.CC = window.CC || {});
