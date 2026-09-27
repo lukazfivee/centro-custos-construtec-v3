@@ -16,7 +16,7 @@ function loadTools(apiImpl) {
   return { CC, location };
 }
 
-test('assistente: SDK do Firebase só ao abrir, sem chave de API do Gemini no código', () => {
+test('assistente: SDK do Firebase em segundo plano, com App Check, sem chave de API do Gemini no código', () => {
   const chat = read('ia-chat.js');
   const config = read('ia-config.js');
   assert.match(chat, /import\(`\$\{base\}firebase-ai\.js`\)/);
@@ -24,7 +24,11 @@ test('assistente: SDK do Firebase só ao abrir, sem chave de API do Gemini no c�
   assert.match(config, /https:\/\/www\.gstatic\.com\/firebasejs\/\d+\.\d+\.\d+\//);
   assert.doesNotMatch(chat + config + read('ia-tools.js'), /generativelanguage\.googleapis|x-goog-api-key|localStorage|indexedDB/);
   // App Check (reCAPTCHA v3) antes de usar o Gemini, só quando a chave do site existe.
-  assert.match(chat, /if \(CC\.iaConfig\.recaptcha\) \{[\s\S]*new check\.ReCaptchaV3Provider\(CC\.iaConfig\.recaptcha\)[\s\S]*\}\s*state\.sdk = \{ ai, backend: ai\.getAI/);
+  assert.match(chat, /if \(CC\.iaConfig\.recaptcha\) \{[\s\S]*new check\.ReCaptchaV3Provider\(CC\.iaConfig\.recaptcha\)[\s\S]*\}\s*return \{ ai, backend: ai\.getAI/);
+  // Pré-carga só com sessão; resposta em streaming, sem repetir depois de texto parcial.
+  assert.match(chat, /if \(CC\.session\.token\(\)\) IA\.warm\(\)/);
+  assert.match(chat, /sendMessageStream\(content\)/);
+  assert.match(chat, /if \(state\.live \|\| \(!quota\(error\) && !busy\(error\)\)\) throw error;/);
   // Sem configuração web do Firebase, o botão não aparece.
   assert.match(chat, /IA\.ready = \(\) => Boolean\(CC\.iaConfig && CC\.iaConfig\.firebase\)/);
   assert.match(read('screen-home.js'), /CC\.iaBtn \? CC\.iaBtn\(\) : ''/);

@@ -12,7 +12,8 @@
       messagingSenderId: '56081262604',
       appId: '1:56081262604:web:ee13ea8d5124ef3c936629',
     },
-    modelos: ['gemini-3.8-flash', 'gemini-3.5-flash-lite'], // o segundo entra quando o limite gratuito do primeiro acaba
+    // O primeiro e o mais rapido; o segundo entra no limite gratuito ou na sobrecarga do primeiro.
+    modelos: [{ nome: 'gemini-3.5-flash-lite', pensar: 'MINIMAL' }, { nome: 'gemini-3.8-flash', pensar: 'LOW' }],
     sdk: 'https://www.gstatic.com/firebasejs/12.19.0/',
     recaptcha: '6LdWgtItAAAAAJ_uz821H2QiZ2PNzalW5lPOSzLt', // chave do site do reCAPTCHA v3 (pública) do App Check
   };
