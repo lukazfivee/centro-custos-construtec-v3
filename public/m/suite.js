@@ -14,7 +14,7 @@
   };
 
   // Contexto da tela aberta: a obra informa a proposta de origem; CC.go limpa.
-  CC.suite = { context: null };
+  CC.suite = { context: null, orcLink };
 
   function onKey(event) { if (event.key === 'Escape') close(); }
   function close() {

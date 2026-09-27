@@ -14,8 +14,35 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import java.net.URI;
+import java.util.Locale;
+
 /** "Configurar servidor local": a antiga tela de conexao com a instalacao Windows, agora opcional. */
 final class LocalSetup {
+    /** Endereco do servidor local: HTTPS, ou HTTP so em rede privada (Wi-Fi da obra/escritorio). */
+    static String normalizeUrl(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (!value.contains("://")) value = "http://" + value;
+        try {
+            URI uri = URI.create(value);
+            String scheme = String.valueOf(uri.getScheme()).toLowerCase(Locale.ROOT);
+            String host = String.valueOf(uri.getHost()).toLowerCase(Locale.ROOT);
+            if (host.isEmpty() || !(scheme.equals("https") || (scheme.equals("http") && isPrivateHost(host)))) return null;
+            return value.replaceAll("/+$", "");
+        } catch (RuntimeException ignored) { return null; }
+    }
+
+    private static boolean isPrivateHost(String host) {
+        if (host.equals("10.0.2.2") || host.equals("127.0.0.1")) return true;
+        String[] parts = host.split("\\.");
+        if (parts.length != 4) return false;
+        try {
+            int first = Integer.parseInt(parts[0]); int second = Integer.parseInt(parts[1]);
+            return first == 10 || (first == 192 && second == 168) || (first == 172 && second >= 16 && second <= 31);
+        } catch (NumberFormatException ignored) { return false; }
+    }
+
+
     interface Listener {
         /** Devolve a mensagem de erro, ou null se o endereco foi aceito. */
         String connect(String rawUrl);
