@@ -1,5 +1,5 @@
 const { assertMutableTransaction, moneyCents } = require('../services/financialPolicy');
-const { validDate } = require('../lib/dates');
+const { validDate, todayIso } = require('../lib/dates');
 const express = require('express');
 const { getDb, getInstanceIdentity } = require('../db');
 const { autenticar, exigirPapel } = require('../middleware/auth');
@@ -55,7 +55,7 @@ router.post('/acoes-em-massa', exigirPapel('admin','gestor'), asyncRoute(async (
         if((await tx.query('SELECT 1 FROM transaction_allocations WHERE transaction_id=$1 LIMIT 1',[id])).rows.length) throw httpError(409,'Edite o rateio para alterar as obras deste lançamento.');
         result=await tx.query(`UPDATE transactions SET cost_center_id=$1,revision=revision+1,updated_by=$2,updated_at=NOW(),last_modified_instance_id=$3,last_modified_instance_name=$4 WHERE id=$5 AND deleted_at IS NULL AND reversal_of IS NULL AND reversed_at IS NULL`,[centerId,req.usuario.id,instance.id,instance.name,id]);
       } else if (action==='liquidar') {
-        const date=String(req.body.data_liquidacao||new Date().toISOString().slice(0,10));
+        const date=String(req.body.data_liquidacao||todayIso());
         if(!validDate(date)) throw httpError(400,'Data de liquidação inválida.');
         if(row.approval_status!=='aprovado') throw httpError(409,'Aprove o lançamento antes de liquidar.');
         result=await tx.query(`UPDATE transactions SET financial_status='liquidado',settlement_date=$1,revision=revision+1,updated_by=$2,updated_at=NOW(),last_modified_instance_id=$3,last_modified_instance_name=$4 WHERE id=$5 AND deleted_at IS NULL AND reversal_of IS NULL AND reversed_at IS NULL`,[date,req.usuario.id,instance.id,instance.name,id]);
