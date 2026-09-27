@@ -18,6 +18,12 @@
     const base = CC.iaConfig.sdk;
     const [app, ai] = await Promise.all([import(`${base}firebase-app.js`), import(`${base}firebase-ai.js`)]);
     const fb = app.getApps()[0] || app.initializeApp(CC.iaConfig.firebase);
+    // App Check (reCAPTCHA v3): so este site consegue usar a cota do Gemini do projeto.
+    if (CC.iaConfig.recaptcha) {
+      const check = await import(`${base}firebase-app-check.js`);
+      if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true; // teste local
+      check.initializeAppCheck(fb, { provider: new check.ReCaptchaV3Provider(CC.iaConfig.recaptcha), isTokenAutoRefreshEnabled: true });
+    }
     state.sdk = { ai, backend: ai.getAI(fb, { backend: new ai.GoogleAIBackend() }) };
     return state.sdk;
   }
@@ -193,7 +199,7 @@
       <div class="ia-log" id="ia-log" aria-live="polite"></div>
       <form class="ia-input" id="ia-form"><textarea id="ia-q" rows="1" maxlength="1500" placeholder="Pergunte ou peça uma tela" aria-label="Mensagem para o assistente"></textarea>
         <button class="ia-send" type="submit" aria-label="Enviar">${icon('paper-plane-right', 20)}</button></form>
-      <small class="ia-note">A IA pode errar. Confira os valores nas telas.</small></div>`;
+      <small class="ia-note">A IA pode errar. Confira os valores nas telas.${CC.iaConfig.recaptcha ? ' Protegido pelo reCAPTCHA (<a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacidade</a>, <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Termos</a>).' : ''}</small></div>`;
     el.addEventListener('click', (event) => { if (event.target === el || event.target.closest('.sheet-x')) close(); });
     document.body.appendChild(el);
     document.addEventListener('keydown', onKey);
