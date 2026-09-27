@@ -52,13 +52,23 @@ test('servidor abre /m/ e o app Android usa o site do celular', () => {
   assert.match(server, /app\.get\(\['\/m', '\/m\/'\]/);
   assert.match(server, /path\.join\(publicDir, 'm', 'index\.html'\)/);
   const main = read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/MainActivity.java');
-  assert.match(main, /"\/m\/"/);
   assert.match(main, /"#handoff="/);
   // Fase 3: Orcamentos numa segunda WebView, com handoff proprio e troca por suite://app/<id>.
-  assert.match(main, /BuildConfig\.ORC_WEB_BASE/);
   assert.match(main, /auth\.handoffCode\(app\)/);
-  assert.match(read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/SuiteViews.java'), /ORCAMENTOS = "orcamentos"/);
-  assert.match(read('public/m/screen-misc.js'), /suite:\/\/app\/orcamentos/);
+  const views = read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/SuiteViews.java');
+  assert.match(views, /ORCAMENTOS = "orcamentos"/);
+  assert.match(views, /"\/m\/"/);
+  assert.match(views, /BuildConfig\.ORC_WEB_BASE/);
+  // Passo 4: destino validado (proposta= ou obra=) e WebView aberta levada por hashchange.
+  assert.match(views, /\[A-Za-z0-9-\]\{1,64\}/);
+  assert.match(views, /\[0-9\]\{1,12\}/);
+  assert.match(views, /location\.hash=/);
+  // Passo 4: o seletor Suite (suite.js) troca de app e vai direto a proposta de origem.
+  const suite = read('public/m/suite.js');
+  assert.match(suite, /suite:\/\/app\/orcamentos/);
+  assert.match(suite, /\?proposta=/);
+  assert.match(read('public/m/screen-obra.js'), /proposta_origem/);
+  assert.match(read('public/m/app.js'), /hashchange/);
   assert.match(main, /SuiteConstrutec\//);
   assert.doesNotMatch(main, /addMenuButton/);
   const web = read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/AppWebView.java');

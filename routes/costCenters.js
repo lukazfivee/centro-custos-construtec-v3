@@ -23,6 +23,7 @@ const {
 } = require('../services/budgets/budgetMeasurements');
 const { getPortfolioSummary } = require('../services/budgets/budgetPortfolio');
 const { getCostCenterCurveS } = require('../services/budgets/budgetCurveS');
+const { getProposalOrigin } = require('../services/budgets/proposalOrigin');
 
 const router = express.Router();
 router.use(autenticar);
@@ -96,6 +97,7 @@ router.get('/:id/detalhes', asyncRoute(async (req, res) => {
   if (!centerResult.rows[0]) throw httpError(404, 'Centro de custo não encontrado.');
   const center = centerResult.rows[0];
   center.mes_orcamento = month;
+  center.proposta_origem = await getProposalOrigin(db, id);
   const { rows: transactions } = await db.query(`
     SELECT t.id, t.public_id, t.type AS tipo, t.description AS descricao, t.counterparty AS favorecido,
       t.amount AS valor,t.original_amount AS valor_original,t.accounting_sign AS sinal_contabil,t.reversal_of AS estorno_de,

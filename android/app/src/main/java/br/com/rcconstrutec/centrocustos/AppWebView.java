@@ -42,7 +42,7 @@ final class AppWebView {
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri target = request.getUrl();
-                if ("suite".equals(target.getScheme())) { String path = target.getPath() == null ? "" : target.getPath(); host.suiteLink(target.getHost() + path); return true; }
+                if ("suite".equals(target.getScheme())) { String path = target.getPath() == null ? "" : target.getPath(); String query = target.getEncodedQuery() == null ? "" : "?" + target.getEncodedQuery(); host.suiteLink(target.getHost() + path + query); return true; }
                 if (allowed.getHost().equalsIgnoreCase(target.getHost()) && allowed.getScheme().equalsIgnoreCase(target.getScheme())) return false;
                 try { activity.startActivity(new Intent(Intent.ACTION_VIEW, target)); } catch (ActivityNotFoundException ignored) { /* sem app para abrir */ }
                 return true;

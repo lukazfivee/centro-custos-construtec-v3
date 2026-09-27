@@ -35,6 +35,7 @@
     const screen = CC.screens[name];
     if (!screen) return;
     current = name;
+    if (CC.suite) CC.suite.context = null;
     currentParams = { ...(params || {}) };
     delete currentParams.__nav;
     CC.nav += 1;
@@ -80,6 +81,7 @@
     CC.theme.apply(CC.theme.get());
     const hash = new URLSearchParams(location.hash.slice(1));
     const code = hash.get('handoff');
+    const obra = Number(hash.get('obra')) || 0; // link direto #obra=<id> (seletor Suite)
     if (code) {
       try { await consumeHandoff(code); } catch (error) { if (!CC.session.token()) return signedOut(error.message); }
     }
@@ -88,6 +90,12 @@
     await CC.queue.refresh();
     CC.queue.paint();
     CC.queue.run();
+    // O app Android troca so o fragmento da WebView ja aberta para ir a uma obra.
+    window.addEventListener('hashchange', () => {
+      const id = Number(new URLSearchParams(location.hash.slice(1)).get('obra')) || 0;
+      if (id > 0 && CC.session.token()) CC.go('obra', { id });
+    });
+    if (obra > 0) return CC.go('obra', { id: obra });
     const start = location.hash.slice(1);
     CC.go(CC.screens[start] && !['ok', 'obra'].includes(start) ? start : 'home');
   }

@@ -2,8 +2,11 @@
 (function (CC) {
   const { esc, icon, money, moneyShort } = CC;
 
+  // Pilula do seletor Suite (suite.js), no cabecalho de todas as telas com abas.
+  CC.suitePill = () => `<button class="suite-pill" type="button" data-suite aria-haspopup="dialog">${icon('squares-four', 16)}Suíte</button>`;
+
   function header(title) {
-    return `<div class="top"><span class="brand"><img src="simbolo.png" alt="">Centro de Custos</span><span class="grow"></span></div>
+    return `<div class="top"><span class="brand"><img src="simbolo.png" alt="">Centro de Custos</span><span class="grow"></span>${CC.suitePill()}</div>
       ${title ? `<h1 class="title">${esc(title)}</h1>` : ''}`;
   }
   CC.header = header;

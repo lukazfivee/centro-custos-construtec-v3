@@ -71,12 +71,13 @@
       return CC.errorScreen(el, error, () => CC.screens.obra(params));
     }
     const c = result.data.centro, list = result.data.lancamentos || [];
+    if (CC.suite) CC.suite.context = { proposta: c.proposta_origem || null };
     const queued = tab === 'lanc' ? await CC.queuedRows((i) => Number(i.payload.cost_center_id) === id) : '';
     const body = tab === 'resumo' ? resumo(c, list)
       : (tab === 'caixa' ? caixa(list)
         : (list.length || queued ? `${queued}${byDate(list)}` : `<div class="empty">${icon('receipt', 28)}Nenhum lançamento nesta obra ainda.</div>`));
     CC.render(`<div class="top"><button class="back" type="button" id="voltar" aria-label="Voltar">${icon('caret-left', 20)}</button>
-        <span class="grow"><h1>${esc(c.nome)}</h1><small class="muted">${esc([c.cliente, c.codigo].filter(Boolean).join(' · '))}</small></span></div>
+        <span class="grow"><h1>${esc(c.nome)}</h1><small class="muted">${esc([c.cliente, c.codigo].filter(Boolean).join(' · '))}</small></span>${CC.suitePill()}</div>
       ${CC.staleNote(result)}
       <div class="seg" role="group" aria-label="Seções da obra">${TABS.map(([k, label]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${label}</button>`).join('')}</div>
       ${body}

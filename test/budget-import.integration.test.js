@@ -90,6 +90,8 @@ test('F2.2 & F2.3 - Ingestão Transacional e Idempotente de Baselines no Centro 
     assert.ok(importResult.costCenterId);
 
     // Verificar centro de custo criado
+    const detalhes = await request(`/centros-custo/${importResult.costCenterId}/detalhes`);
+    assert.deepEqual(detalhes.centro.proposta_origem, { id: 'proposal-fixture-pa-1001', numero: 'PA-1001', revisao: 0 });
     const ccRes = await db.query('SELECT * FROM cost_centers WHERE id = $1', [importResult.costCenterId]);
     const cc = ccRes.rows[0];
     assert.equal(cc.project_status, 'planejamento');

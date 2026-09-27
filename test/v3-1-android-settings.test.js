@@ -45,12 +45,12 @@ test('QR Code do desktop abre diretamente a versao mobile HTTPS', () => {
   assert.match(app, /version\.mobileAppUrl/);
 });
 
-test('workflow RC16 publica instalador Windows e APK Android', () => {
+test('workflow RC17 publica instalador Windows e APK Android', () => {
   const workflow = read('.github/workflows/publish-v3-1.yml');
   const androidBuild = read('android/app/build.gradle');
   assert.match(workflow, /assembleDebug/);
-  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc\.16\.apk/);
+  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc.17\.apk/);
   assert.match(workflow, /dist\/\*\.apk/);
-  assert.match(androidBuild, /versionCode 31016/);
-  assert.match(androidBuild, /versionName '3\.1\.0-rc\.16'/);
+  assert.match(androidBuild, /versionCode 31017/);
+  assert.match(androidBuild, /versionName '3\.1\.0-rc.17'/);
 });
