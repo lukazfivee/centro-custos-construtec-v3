@@ -14,6 +14,7 @@
     },
     modelos: ['gemini-3.8-flash', 'gemini-3.5-flash-lite'], // o segundo entra quando o limite gratuito do primeiro acaba
     sdk: 'https://www.gstatic.com/firebasejs/12.19.0/',
+    recaptcha: '6LdWgtItAAAAAJ_uz821H2QiZ2PNzalW5lPOSzLt', // chave do site do reCAPTCHA v3 (pública) do App Check
   };
 
   const TELAS = { home: 'Início', obras: 'Obras', obra: 'detalhe de uma obra', lancar: 'Nova despesa', ok: 'despesa enviada', lancamentos: 'Lançamentos', menu: 'Menu', avisos: 'Notificações', pedidos: 'Pedidos de acesso', perfil: 'Meu perfil' };
