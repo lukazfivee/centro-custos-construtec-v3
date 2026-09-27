@@ -52,7 +52,13 @@ test('servidor abre /m/ e o app Android usa o site do celular', () => {
   assert.match(server, /app\.get\(\['\/m', '\/m\/'\]/);
   assert.match(server, /path\.join\(publicDir, 'm', 'index\.html'\)/);
   const main = read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/MainActivity.java');
-  assert.match(main, /"\/m\/#handoff="/);
+  assert.match(main, /"\/m\/"/);
+  assert.match(main, /"#handoff="/);
+  // Fase 3: Orcamentos numa segunda WebView, com handoff proprio e troca por suite://app/<id>.
+  assert.match(main, /BuildConfig\.ORC_WEB_BASE/);
+  assert.match(main, /auth\.handoffCode\(app\)/);
+  assert.match(read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/SuiteViews.java'), /ORCAMENTOS = "orcamentos"/);
+  assert.match(read('public/m/screen-misc.js'), /suite:\/\/app\/orcamentos/);
   assert.match(main, /SuiteConstrutec\//);
   assert.doesNotMatch(main, /addMenuButton/);
   const web = read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/AppWebView.java');

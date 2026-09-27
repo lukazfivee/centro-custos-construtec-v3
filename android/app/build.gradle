@@ -5,6 +5,8 @@ plugins { id 'com.android.application' }
 def centralApiBase = (project.findProperty('centralApiBase') ?: 'https://centro-custos-api.construtec-reports.workers.dev').toString().replaceAll('/+$', '')
 def centralWebBase = (project.findProperty('centralWebBase') ?: centralApiBase).toString().replaceAll('/+$', '')
 def centralHost = new URI(centralApiBase).host
+// Orcamentos dentro do app (Fase 3): -PorcWebBase=...
+def orcWebBase = (project.findProperty('orcWebBase') ?: 'https://construtec-orcamentos-cloud.construtec-reports.workers.dev').toString().replaceAll('/+$', '')
 
 android {
     namespace 'br.com.rcconstrutec.centrocustos'
@@ -14,10 +16,11 @@ android {
         applicationId 'br.com.rcconstrutec.centrocustos'
         minSdk 28
         targetSdk 35
-        versionCode 31015
-        versionName '3.1.0-rc.15'
+        versionCode 31016
+        versionName '3.1.0-rc.16'
         buildConfigField 'String', 'CENTRAL_API_BASE', "\"${centralApiBase}\""
         buildConfigField 'String', 'CENTRAL_WEB_BASE', "\"${centralWebBase}\""
+        buildConfigField 'String', 'ORC_WEB_BASE', "\"${orcWebBase}\""
         manifestPlaceholders = [centralHost: centralHost]
     }
 

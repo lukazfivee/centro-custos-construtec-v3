@@ -59,6 +59,7 @@
       <div class="rows">
         <button class="menu-item" type="button" id="m-tema">${icon(dark ? 'sun' : 'moon', 22)}<span>${dark ? 'Modo claro' : 'Modo escuro'}</span></button>
         ${inApp ? `<button class="menu-item" type="button" id="m-seg">${icon('shield-check', 22)}<span>Segurança<small>PIN, digital, bloqueio automático e aparelhos</small></span></button>` : ''}
+        ${inApp ? `<a class="menu-item" href="suite://app/orcamentos" id="m-orc" style="color:inherit;text-decoration:none">${icon('receipt', 22)}<span>Orçamentos<small>Trocar para o Orçamentos sem sair do app</small></span></a>` : ''}
         <a class="menu-item" href="/" id="m-web" style="color:inherit;text-decoration:none">${icon('desktop', 22)}<span>Versão completa<small>Todas as telas do Centro de Custos</small></span></a>
         <button class="menu-item danger" type="button" id="m-sair">${icon('sign-out', 22)}<span>Sair</span></button>
       </div>`);
