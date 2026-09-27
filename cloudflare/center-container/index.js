@@ -4,6 +4,7 @@ import { handleCentralAuth } from './centralAuth.js';
 import { handleCommercialSync } from './commercialSync.js';
 import { handleNotifications, isNotificationRoute, runDailyNotices } from './notifications.js';
 import { handleSignup, invitePage, isSignupRoute } from './signup.js';
+import { handleProfile, isProfileRoute } from './profile.js';
 import { assetLinks, resetPage } from './resetPage.js';
 
 // O Container passa cada valor de envVars pelo ambiente do processo, que so
@@ -48,6 +49,7 @@ export default {
     if (request.method === 'GET' && url.pathname === '/.well-known/assetlinks.json') return assetLinks(env);
     if (url.pathname === '/api/auth/handoff-bridge' || url.pathname.startsWith('/api/interno/')) return new Response(null, { status: 404 });
     if (isSignupRoute(url.pathname)) return handleSignup(request, env, url);
+    if (isProfileRoute(url.pathname)) return handleProfile(request, env);
     if (isNotificationRoute(url.pathname)) return handleNotifications(request, env, url);
     if (url.pathname.startsWith('/v1/')) {
       const central = await handleCentralAuth(request, env);
