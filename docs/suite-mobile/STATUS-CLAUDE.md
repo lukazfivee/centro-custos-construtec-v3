@@ -1,11 +1,31 @@
 # Status: Claude Code (app Android)
 
-Fase atual: 3, passo 4 publicado em 27/09/2026 (RC17) · PRs: #41 (Centro e app) e, no Orçamentos, #94. Fase 3 anterior: #37, #38, #39; Orçamentos #90, #92, #93
+Fase atual: 4 (notificações), publicada em 27/09/2026 (RC18) · PR #45. Antes: passo 4 da Fase 3 (#41; Orçamentos #94), Fase 3 (#37, #38, #39; Orçamentos #90, #92, #93)
 
 ## Última atualização
 
 - Data e hora (BRT): 27/09/2026 02:50
 - Fase 3 feita pelo Claude Code, com merges e deploys autorizados pelo Lucas.
+
+## Fase 4 (27/09/2026): notificações
+
+Decisões do Lucas: os quatro avisos (proposta aprovada, item acima do orçado, conta a vencer, novo acesso); os avisos das obras vão para todos com acesso ao Centro, e o de novo acesso só para o dono da conta; tudo ligado, cada pessoa desliga nas preferências; push pelo Firebase (projeto `suite-construtec`, plano gratuito); até a produção (RC18).
+
+- **Firebase:** o Lucas criou o projeto e gerou a chave da conta de serviço. A chave foi gravada por ele, com um `.bat`, como segredo `FCM_SERVICE_ACCOUNT` do Worker; o arquivo foi apagado de Downloads e não foi lido. O `android/app/google-services.json` (não é segredo) está no repositório.
+- **Worker (#45):** migração D1 `010-notificacoes.sql` (aplicada em produção antes do deploy): `push_devices`, `known_devices`, `notifications` (com `dedupe_key` único por pessoa) e `notification_prefs`.
+  - `notifications.js`: registro do aparelho, central, marcar como lidas, preferências, teste e as rotas internas para o Container (`x-sync-key`).
+  - `fcm.js`: API HTTP v1 do FCM, com JWT RS256 por WebCrypto. Tokens que o Firebase recusa são apagados.
+  - Novo acesso: no login, um aparelho novo numa conta que já tinha outro avisa o dono. "Sair" desliga o push do aparelho.
+  - Cron `0 11 * * *` (08:00 de Brasília) pede os avisos diários ao Container. `/api/interno/*` é bloqueado ao público.
+- **Centro:** aviso de proposta aprovada depois da importação; `services/dailyNotices.js` calcula as contas a pagar que vencem hoje ou amanhã (um aviso por dia) e os itens acima do orçado (um aviso por item, até 20 por dia); `/api/notificacoes` serve a central do site do celular pela conta central (`users.cloud_user_id`).
+- **Site do celular:** sino com contador no cabeçalho (também na obra), central `screen-avisos.js` com Hoje/Ontem/Anteriores, filtro por app (Centro de Custos, Orçamentos, Conta), marcar como lidas, preferências e "Enviar notificação de teste". Cache do service worker em `cc-celular-v3`.
+- **App:** `SuitePush` (Firebase Messaging): permissão no Android 13+ na primeira entrada, registro do token a cada entrada, aviso próprio com o app aberto e toque abrindo o destino validado (`SuiteViews.parse`). A validação do servidor local foi para o `LocalSetup` para abrir espaço no `MainActivity`. `android.useAndroidX=true` (o Firebase traz AndroidX). RC18.
+- **Validação:** testes novos `notifications-worker` (4, com o Google simulado), `notificacoes-container` (5, com o Worker simulado) e `notifications-android` (2). `npm run verify` 255 de 256 com o PC carregado (a falha era o `database-lock`, que passa sozinho). Central conferida no navegador em 375x812 nos dois temas. Emulador com o APK do mock: o app pediu a permissão e registrou um token real do Firebase; o toque simulado abriu a proposta e a obra certas.
+- **Produção:** Worker `c93c4c36`; rotas novas respondem 401 sem sessão e 403 sem a chave interna.
+- **Falta:**
+  - conferir o push de verdade no A17: instalar a RC18 (instala por cima), entrar, permitir as notificações e tocar em Notificações › "Enviar notificação de teste";
+  - o primeiro aviso diário sai às 08:00 de 28/09;
+  - o sino ainda não existe no Orçamentos (os avisos das propostas chegam pelo Centro).
 
 ## Passo 4 (27/09/2026): seletor Suíte, Ir direto para e comparativo no celular
 

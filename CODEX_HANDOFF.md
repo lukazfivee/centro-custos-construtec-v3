@@ -1,5 +1,11 @@
 # Handoff — Centro de Custos
 
+## 2026-09-27 12:40 BRT — Suíte mobile, Fase 4 (notificações) publicada (Claude Code)
+
+- Central de notificações no Worker (D1 `010`), push pelo Firebase (`FCM_SERVICE_ACCOUNT`), avisos de proposta aprovada, item acima do orçado, contas a vencer e novo acesso, sino e central no site do celular, app com Firebase Messaging (PR #45).
+- Produção: Worker `centro-custos-api` versão `c93c4c36`, cron `0 11 * * *`; pré-lançamento `v3.1.0-rc.18`.
+- Detalhes e pendências: `docs/suite-mobile/STATUS-CLAUDE.md`, seção "Fase 4".
+
 ## 2026-09-27 04:10 BRT — Suíte mobile, passo 4 publicado (Claude Code)
 
 - Seletor "Suíte" no site do celular e no Orçamentos, "Ir direto para" entre obra e proposta (`proposta_origem` em `/detalhes`), links `#obra=`/`#proposta=`, comparativo de revisões em cartões e RC17 (PR #41; Orçamentos #94).
