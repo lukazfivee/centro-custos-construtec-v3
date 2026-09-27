@@ -49,7 +49,7 @@
     } catch (error) {
       return CC.errorScreen(el, error, () => CC.screens.lancar(params));
     }
-    const obraList = (obras.data || []).filter((c) => c.ativo !== false && c.situacao !== 'concluida');
+    const obraList = (obras.data || []).filter((c) => c.ativo !== false && c.situacao !== 'concluido');
     const catList = (cats.data || []).filter((c) => c.ativo !== false && (c.tipo === 'despesa' || c.tipo === 'ambos'));
     const opt = (list, sel, label) => `<option value="">${label}</option>${list.map((i) => `<option value="${i.id}"${Number(sel) === i.id ? ' selected' : ''}>${esc(i.nome)}</option>`).join('')}`;
     const value = Number.isFinite(draft.valor) ? draft.valor.toFixed(2).replace('.', ',') : '';
@@ -102,7 +102,15 @@
           data_liquidacao: paid ? d.data : null, documento: d.documento || null },
         foto: d.foto ? { nome: `nota-${d.data}.jpg`, tipo: 'image/jpeg', categoria: 'nota_fiscal', observacao: 'Foto tirada no celular', conteudoBase64: d.foto } : null,
       };
-      try { await CC.queue.add(item); } catch { /* fica na fila; o envio tenta de novo */ }
+      try {
+        await CC.queue.add(item);
+      } catch {
+        // Nada foi guardado nem enviado: mostra o erro e mantem o que foi digitado.
+        draft = d;
+        button.disabled = false;
+        CC.$('#err', page).innerHTML = `${icon('warning-circle', 16)}<span>Não foi possível salvar no celular. Libere espaço ou tente sem a foto.</span>`;
+        return;
+      }
       const still = await CC.store.get('fila', item.client_id).catch(() => null);
       draft = null;
       CC.screens.ok({ item, offline: Boolean(still && still.estado !== 'erro'), erro: still && still.estado === 'erro' ? still.erro : '', from });

@@ -31,7 +31,7 @@
       const budget = Number(c.orcamento), spent = Number(c.comprometido);
       if (budget > 0 && spent > budget) {
         tasks.push({ alert: true, icon: 'trend-up', title: 'Custo acima do orçado', sub: c.nome + ' passou ' + moneyShort(spent - budget) + ' do orçado', action: 'Ver obra', go: ['obra', { id: c.id }] });
-      } else if (Number(c.qtd_lancamentos) === 0 && c.situacao !== 'concluida') {
+      } else if (Number(c.qtd_lancamentos) === 0 && c.situacao !== 'concluido') {
         tasks.push({ alert: false, icon: 'buildings', title: 'Obra sem lançamentos', sub: c.nome, action: 'Abrir obra', go: ['obra', { id: c.id }] });
       }
     }
@@ -54,7 +54,7 @@
     }
     const dash = result.data;
     const tasks = tasksFrom(dash, CC.queue.state);
-    const active = (dash.porCentro || []).filter((c) => c.situacao !== 'concluida').length;
+    const active = (dash.porCentro || []).filter((c) => c.situacao !== 'concluido').length;
     const title = tasks.length ? (tasks.length === 1 ? '1 pendência hoje' : `${tasks.length} pendências hoje`) : 'Nada pendente hoje';
     CC.render(`${header('')}<p class="hello">${esc(CC.greeting())}${first ? `, ${esc(first)}` : ''}</p>
       <h1 class="title">${esc(title)}</h1>${staleNote(result)}
@@ -81,7 +81,7 @@
       return CC.errorScreen(el, error, () => CC.screens.obras());
     }
     const list = (result.data || []).filter((c) => c.ativo !== false);
-    const running = list.filter((c) => c.situacao !== 'concluida').length;
+    const running = list.filter((c) => c.situacao !== 'concluido').length;
     const rows = list.map((c) => {
       const budget = Number(c.orcamento), spent = Number(c.total_comprometido), p = pct(spent, budget);
       const over = p !== null && p > 100;

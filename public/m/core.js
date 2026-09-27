@@ -57,6 +57,11 @@
     },
     clear() { ['cc_token', 'cc_usuario', 'cc_instancia'].forEach((k) => localStorage.removeItem(k)); },
   };
+  // Dono dos dados guardados no celular: a fila e o cache nunca passam de uma conta para outra.
+  CC.owner = () => {
+    const u = CC.session.user() || {};
+    return String(u.id != null ? u.id : (u.email || ''));
+  };
 
   class ApiError extends Error {
     constructor(status, message) { super(message); this.status = status; }
@@ -90,11 +95,11 @@
   CC.cached = async function (key, path) {
     try {
       const { data } = await CC.api(path);
-      CC.store.put('cache', { key, data, at: Date.now() }).catch(() => {});
+      CC.store.put('cache', { key: `${CC.owner()}|${key}`, data, at: Date.now() }).catch(() => {});
       return { data, stale: false };
     } catch (error) {
       if (error.status !== 0) throw error;
-      const saved = await CC.store.get('cache', key).catch(() => null);
+      const saved = await CC.store.get('cache', `${CC.owner()}|${key}`).catch(() => null);
       if (!saved) throw error;
       return { data: saved.data, stale: true, at: saved.at };
     }

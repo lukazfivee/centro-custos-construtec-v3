@@ -17,7 +17,7 @@
   };
 
   CC.queuedRows = async function (filterFn) {
-    const items = (await CC.store.all('fila').catch(() => [])).filter(filterFn || (() => true));
+    const items = (await CC.queue.mine()).filter(filterFn || (() => true));
     return items.map((i) => CC.txRow({ ...i.payload, favorecido: i.payload.favorecido, situacao: '', status_financeiro: i.payload.status_financeiro },
       i.estado === 'erro' ? 'erro: ' + i.erro : (CC.queue.state.syncing ? 'enviando…' : 'na fila, sem internet'))).join('');
   };

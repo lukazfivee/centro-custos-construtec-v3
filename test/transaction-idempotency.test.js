@@ -95,6 +95,19 @@ test('lançamento com client_id: reenviar não duplica (fila offline do celular)
     assert.equal(await countFor(clientId), 1);
   });
 
+  await context.test('reenvio completa a auditoria que faltou na primeira tentativa, sem duplicar', async () => {
+    const clientId = crypto.randomUUID();
+    const first = await call('/lancamentos', 'POST', despesa({ client_id: clientId }));
+    const audits = async () => (await db.query(
+      "SELECT count(*)::int AS n FROM audit_log WHERE entity_type='lancamento' AND entity_id=$1 AND action='criado'", [first.body.public_id])).rows[0].n;
+    assert.equal(await audits(), 1);
+    await db.query("DELETE FROM audit_log WHERE entity_type='lancamento' AND entity_id=$1", [first.body.public_id]);
+    assert.equal((await call('/lancamentos', 'POST', despesa({ client_id: clientId }))).status, 200);
+    assert.equal(await audits(), 1);
+    assert.equal((await call('/lancamentos', 'POST', despesa({ client_id: clientId }))).status, 200);
+    assert.equal(await audits(), 1);
+  });
+
   await context.test('sem client_id continua como antes: cada envio cria um lançamento', async () => {
     const before = (await db.query("SELECT count(*)::int AS n FROM transactions WHERE description='Sem identificador'")).rows[0].n;
     assert.equal((await call('/lancamentos', 'POST', despesa({ descricao: 'Sem identificador' }))).status, 201);

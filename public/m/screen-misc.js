@@ -4,7 +4,7 @@
   const FILTERS = [['', 'Todos'], ['pendente', 'Em aberto'], ['vencido', 'Vencidos']];
 
   async function queueBlock() {
-    const items = (await CC.store.all('fila').catch(() => [])).sort((a, b) => a.criado_em - b.criado_em);
+    const items = (await CC.queue.mine()).sort((a, b) => a.criado_em - b.criado_em);
     if (!items.length) return '';
     return `<span class="label">No celular</span>${items.map((i) => `<div class="tx"><span class="grow"><b>${esc(i.payload.favorecido || i.payload.descricao)}</b>
         <small>${esc(i.obra_nome)} · ${esc(CC.dateBr(i.payload.data))}</small>

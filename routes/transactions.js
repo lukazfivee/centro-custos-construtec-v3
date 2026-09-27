@@ -10,7 +10,7 @@ const { validDate } = require('../lib/dates');
 const { csvLine, decimalBr } = require('../lib/csv');
 const { recordAudit } = require('../services/audit');
 const { recordExpenseAllocation } = require('../services/budgets/budgetAllocations');
-const { readClientId, findReplay, isClientIdConflict } = require('../lib/transactionIdempotency');
+const { readClientId, findReplay, isClientIdConflict, ensureCreatedAudit } = require('../lib/transactionIdempotency');
 
 const router = express.Router();
 router.use(autenticar);
@@ -79,6 +79,7 @@ router.get('/exportar.csv', asyncRoute(async (req, res) => {
 router.post('/', asyncRoute(async (req, res) => {
   const data = validatePayload(req.body);
   const clientId = readClientId(req.body), replay = await findReplay(getDb(), req.usuario.id, clientId, data);
+  if (replay && !replay.excluido) { await ensureCreatedAudit(replay.public_id, data, req.usuario); await maybeAutoAllocateExpense(data, replay.id); }
   if (replay) return res.status(200).json(replay);
   if (await isMonthClosed(data.date)) {
     throw httpError(403, 'Esta competência está fechada. Não é possível criar lançamentos nela.');
@@ -101,10 +102,7 @@ router.post('/', asyncRoute(async (req, res) => {
     return { rows: [await findReplay(getDb(), req.usuario.id, clientId, data)] };
   });
   if (rows[0].replayed) return res.status(200).json(rows[0]);
-  await recordAudit({
-    entityType:'lancamento',entityId:rows[0].public_id,action:'criado',
-    summary:`Lançamento criado: ${data.description}`,data,user:req.usuario,
-  });
+  await ensureCreatedAudit(rows[0].public_id, data, req.usuario);
   await maybeAutoAllocateExpense(data, rows[0].id);
   res.status(201).json(rows[0]);
 }));
@@ -275,7 +273,7 @@ async function maybeAutoAllocateExpense(data, transactionId) {
   );
   if (!contract.rows[0]) return;
   const existing = await db.query('SELECT 1 FROM expense_allocations WHERE transaction_id=$1 LIMIT 1', [transactionId]);
-  if (existing.rowCount) return;
+  if (existing.rows.length) return; // rowCount de SELECT vem 0 no PGlite
   await recordExpenseAllocation(db, {
     transactionId, costCenterId:data.costCenterId, amount:data.amount, contractId:contract.rows[0].id,
   });

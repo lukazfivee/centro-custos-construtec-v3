@@ -32,6 +32,7 @@ function load({ online = true } = {}) {
   };
   CC.toast = () => {};
   storage.set('cc_token', 'token-de-teste');
+  storage.set('cc_usuario', JSON.stringify({ id: 1, nome: 'Marina' }));
   return { CC, db, context, listeners };
 }
 
@@ -70,7 +71,7 @@ test('fila: 409 do anexo conta como já enviado; reenvio com lançamento já cri
     if (route.startsWith('/anexos')) throw new CC.ApiError(409, 'Este mesmo arquivo já está anexado');
     return { status: 200, data: { id: 7, replayed: true } };
   };
-  await CC.store.put('fila', { client_id: 'b2', payload: {}, foto: { conteudoBase64: 'A' }, estado: 'fila', lancamento_id: 7, criado_em: 1 });
+  await CC.store.put('fila', { client_id: 'b2', payload: {}, foto: { conteudoBase64: 'A' }, estado: 'fila', lancamento_id: 7, criado_em: 1, owner: '1' });
   await CC.queue.run();
   assert.deepEqual(calls, ['/anexos/lancamento/7']);
   assert.equal(db.size, 0);
@@ -85,7 +86,7 @@ test('fila: sem rede o item continua; erro de dados fica marcado e não trava os
 
   let n = 0;
   CC.api = async () => { n += 1; if (n === 1) throw new CC.ApiError(400, 'Centro de custo ou categoria não encontrado.'); return { status: 201, data: { id: 9 } }; };
-  await CC.store.put('fila', { client_id: 'd4', payload: {}, foto: null, estado: 'fila', criado_em: Date.now() + 1000 });
+  await CC.store.put('fila', { client_id: 'd4', payload: {}, foto: null, estado: 'fila', criado_em: Date.now() + 1000, owner: '1' });
   await CC.queue.run();
   assert.equal(db.get('fila:c3').estado, 'erro');
   assert.match(db.get('fila:c3').erro, /não encontrado/);
@@ -106,4 +107,31 @@ test('fila: offline não tenta enviar e 5xx para a fila para tentar depois', asy
   CC.api = async () => { throw new CC.ApiError(503, 'Indisponível'); };
   await CC.queue.add({ client_id: 'f6', payload: {}, foto: null });
   assert.equal(db.get('fila:f6').estado, 'fila');
+});
+
+test('fila e cache separados por conta: outra conta não envia nem vê itens alheios', async () => {
+  const { CC, db, context } = load();
+  const sent = [];
+  CC.api = async (route, opts) => { sent.push(opts && opts.body && opts.body.client_id); return { status: 201, data: { id: 5 } }; };
+  await CC.store.put('fila', { client_id: 'de-outra-conta', owner: '2', payload: {}, foto: null, estado: 'fila', criado_em: 1 });
+  await CC.store.put('fila', { client_id: 'sem-dono', payload: {}, foto: null, estado: 'fila', criado_em: 2 });
+  await CC.queue.add({ client_id: 'minha', payload: {}, foto: null });
+  assert.deepEqual(sent, ['minha']);
+  assert.ok(db.has('fila:de-outra-conta'));
+  assert.ok(db.has('fila:sem-dono'));
+  assert.equal((await CC.queue.mine()).length, 0);
+  // Cache com a chave da conta.
+  CC.api = async () => ({ status: 200, data: { ok: 1 } });
+  await CC.cached('obras', '/centros-custo');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(db.has('cache:1|obras'));
+  context.localStorage.setItem('cc_usuario', JSON.stringify({ id: 2 }));
+  CC.api = async () => { throw new CC.ApiError(0, 'Sem internet.'); };
+  await assert.rejects(CC.cached('obras', '/centros-custo'), (e) => e.status === 0);
+});
+
+test('falha ao gravar no celular sobe para a tela (nada é dado como salvo)', async () => {
+  const { CC } = load();
+  CC.store.put = async () => { throw new Error('QuotaExceededError'); };
+  await assert.rejects(CC.queue.add({ client_id: 'g7', payload: {}, foto: { conteudoBase64: 'x' } }), /Quota/);
 });

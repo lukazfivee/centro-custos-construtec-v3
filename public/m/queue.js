@@ -36,8 +36,11 @@
   CC.queue = { state, on: (fn) => listeners.push(fn) };
   function emit() { listeners.forEach((fn) => { try { fn(state); } catch { /* tela fechada */ } }); }
 
+  // So os itens da conta atual (outra conta no mesmo celular nao envia nem ve a fila alheia).
+  CC.queue.mine = async () => (await CC.store.all('fila').catch(() => [])).filter((i) => i.owner && i.owner === CC.owner());
+
   CC.queue.refresh = async function () {
-    const items = await CC.store.all('fila').catch(() => []);
+    const items = await CC.queue.mine();
     state.pending = items.filter((i) => i.estado !== 'erro').length;
     state.errors = items.filter((i) => i.estado === 'erro').length;
     emit();
@@ -46,9 +49,10 @@
 
   // Guarda a despesa no celular. Ela sai da fila so depois de o servidor confirmar.
   CC.queue.add = async function (item) {
-    await CC.store.put('fila', { ...item, estado: 'fila', erro: '', lancamento_id: null, criado_em: Date.now() });
+    // Se nao der para gravar (ex.: sem espaco), o erro sobe e a tela mantem o rascunho.
+    await CC.store.put('fila', { ...item, owner: CC.owner(), estado: 'fila', erro: '', lancamento_id: null, criado_em: Date.now() });
     await CC.queue.refresh();
-    return CC.queue.run();
+    try { await CC.queue.run(); } catch { /* segue na fila; tenta de novo depois */ }
   };
 
   async function sendOne(item) {
@@ -70,7 +74,7 @@
   // Envia a fila em ordem. Para na primeira falha de rede; erros de dados ficam marcados.
   CC.queue.run = async function () {
     if (state.syncing || CC.offline() || !CC.session.token()) return CC.queue.refresh();
-    const items = (await CC.store.all('fila').catch(() => [])).filter((i) => i.estado !== 'erro').sort((a, b) => a.criado_em - b.criado_em);
+    const items = (await CC.queue.mine()).filter((i) => i.estado !== 'erro').sort((a, b) => a.criado_em - b.criado_em);
     if (!items.length) return CC.queue.refresh();
     state.syncing = true;
     emit();
