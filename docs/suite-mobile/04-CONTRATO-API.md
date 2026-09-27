@@ -100,7 +100,14 @@ O app abre então `https://<base>/#handoff=<code>`.
 
 No `public/app.js` (do Codex): ao iniciar, se houver `#handoff=`, consome o código, guarda a sessão como no login normal e limpa o fragmento com `history.replaceState`.
 
-O alvo `orcamentos` fica para a Fase 3, com rota espelho no servidor do Orçamentos.
+**Alvo `orcamentos` (Fase 3, aprovado pelo Lucas em 27/09/2026):**
+
+- `POST /v1/auth/handoff` aceita `{ target: "orcamentos" }`. O código guarda o destino (coluna `session_handoffs.target`, migração D1 `009`) e só vale nele; uma tentativa no destino errado responde `HANDOFF_INVALID` sem gastar o código. Outro valor de `target` responde 400 `TARGET_INVALID`.
+- O app abre `https://<base do Orçamentos>/#handoff=<code>`. O site entrega o código ao próprio servidor em `POST /api/auth/handoff` (mesma origem, sem CORS).
+- O servidor do Orçamentos chama `POST /v1/auth/handoff/consume` com `{ code, target: "orcamentos" }` e o cabeçalho `X-Construtec-Identity-Key`. Sem a chave: 403 `FORBIDDEN`.
+- 200: `{ ok: true, sessionToken, expiresAt, user }`, o mesmo formato do login central. É uma sessão central nova, "Orçamentos web", de 8h, filha da sessão do app: o `POST /v1/auth/logout` do app também a encerra, e `revoke-others` a preserva.
+- O Orçamentos usa o `sessionToken` como a própria sessão (identidade compartilhada), sem JWT local.
+- Sem `target`, o `consume` continua sendo o do Centro de Custos web, sem mudança para clientes antigos.
 
 ## 7. Erros comuns
 
