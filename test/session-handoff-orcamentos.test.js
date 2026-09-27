@@ -48,3 +48,11 @@ maybe('código só vale no destino para o qual foi emitido', async () => {
   assert.equal((await call('POST', '/v1/auth/handoff', { token, body: { target: 'chamados' } })).data.code, 'TARGET_INVALID');
   assert.equal((await call('POST', '/v1/auth/handoff/consume', { body: { code: paraOrc.data.code, target: 'chamados' } })).data.code, 'TARGET_INVALID');
 });
+
+maybe('chave de serviço gravada com BOM ou espaços ainda confere', async () => {
+  const { env, call, token } = await setup();
+  env.CONSTRUTEC_IDENTITY_KEY = `﻿${KEY}\n`;
+  const issued = await call('POST', '/v1/auth/handoff', { token, body: { target: 'orcamentos' } });
+  const consumed = await call('POST', '/v1/auth/handoff/consume', { headers: { 'x-construtec-identity-key': KEY }, body: { code: issued.data.code, target: 'orcamentos' } });
+  assert.equal(consumed.status, 200);
+});
