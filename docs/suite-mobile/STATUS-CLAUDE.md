@@ -1,12 +1,29 @@
 # Status: Claude Code (app Android)
 
-Fase atual: 2 · Branches: `feat/mobile-idempotencia` (servidor, PR #33) e `feat/mobile-web-centro-custos` (site do celular e app)
+Fase atual: 3 (publicada em 27/09/2026) · PRs: #37 (servidor), #38 (app e site do celular), #39 (chave com BOM); no Orçamentos, #90, #92 e #93
 
 ## Última atualização
 
-- Data e hora (BRT): 24/09/2026 18:58
-- Commit base: `8980682` (origin/main, "docs: pacote da Suite mobile (fase 1)")
-- Trabalho feito na worktree `../wt-cc-android`, porque a pasta principal do repositório estava na branch do Codex.
+- Data e hora (BRT): 27/09/2026 02:50
+- Fase 3 feita pelo Claude Code, com merges e deploys autorizados pelo Lucas.
+
+## Fase 3 (27/09/2026): Orçamentos dentro do app
+
+Decisões do Lucas: revisar e publicar antes o #90 do Orçamentos (identidade compartilhada); §6 do contrato com o alvo `orcamentos`; seletor "Suíte" dentro de cada site (passo 4); até lá, troca por item de menu; comparativo de revisões e `#proposta=` ficam para o passo 4; produção do app = pré-lançamento RC16 no GitHub; A17 fica para depois.
+
+- **Orçamentos #90 (identidade compartilhada):** revisado antes do merge. Corrigidos o typecheck da CI, o admin rebaixado no Centro que continuava admin (migração `013`: `centro_admin`, `local_role`) e a troca de e-mail que travava o login. Publicado.
+- **Queda do login do Orçamentos (01:45 a 02:26 BRT):** o segredo `CONSTRUTEC_IDENTITY_KEY` do Orçamentos estava com BOM (U+FEFF) e o `fetch` recusava o cabeçalho. A chave agora é normalizada nos dois lados (Orçamentos #92, Centro #39), e as chamadas do Container ao Centro passam pelo service binding `CENTRO`. Não dava para voltar a versão: a migração 012 já tinha desativado as contas locais.
+- **Servidor central (#37):** `POST /v1/auth/handoff` aceita `target: "orcamentos"`; migração D1 `009` (`session_handoffs.target`) aplicada em produção antes do deploy. O `consume` do Orçamentos exige `X-Construtec-Identity-Key` e devolve uma sessão central "Orçamentos web", filha da sessão do app. Contrato §6 atualizado.
+- **Orçamentos (#93):** `POST /api/auth/handoff`, leitura do `#handoff=`, entrada e saída pelo app (`suite://entrar`, `suite://sair`), "Trocar para o Centro de Custos" no menu mobile (só no app) e `viewport-fit=cover`.
+- **App (#38):** `SuiteViews.java` guarda uma WebView por app; a outra fica escondida sem recarregar. `suite://app/<id>` troca de app; "Orçamentos" no Menu do site do celular (só no app). `ORC_WEB_BASE` vem do Gradle (`-PorcWebBase`). RC16 (`versionCode 31016`).
+- **CI:** job `android` (assembleDebug e lintDebug) com dois APKs de artefato: o de produção e o do mock (`-PcentralApiBase=http://10.0.2.2:8787 -PorcWebBase=http://10.0.2.2:8787/orc`). O mock ganhou a página `/orc/` e confere o destino do código.
+- **Validação:** `npm run verify` 244/244 no Centro e 37/38 no Orçamentos (PostgreSQL real pulado). Emulador (AVD novo `Suite_Teste_API35`, sem trava de tela) com o APK do mock: handoff dos dois destinos, troca nos dois sentidos sem recarregar (anotação preservada) e `suite://sair` destruindo as duas WebViews. Produção: login do Orçamentos com senha errada responde 401; `consume` sem chave 403, destino inválido 400.
+- **Falta:**
+  - instalar a RC16 no Galaxy A17. O APK da CI é assinado com outra chave: é preciso desinstalar o app atual (perde PIN e digital) antes;
+  - a chave de assinatura de debug da CI muda a cada execução, então uma RC não instala por cima da outra. Vale criar uma chave fixa como segredo do GitHub;
+  - backup diário do Neon do Orçamentos falha desde pelo menos 24/09: faltam os segredos `ORCAMENTOS_BACKUP_DATABASE_URL` e `BACKUP_PASSPHRASE` no GitHub do Orçamentos;
+  - conferir se o `CONSTRUTEC_INTEGRATION_KEY` do Orçamentos também tem BOM (a sincronização de propostas usaria o mesmo cabeçalho);
+  - passo 4: seletor "Suíte", comparativo de revisões no celular e `#proposta=`.
 
 ## Fase 2 (26/09/2026)
 
