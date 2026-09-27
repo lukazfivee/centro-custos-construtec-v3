@@ -97,6 +97,16 @@ Decisões do Lucas: revisar e publicar antes o #90 do Orçamentos (identidade co
   - backup diário do Neon do Orçamentos falha desde pelo menos 24/09: faltam os segredos `ORCAMENTOS_BACKUP_DATABASE_URL` e `BACKUP_PASSPHRASE` no GitHub do Orçamentos;
   - conferir se o `CONSTRUTEC_INTEGRATION_KEY` do Orçamentos também tem BOM (a sincronização de propostas usaria o mesmo cabeçalho);
 
+## Assistente de IA no celular (27/09/2026)
+
+Decisões do Lucas: Firebase AI Logic com a Gemini Developer API (plano gratuito, aceita que o Google pode usar os dados); assistente no /m/ lendo Centro e propostas do Orçamentos; "reporte" = Reportar bug/falha.
+
+- `public/m/ia-config.js` (app web "Suíte celular" do projeto `suite-construtec`, modelos `gemini-3.8-flash` e reserva `gemini-3.5-flash-lite`, instruções), `ia-tools.js` (10 ferramentas com a sessão de quem pergunta), `ia-chat.js` (folha de conversa; SDK 12.19.0 do gstatic só ao abrir; relato só envia pelo botão).
+- Estrela no cabeçalho (`ia-btn`) e Menu › Assistente / Reportar problema. Cache do sw `cc-celular-v6`.
+- `/api/assistente/orcamentos/propostas[/:id]`: handoff `target:orcamentos` pelo Worker e troca no servidor do Orçamentos (sem CORS); sessão guardada 20 min.
+- 429 e 500/503 ("high demand") passam para o modelo reserva.
+- Testado com Gemini real no servidor local. Pendente: App Check e voz.
+
 ## Fase 2 (26/09/2026)
 
 Decisões do Lucas:
