@@ -1,4 +1,15 @@
-# STATUS-CODEX — Fase 1 servidor
+# STATUS-CODEX — handoff para a Suite mobile
+
+## Barra Liquid Glass do site mobile (27/09/2026)
+
+- Base: `main` em `2d51b8e` (PR #34). Trabalho na branch `codex/mobile-liquid-glass-nav`.
+- `public/m/m.css`: barra inferior flutuante com fundo translúcido, refração e lente móvel sobre a aba ativa. No tema escuro, a camada da barra e a lente têm opacidade reduzida para deixar o conteúdo visível atrás dos botões. O destaque mantém contraste por reflexo de borda e sombra do texto.
+- `public/m/app.js`: a lente acompanha as cinco abas reais; a troca anima a posição. `public/m/index.html` contém o filtro SVG de deslocamento usado pela barra. Há respeito a `prefers-reduced-motion`.
+- `docs/suite-mobile/preview-liquid-glass.html`: prévia interativa com os mesmos CSS e ícones do site mobile, alternância claro/escuro e conteúdo ilustrativo sob a barra. Localmente: `http://127.0.0.1:8765/docs/suite-mobile/preview-liquid-glass.html`. A prévia não consulta API nem substitui teste no Android.
+- O usuário pediu explicitamente mais transparência nos botões depois de ver a primeira versão escura. A revisão atual foi conferida visualmente no navegador em ambos os temas e com a lente em abas diferentes.
+- Próximo passo para Claude: conferir a barra no WebView do Android, inclusive sobre conteúdo claro e escuro durante rolagem; ajustar se o filtro SVG ou o `backdrop-filter` tiverem resultado diferente no aparelho. Nenhuma mudança de servidor, banco, autenticação ou deploy foi feita nesta branch.
+
+## Histórico: Fase 1 servidor
 
 - Atualizado: 24/09/2026, 20:08 BRT.
 - Commit base: `8980682312853d6a4cf785f05d075dfdb01606b3` (`origin/main`).
