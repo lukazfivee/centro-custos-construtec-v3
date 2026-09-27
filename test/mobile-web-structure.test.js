@@ -61,3 +61,17 @@ test('servidor abre /m/ e o app Android usa o site do celular', () => {
   assert.match(bridge, /"seguranca"\.equals\(action\) && auth\.unlocked\(\)/);
   assert.match(read('public/m/screen-misc.js'), /suite:\/\/seguranca/);
 });
+
+test('revisão do Codex: navegação descarta tela antiga, sair preserva a fila', () => {
+  const core = read('public/m/core.js');
+  const app = read('public/m/app.js');
+  assert.match(core, /if \(params && params\.__nav && params\.__nav !== CC\.nav\) throw new Stale\(\)/);
+  assert.match(app, /if \(error instanceof CC\.Stale \|\| nav !== CC\.nav\) return;/);
+  assert.match(app, /CC\.go\(current, currentParams\)/);
+  for (const f of ['screen-home.js', 'screen-obra.js', 'screen-misc.js', 'screen-lancar.js']) assert.match(read(`public/m/${f}`), /, (?:true|false), params\);/, f);
+  const misc = read('public/m/screen-misc.js');
+  assert.match(misc, /CC\.queue\.state\.pending \+ CC\.queue\.state\.errors/);
+  const main = read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/MainActivity.java');
+  assert.equal((main.match(/deleteAllData\(\)/g) || []).length, 1);
+  assert.match(main, /if \(forget\) WebStorage\.getInstance\(\)\.deleteAllData\(\);/);
+});

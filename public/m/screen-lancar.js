@@ -70,7 +70,7 @@
         <button type="button" data-pag="pago" aria-pressed="${draft.pagamento === 'pago'}">Já paguei</button></div></div>
       <label class="field" id="venc-box"${draft.pagamento === 'pago' ? ' hidden' : ''}><span>Vencimento</span><input id="f-venc" type="date" value="${esc(draft.vencimento)}"></label>
       <p class="alert" role="alert" id="err"></p>
-      <div class="actions"><button class="btn" type="button" id="salvar">${icon('check', 18)}Salvar lançamento</button></div>`, true);
+      <div class="actions"><button class="btn" type="button" id="salvar">${icon('check', 18)}Salvar lançamento</button></div>`, true, params);
     document.body.classList.add('no-tabs');
     CC.$('#voltar', page).addEventListener('click', () => { draft = null; CC.go(from[0], from[1]); });
     for (const id of ['f-cam', 'f-gal']) {

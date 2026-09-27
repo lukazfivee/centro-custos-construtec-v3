@@ -1,6 +1,6 @@
 # Status: Claude Code (app Android)
 
-Fase atual: 1 · Branch: `feat/android-suite-auth`
+Fase atual: 2 · Branches: `feat/mobile-idempotencia` (servidor, PR #33) e `feat/mobile-web-centro-custos` (site do celular e app)
 
 ## Última atualização
 
@@ -8,7 +8,54 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
 - Commit base: `8980682` (origin/main, "docs: pacote da Suite mobile (fase 1)")
 - Trabalho feito na worktree `../wt-cc-android`, porque a pasta principal do repositório estava na branch do Codex.
 
-## Feito
+## Fase 2 (26/09/2026)
+
+Decisões do Lucas:
+- foto da nota + campos digitados (sem leitura automática);
+- categoria atual (não item do orçamento);
+- Claude faz servidor e celular, porque o plugin do Codex não grava no repositório;
+- sino escondido até a Fase 4.
+
+- **Servidor (PR #33):**
+  - `client_id` no `POST /api/lancamentos`: reenvio igual devolve 200 sem duplicar, dados diferentes dão 409. Migração `106` só aditiva.
+  - O reenvio completa a auditoria e a alocação que faltaram.
+  - Achado: `rowCount` de `SELECT` vem 0 no PGlite. A checagem de alocação existente contava errado e passou a contar linhas.
+  - Contrato em `05-CONTRATO-FASE2.md`.
+- **Site do celular em `public/m/`** (rota `/m/` no `server.js`), com arquivos de até 146 linhas:
+  - Início: pendências do dia e resumo do mês;
+  - Obras: lista com % gasto e detalhe (Resumo, Lançamentos, Caixa);
+  - Nova despesa: foto pela câmera ou galeria, reduzida a JPEG de 1600 px, e campos digitados;
+  - confirmação com a animação do login;
+  - Lançamentos, com os itens do celular e os recusados ("Tentar de novo" e "Descartar");
+  - Menu: tema, Segurança, versão completa e Sair.
+- **Offline:**
+  - faixa "Sem internet · N na fila" e "Enviando…";
+  - fila no IndexedDB, separada por conta, com envio automático quando a internet volta ou a cada 30 s;
+  - última resposta de cada tela guardada no celular;
+  - service worker para abrir o site sem rede.
+- **App Android:**
+  - abre `/m/#handoff=`;
+  - identifica-se com `SuiteConstrutec/<versão>` no user agent;
+  - trata `suite://seguranca`, `suite://sair` e `suite://entrar`;
+  - o botão de menu flutuante saiu, como decidido na Fase 1.
+- **Revisão do Codex (plugin, `gpt-5.6-sol`):** 4 apontamentos, todos corrigidos:
+  - fila e cache agora separados por conta;
+  - falha ao gravar no celular deixou de ser silenciosa;
+  - pós-processamento no reenvio;
+  - estado `concluido`.
+- **Segunda revisão do Codex:** 3 apontamentos, todos corrigidos:
+  - "Sair" conta também os lançamentos recusados no aviso, e o app não apaga mais o armazenamento do site ao sair; só "esquecer o aparelho" apaga;
+  - a atualização depois de enviar a fila mantém a obra aberta;
+  - tela antiga que termina de carregar depois de trocar de aba é descartada (número de navegação).
+- **Validação:**
+  - `npm test` 242 de 242, `npm run check` ok;
+  - `assembleDebug` e `lintDebug` com 0 erros;
+  - navegador em 375x812 contra o servidor local: login da sessão, Início, Obras, detalhe, despesa online, despesa offline com foto, volta da internet enviando a fila, queda no meio sem duplicar, item recusado, tema claro e Menu.
+- **Falta verificar:**
+  - o service worker. O navegador interno do app recusa registrar service workers até em `localhost`; a verificação fica para o celular, em HTTPS, depois do deploy.
+  - Achado fora do escopo: o servidor marca "vencida" pela data UTC (`CURRENT_DATE`). Depois das 21h de Brasília, uma conta que vence hoje já aparece vencida.
+
+## Feito (Fase 1)
 
 - **Telas de entrada locais** em `android/app/src/main/assets/auth/` (HTML, CSS e JS sem framework, fonte IBM Plex Sans e ícones Phosphor embutidos):
   - [A] login de vidro, [B] PIN, [B2] PIN bloqueado, [C] criar e trocar PIN, [D] oferta de biometria;
@@ -116,9 +163,7 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
   - Verificado: `POST /v1/auth/logout` sem token devolve 200 `{ ok: true, revoked: 0 }`; as demais rotas não mudaram.
   - A CI do `main` agora tem os jobs `test` (Node 20) e `test-node24`.
 
-- **Pendente no celular (adiado pelo Lucas em 26/09):**
-  - remover a cópia "Dual App" do Centro de Custos (perfil 95 da Samsung);
-  - instalar o APK final (`adb install -r`, mantém PIN, digital e sessão).
+- **Celular da Fase 1 (resolvido em 26/09):** APK final instalado no perfil principal, com cofre, PIN e digital intactos. A cópia do Dual App foi removida (`pm uninstall --user 95`) e ficou `installed=false`.
 
 ## Pedidos ao Codex
 

@@ -27,7 +27,7 @@
       result = await CC.cached(`lanc-${situacao}-${CC.month()}`, `/lancamentos?${q}`);
     } catch (error) {
       if (error.status === 0 && local) {
-        CC.render(`${CC.header('Lançamentos')}${tabs}${local}<p class="sub">Sem internet para mostrar os lançamentos do servidor.</p>`);
+        CC.render(`${CC.header('Lançamentos')}${tabs}${local}<p class="sub">Sem internet para mostrar os lançamentos do servidor.</p>`, false, params);
         return wire();
       }
       return CC.errorScreen(el, error, () => CC.screens.lancamentos(params));
@@ -41,7 +41,7 @@
     }).join('');
     CC.render(`${CC.header('Lançamentos')}${tabs}${CC.staleNote(result)}${local}
       ${local && rows.length ? `<span class="label">No Centro de Custos · ${esc(CC.monthName())}</span>` : ''}
-      ${list || (local ? '' : `<div class="empty">${icon('list-bullets', 28)}Nenhum lançamento neste mês.</div>`)}`);
+      ${list || (local ? '' : `<div class="empty">${icon('list-bullets', 28)}Nenhum lançamento neste mês.</div>`)}`, false, params);
     wire();
     CC.$$('[data-retry]').forEach((b) => b.addEventListener('click', async () => { await CC.queue.retry(b.dataset.retry); CC.screens.lancamentos(params); }));
     CC.$$('[data-discard]').forEach((b) => b.addEventListener('click', async () => {
@@ -66,15 +66,16 @@
     const seg = CC.$('#m-seg', el);
     if (seg) seg.addEventListener('click', () => { location.href = 'suite://seguranca'; });
     CC.$('#m-sair', el).addEventListener('click', async () => {
-      const pending = CC.queue.state.pending;
+      // Conta tambem os recusados: eles ficam guardados no celular ate a pessoa corrigir ou descartar.
+      const pending = CC.queue.state.pending + CC.queue.state.errors;
       const b = CC.$('#m-sair', el);
       if (pending && b.dataset.armed !== '1') {
         b.dataset.armed = '1';
-        b.querySelector('span').textContent = pending === 1 ? '1 lançamento ainda não foi enviado. Toque de novo para sair.' : `${pending} lançamentos ainda não foram enviados. Toque de novo para sair.`;
+        b.querySelector('span').textContent = pending === 1 ? '1 lançamento ainda não foi enviado. Ele fica guardado neste celular. Toque de novo para sair.' : `${pending} lançamentos ainda não foram enviados. Eles ficam guardados neste celular. Toque de novo para sair.`;
         return;
       }
+      CC.session.clear(); // a fila do celular continua guardada para quando esta conta voltar
       if (inApp) { location.href = 'suite://sair'; return; }
-      CC.session.clear();
       location.href = '/';
     });
   };

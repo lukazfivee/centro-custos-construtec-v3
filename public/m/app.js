@@ -9,7 +9,8 @@
     ['lancamentos', 'Lançamentos', 'list-bullets', ['lancamentos']],
     ['menu', 'Menu', 'list', ['menu']],
   ];
-  let current = 'home';
+  let current = 'home', currentParams = {};
+  CC.nav = 0;
 
   function paintTabs() {
     const nav = document.getElementById('tabs');
@@ -24,10 +25,17 @@
     const screen = CC.screens[name];
     if (!screen) return;
     current = name;
+    currentParams = { ...(params || {}) };
+    delete currentParams.__nav;
+    CC.nav += 1;
     document.body.classList.remove('no-tabs');
     paintTabs();
     history.replaceState(null, '', `#${name}`);
-    Promise.resolve(screen(params || {})).catch((error) => CC.errorScreen(document.getElementById('view'), error, () => CC.go(name, params)));
+    const nav = CC.nav;
+    Promise.resolve(screen({ ...currentParams, __nav: nav })).catch((error) => {
+      if (error instanceof CC.Stale || nav !== CC.nav) return;
+      CC.errorScreen(document.getElementById('view'), error, () => CC.go(name, params));
+    });
   };
 
   CC.errorScreen = function (el, error, retry) {
@@ -48,7 +56,7 @@
       <a class="btn" href="${inApp ? 'suite://entrar' : '/'}" style="padding:0 22px;text-decoration:none">Entrar</a></div>`);
   }
   CC.onUnauthorized = () => signedOut('Sua sessão terminou');
-  CC.onQueueSent = () => { if (['home', 'lancamentos', 'obra'].includes(current)) CC.go(current); };
+  CC.onQueueSent = () => { if (['home', 'lancamentos', 'obra'].includes(current)) CC.go(current, currentParams); };
 
   async function consumeHandoff(code) {
     history.replaceState(null, '', location.pathname + location.search);

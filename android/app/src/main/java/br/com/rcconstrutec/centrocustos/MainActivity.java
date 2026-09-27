@@ -160,6 +160,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
 
     @Override public void logout(boolean forget) {
         dropApp();
+        if (forget) WebStorage.getInstance().deleteAllData();
         showAuth("start", null, forget);
     }
 
@@ -176,8 +177,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
 
     @Override public void dropApp() {
         destroyWebView();
-        appLayer.removeAllViews();
-        WebStorage.getInstance().deleteAllData();
+        appLayer.removeAllViews(); // o armazenamento do site (fila offline) so e apagado ao esquecer o aparelho
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
     }

@@ -80,7 +80,7 @@
       ${CC.staleNote(result)}
       <div class="seg" role="group" aria-label="Seções da obra">${TABS.map(([k, label]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${label}</button>`).join('')}</div>
       ${body}
-      <div class="actions"><button class="btn" type="button" id="lancar">${icon('camera', 18)}Lançar despesa</button></div>`, true);
+      <div class="actions"><button class="btn" type="button" id="lancar">${icon('camera', 18)}Lançar despesa</button></div>`, true, params);
     CC.$('#voltar').addEventListener('click', () => CC.go('obras'));
     CC.$$('[data-tab]').forEach((b) => b.addEventListener('click', () => CC.screens.obra({ id, tab: b.dataset.tab })));
     CC.$('#lancar').addEventListener('click', () => CC.go('lancar', { obraId: id, from: ['obra', { id, tab: 'lanc' }] }));

@@ -41,7 +41,7 @@
     return tasks;
   }
 
-  CC.screens.home = async function () {
+  CC.screens.home = async function (params) {
     const user = CC.session.user() || {};
     const first = String(user.nome || user.name || '').trim().split(/\s+/)[0];
     const el = CC.render(`${header('')}<p class="hello">${esc(CC.greeting())}${first ? `, ${esc(first)}` : ''}</p>
@@ -67,12 +67,12 @@
       ${tasks.map((t, i) => `<div class="card task${t.alert ? ' hot' : ''}"><span class="ic">${icon(t.icon, 18)}</span>
         <span class="txt"><b>${esc(t.title)}</b><small>${esc(t.sub)}</small></span>${t.value ? `<span class="val">${esc(t.value)}</span>` : ''}
         <button class="chip-act" type="button" data-task="${i}">${esc(t.action)}${icon('arrow-right', 14)}</button></div>`).join('')}
-      ${tasks.length ? '' : `<div class="empty">${icon('check-circle', 28)}Tudo em dia por aqui.</div>`}`);
+      ${tasks.length ? '' : `<div class="empty">${icon('check-circle', 28)}Tudo em dia por aqui.</div>`}`, false, params);
     CC.$('#resumo').addEventListener('click', () => CC.go('lancamentos'));
     CC.$$('[data-task]').forEach((b) => b.addEventListener('click', () => { const t = tasks[Number(b.dataset.task)]; CC.go(t.go[0], t.go[1]); }));
   };
 
-  CC.screens.obras = async function () {
+  CC.screens.obras = async function (params) {
     const el = CC.render(`${header('Obras')}<div class="skeleton"></div><div class="skeleton"></div>`);
     let result;
     try {
@@ -93,7 +93,7 @@
         <span class="foot">Gasto ${esc(moneyShort(spent))}${budget > 0 ? ` de ${esc(moneyShort(budget))} orçado` : ''}</span></button>`;
     }).join('');
     CC.render(`${header('Obras')}<p class="sub">${running === 1 ? '1 obra em execução' : `${running} obras em execução`}</p>${staleNote(result)}
-      <div class="rows">${rows || `<div class="empty">${icon('buildings', 28)}Nenhuma obra cadastrada.</div>`}</div>`);
+      <div class="rows">${rows || `<div class="empty">${icon('buildings', 28)}Nenhuma obra cadastrada.</div>`}</div>`, false, params);
     CC.$$('[data-obra]').forEach((b) => b.addEventListener('click', () => CC.go('obra', { id: Number(b.dataset.obra) })));
   };
 })(window.CC = window.CC || {});

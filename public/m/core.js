@@ -105,7 +105,11 @@
     }
   };
 
-  CC.render = function (html, inner) {
+  // Tela antiga que termina de carregar depois de trocar de aba nao desenha por cima da nova.
+  class Stale extends Error {}
+  CC.Stale = Stale;
+  CC.render = function (html, inner, params) {
+    if (params && params.__nav && params.__nav !== CC.nav) throw new Stale();
     const el = app();
     el.innerHTML = `<main class="screen${inner ? ' inner' : ''}">${html}</main>`;
     window.scrollTo(0, 0);
