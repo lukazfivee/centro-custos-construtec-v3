@@ -1,0 +1,100 @@
+/* Construtec · Centro de Custos desktop
+   Base visual extraída do protótipo aprovado (canvas "App mobile Construtec", Rodadas 17 a 20).
+   Referência para o código novo: copie o que precisar para os CSS do app, respeitando MAX_LINES <= 350.
+   Tokens iguais aos do mobile (docs/suite-mobile/design-tokens.json). */
+
+/* 1. Tokens: tema claro em :root, escuro em [data-theme="escuro"] */
+:root{
+  --color-bg:#f2f8fa;
+  --color-surface:#fefefe;
+  --color-text:#0b2530;
+  --color-accent:#12a9d1;
+  --color-divider:#d6e4e9;
+  --color-neutral-300:#5d7480;
+  --color-neutral-500:#8fa6b0;
+  --color-neutral-600:#bad0d8;
+  --color-neutral-800:#d6e4e9;
+  --color-accent-300:#0a7896;
+  --color-accent-500:#12a9d1;
+  --color-accent-600:#0d7f9f;
+  --color-accent-700:#0b4a5c;
+  --color-accent-900:#e8f8fc;
+  --shadow-sm:0 0 0 1px #d6e4e9;
+  --font-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --font-heading:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --c-warn:#8a5200;
+  --c-warn-bar:#e0a33a;
+  --c-warn-soft:#fff5d9;
+  --c-tab:#031f29}
+[data-theme="escuro"]{
+  --color-bg:#031f29;
+  --color-surface:#0b2f3b;
+  --color-text:#f2f8fa;
+  --color-divider:#164656;
+  --color-neutral-300:#b9d4dd;
+  --color-neutral-500:#6f8f9b;
+  --color-neutral-600:#2e5463;
+  --color-neutral-800:#123c4a;
+  --color-accent-300:#5fd0ee;
+  --color-accent-500:#12a9d1;
+  --color-accent-600:#0d7f9f;
+  --color-accent-700:#0b5a70;
+  --color-accent-900:#0a3a48;
+  --shadow-sm:0 0 0 1px #164656;
+  --c-warn:#f2b544;
+  --c-warn-bar:#e0a33a;
+  --c-warn-soft:#3a2a0c;
+  --c-tab:#021820}
+
+/* 2. Movimento reduzido */
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* 3. Base */
+html,body{margin:0;background:var(--color-bg)}img{display:block;max-width:100%}p{margin:0}button{font-family:inherit}
+body{margin:0;background:var(--color-bg)}
+*{box-sizing:border-box}
+.card{background:var(--color-surface);border-radius:14px;box-shadow:var(--shadow-sm),0 1px 2px rgba(3,31,41,.04)}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent-300)}
+.lbl{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-neutral-300)}
+.btn{height:40px;padding:0 16px;border:0;border-radius:10px;font:600 13.5px var(--font-body);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;transition:transform .12s ease, background-color .15s ease, box-shadow .15s ease}
+.btn:active{transform:scale(.97)}
+.btn-p{background:#0a7896;color:#fefefe;box-shadow:0 6px 16px rgba(10,120,150,.22)}
+.btn-p:hover{background:#0b4a5c}
+.btn-s{background:var(--color-surface);color:var(--color-text);box-shadow:inset 0 0 0 1px var(--color-divider)}
+.btn-s:hover{background:var(--color-accent-900)}
+.btn-g{background:transparent;color:var(--color-accent-300)}
+.btn-g:hover{background:var(--color-accent-900)}
+.ibtn{width:36px;height:36px;border:0;border-radius:9px;background:transparent;color:var(--color-neutral-300);cursor:pointer;display:inline-grid;place-items:center;transition:background-color .15s ease,color .15s ease}
+.ibtn:hover{background:var(--color-accent-900);color:var(--color-accent-300)}
+.inp{height:40px;width:100%;padding:0 12px;border:0;border-radius:10px;background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-divider);color:var(--color-text);font:14px var(--font-body);outline:none;transition:box-shadow .15s ease}
+.inp:focus{box-shadow:inset 0 0 0 2px #12a9d1}
+textarea.inp{height:76px;padding:10px 12px;resize:vertical}
+.fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fld>span{font-size:12px;font-weight:600;color:var(--color-neutral-300)}
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:12px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.seg{display:inline-flex;padding:3px;border-radius:11px;background:var(--color-bg);box-shadow:inset 0 0 0 1px var(--color-divider);gap:2px}
+.seg button{height:32px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--color-neutral-300);font:600 12.5px var(--font-body);cursor:pointer;white-space:nowrap}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{height:40px;padding:0 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-neutral-300);border-bottom:1px solid var(--color-divider);white-space:nowrap}
+.tbl td{height:56px;padding:6px 14px;border-bottom:1px solid var(--color-divider);vertical-align:middle}
+.tbl tr.rw{cursor:pointer;transition:background-color .12s ease}
+.tbl tr.rw:hover{background:var(--color-accent-900)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nav{width:100%;height:40px;padding:0 12px;border:0;border-radius:10px;display:flex;align-items:center;gap:12px;font:500 13.5px var(--font-body);cursor:pointer;transition:background-color .15s ease,color .15s ease;text-align:left}
+.nav:hover{background:rgba(255,255,255,.06)}
+.bar{display:block;height:8px;border-radius:4px;background:var(--color-neutral-800);overflow:hidden}
+.bar>span{display:block;height:100%;border-radius:4px}
+.tab{height:44px;padding:0 4px;border:0;background:transparent;font:600 13.5px var(--font-body);cursor:pointer;margin-bottom:-1px}
+input::placeholder,textarea::placeholder{color:var(--color-neutral-500)}
+
+/* 4. Animações usadas (check → estouro → símbolo, painel lateral, avisos) */
+@keyframes ctCheck{0%{opacity:1;transform:scale(0)}20%{opacity:1;transform:scale(1.14)}32%{opacity:1;transform:scale(1)}64%{opacity:1;transform:scale(1)}74%{opacity:0;transform:scale(1.35)}100%{opacity:0;transform:scale(1.35)}}
+@keyframes ctRing{0%{opacity:.9;transform:scale(.85)}100%{opacity:0;transform:scale(1.8)}}
+@keyframes ctBurst{0%{opacity:0;transform:rotate(var(--r)) translateY(0) scale(.4)}15%{opacity:1}100%{opacity:0;transform:rotate(var(--r)) translateY(var(--d)) scale(1)}}
+@keyframes ctLogo{0%{opacity:0;transform:scale(.3) rotate(-30deg)}60%{opacity:1;transform:scale(1.12) rotate(5deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{50%{opacity:.35}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes shakeA{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}

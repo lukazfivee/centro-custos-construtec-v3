@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Estado do protótipo desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./vendor/icons.css">
+</head>
+<body>
+<x-dc>
+<helmet><style>body{margin:0;background:#dfe7ea}</style></helmet>
+<div style="width:1440px;height:900px"><dc-import name="Desktop" start="{{ start }}" tema="{{ tema }}" hint-size="1440px,900px"></dc-import></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{}'>
+// Abre um estado do protótipo: estado.html?start=cobMail&tema=escuro
+class Component extends DCLogic {
+  renderVals() {
+    const q = new URLSearchParams(location.search);
+    return { start: (q.get('start') || 'painel').replace(/[^\w]/g, ''), tema: q.get('tema') === 'escuro' ? 'escuro' : 'claro' };
+  }
+}
+</script>
+</body>
+</html>
