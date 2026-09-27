@@ -7,6 +7,9 @@
   "workers_dev": true,
   "observability": { "enabled": true },
   "triggers": { "crons": ["0 11 * * *"] },
+  // Impressao digital da chave fixa de assinatura do app (publica): libera os App Links
+  // (/redefinir-senha e /cadastro abrem direto no app).
+  "vars": { "ANDROID_CERT_SHA256": "0D:85:31:22:E7:A6:BC:5A:9E:FF:A7:49:1D:DF:99:8F:BB:3D:F7:0E:0F:DB:B0:D9:28:17:7B:25:C4:8E:E7:84" },
   "containers": [{
     "class_name": "CentroCustosApi",
     "image": "../../Dockerfile",

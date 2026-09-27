@@ -74,7 +74,7 @@ maybe('aviso para todos não repete, respeita preferência e marca como lido', a
     const muted = await call('POST', '/v1/internal/notify', { headers: sync, body: { ...event, type: 'acima_orcado', dedupeKey: 'orcado:1:x' } });
     assert.equal(muted.data.created, 0);
     assert.deepEqual((await call('GET', '/v1/notifications/prefs', { token })).data.prefs,
-      { proposta_aprovada: true, acima_orcado: false, conta_vencer: true, novo_acesso: true });
+      { proposta_aprovada: true, acima_orcado: false, conta_vencer: true, novo_acesso: true, pedido_acesso: true });
     const listed = await call('GET', '/v1/notifications', { token });
     assert.equal(listed.data.items[0].link, 'centro-custos');
     const read = await call('POST', '/v1/internal/notifications', { headers: sync, body: { action: 'read', userId, all: true } });

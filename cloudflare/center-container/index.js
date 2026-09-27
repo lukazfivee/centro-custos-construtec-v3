@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers';
 import { handleCentralAuth } from './centralAuth.js';
 import { handleCommercialSync } from './commercialSync.js';
 import { handleNotifications, isNotificationRoute, runDailyNotices } from './notifications.js';
+import { handleSignup, invitePage, isSignupRoute } from './signup.js';
 import { assetLinks, resetPage } from './resetPage.js';
 
 // O Container passa cada valor de envVars pelo ambiente do processo, que so
@@ -43,8 +44,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/redefinir-senha') return resetPage();
+    if (request.method === 'GET' && url.pathname === '/cadastro') return invitePage();
     if (request.method === 'GET' && url.pathname === '/.well-known/assetlinks.json') return assetLinks(env);
     if (url.pathname === '/api/auth/handoff-bridge' || url.pathname.startsWith('/api/interno/')) return new Response(null, { status: 404 });
+    if (isSignupRoute(url.pathname)) return handleSignup(request, env, url);
     if (isNotificationRoute(url.pathname)) return handleNotifications(request, env, url);
     if (url.pathname.startsWith('/v1/')) {
       const central = await handleCentralAuth(request, env);
