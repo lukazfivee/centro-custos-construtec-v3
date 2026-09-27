@@ -13,7 +13,7 @@ Pedido do Lucas: usar no iPhone sem app de loja (opção "rápida": /m/ como app
 - `public/m/manifest.webmanifest` (escopo `/m/`, standalone), ícones `icon-180/192/512.png` (símbolo sobre navy), metas `apple-mobile-web-app-*` e `apple-touch-icon` no `index.html`.
 - `public/m/screen-entrar.js`: tela de entrar própria (`/api/auth/login`), "Esqueci minha senha" (`/v1/auth/password-reset/request`) e dica "Adicionar à Tela de Início" só no Safari do iPhone. No iPhone o app da tela de início **não divide** o login com o Safari, por isso o /m/ precisa entrar sozinho.
 - `app.js`: fora do app Android, sessão vencida ou ausente abre essa tela; no app continua `suite://entrar`. Sair no navegador volta para `/m/`.
-- sw.js `cc-celular-v7`. Teste novo `test/mobile-web-iphone.test.js`; `npm run verify` 275/275; testado no navegador em 375x812 (login errado, login certo, sair, dica no iPhone, tema claro e escuro).
+- sw.js `cc-celular-v8`. Teste novo `test/mobile-web-iphone.test.js`; `npm run verify` 275/275; testado no navegador em 375x812 (login errado, login certo, sair, dica no iPhone, tema claro e escuro).
 - Fica de fora (só no app Android): PIN/digital, cadastro, tour, push e Orçamentos na mesma tela.
 
 ## Fase 5 (27/09/2026): cadastro, convites, tour e tela de carregamento
