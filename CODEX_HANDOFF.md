@@ -1,5 +1,11 @@
 # Handoff — Centro de Custos
 
+## 2026-09-27 04:10 BRT — Suíte mobile, passo 4 publicado (Claude Code)
+
+- Seletor "Suíte" no site do celular e no Orçamentos, "Ir direto para" entre obra e proposta (`proposta_origem` em `/detalhes`), links `#obra=`/`#proposta=`, comparativo de revisões em cartões e RC17 (PR #41; Orçamentos #94).
+- Produção: Worker `centro-custos-api` versão `206ba993`; pré-lançamento `v3.1.0-rc.17`.
+- Detalhes e validação: `docs/suite-mobile/STATUS-CLAUDE.md`, seção "Passo 4".
+
 ## 2026-09-27 02:45 BRT — Suíte mobile, Fase 3 publicada (Claude Code)
 
 - Orçamentos dentro do app Android: `POST /v1/auth/handoff` com `target: "orcamentos"` (migração D1 `009`, aplicada), sessão central filha "Orçamentos web" (PR #37); app com uma WebView por app e troca por `suite://app/<id>`, RC16 (PR #38); chave de serviço com BOM (PR #39).

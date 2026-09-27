@@ -1,11 +1,26 @@
 # Status: Claude Code (app Android)
 
-Fase atual: 3 (publicada em 27/09/2026) · PRs: #37 (servidor), #38 (app e site do celular), #39 (chave com BOM); no Orçamentos, #90, #92 e #93
+Fase atual: 3, passo 4 publicado em 27/09/2026 (RC17) · PRs: #41 (Centro e app) e, no Orçamentos, #94. Fase 3 anterior: #37, #38, #39; Orçamentos #90, #92, #93
 
 ## Última atualização
 
 - Data e hora (BRT): 27/09/2026 02:50
 - Fase 3 feita pelo Claude Code, com merges e deploys autorizados pelo Lucas.
+
+## Passo 4 (27/09/2026): seletor Suíte, Ir direto para e comparativo no celular
+
+Decisões do Lucas: a folha mostra Orçamentos, Centro de Custos e ChamadoPro (este no navegador), segue o tema do site; "Ir direto para" nos dois sentidos; comparativo como folha em tela cheia com cartões; tudo até a produção (RC17).
+
+- **Centro (#41):**
+  - site do celular: pílula "Suíte" no cabeçalho (também na obra) e folha "Esteira Operacional Construtec" (`public/m/suite.js`); saiu o item "Orçamentos" do Menu;
+  - `/api/centros-custo/:id/detalhes` traz `proposta_origem` (`id`, `numero`, `revisao` da baseline vigente do contrato ativo; `services/budgets/proposalOrigin.js`). Na obra, a folha mostra "Proposta de origem · PA-xxxx";
+  - link direto `#obra=<id>` na abertura (também junto do `#handoff=`) e por `hashchange`; cache do service worker em `cc-celular-v2`.
+- **Orçamentos (#94):** folha no celular em portal no `body` (dentro da topbar ficava atrás do conteúdo), "Obra gerada desta proposta" (`proposal.costCenterId`), link direto `#proposta=<id>` (na carga e por `hashchange`; o `AuthGate` preserva o destino junto do `#handoff=`), comparativo de revisões em cartões e tela cheia. Saiu o item temporário do menu.
+- **App (#41):** `suite://app/<id>?proposta=<uuid>` ou `?obra=<n>`, validados em `SuiteViews.parse`. Na primeira abertura, o destino vai junto do handoff; com a WebView aberta, o app troca só o fragmento (`location.hash`). RC17 (`versionCode 31017`).
+- **Validação:** testes do Centro (móveis, versão e `budget-import.integration` com `proposta_origem`) e `npm run verify` do Orçamentos (38 de 39). Navegador em 375x812: folha do `/m/` nos dois temas com obra importada da fixture, folha e comparativo do Orçamentos com o servidor local isolado (`APPDATA` temporário) e o mock como diretório central, e troca de revisão pelo fragmento. Emulador com o APK do mock: ida direta nos dois sentidos, com a WebView nova e com a já aberta (sem recarregar), e destino inválido ignorado.
+- **Produção:** Centro `206ba993`, Orçamentos `c6b3f62d`, pré-lançamento v3.1.0-rc.17.
+- **A17:** a RC16 foi instalada por cima do app antigo (APK da CI reassinado com a chave de debug deste PC, a mesma do app no aparelho), mantendo PIN e digital. A RC17 ficou reassinada e pronta, mas o aparelho foi desconectado antes da instalação.
+- **Falta:** o cartão "Obra gerada desta proposta" só aparece quando a proposta já foi enviada ao Centro (`costCenterId` vem do último envio entregue da revisão).
 
 ## Fase 3 (27/09/2026): Orçamentos dentro do app
 
@@ -24,7 +39,6 @@ Decisões do Lucas: revisar e publicar antes o #90 do Orçamentos (identidade co
   - a chave de assinatura de debug da CI muda a cada execução, então uma RC não instala por cima da outra. Vale criar uma chave fixa como segredo do GitHub;
   - backup diário do Neon do Orçamentos falha desde pelo menos 24/09: faltam os segredos `ORCAMENTOS_BACKUP_DATABASE_URL` e `BACKUP_PASSPHRASE` no GitHub do Orçamentos;
   - conferir se o `CONSTRUTEC_INTEGRATION_KEY` do Orçamentos também tem BOM (a sincronização de propostas usaria o mesmo cabeçalho);
-  - passo 4: seletor "Suíte", comparativo de revisões no celular e `#proposta=`.
 
 ## Fase 2 (26/09/2026)
 
