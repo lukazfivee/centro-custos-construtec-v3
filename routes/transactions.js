@@ -10,6 +10,7 @@ const { validDate } = require('../lib/dates');
 const { csvLine, decimalBr } = require('../lib/csv');
 const { recordAudit } = require('../services/audit');
 const { recordExpenseAllocation } = require('../services/budgets/budgetAllocations');
+const { readClientId, findReplay, isClientIdConflict, ensureCreatedAudit } = require('../lib/transactionIdempotency');
 
 const router = express.Router();
 router.use(autenticar);
@@ -77,6 +78,9 @@ router.get('/exportar.csv', asyncRoute(async (req, res) => {
 
 router.post('/', asyncRoute(async (req, res) => {
   const data = validatePayload(req.body);
+  const clientId = readClientId(req.body), replay = await findReplay(getDb(), req.usuario.id, clientId, data);
+  if (replay && !replay.excluido) { await ensureCreatedAudit(replay.public_id, data, req.usuario); await maybeAutoAllocateExpense(data, replay.id); }
+  if (replay) return res.status(200).json(replay);
   if (await isMonthClosed(data.date)) {
     throw httpError(403, 'Esta competência está fechada. Não é possível criar lançamentos nela.');
   }
@@ -87,17 +91,18 @@ router.post('/', asyncRoute(async (req, res) => {
       (public_id,type,cost_center_id,category_id,description,counterparty,amount,transaction_date,notes,
        due_date,settlement_date,financial_status,document_number,payment_method,
        origin_instance_id,origin_instance_name,last_modified_instance_id,last_modified_instance_name,
-       origin_user_name,created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$15,$16,$17,$18)
+       origin_user_name,created_by,client_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$15,$16,$17,$18,$19)
      RETURNING id,public_id`,
     [crypto.randomUUID(),data.type,data.costCenterId,data.categoryId,data.description,data.counterparty,
       data.amount,data.date,data.notes,data.dueDate,data.settlementDate,data.financialStatus,
-      data.documentNumber,data.paymentMethod,instance.id,instance.name,req.usuario.name,req.usuario.id]
-  );
-  await recordAudit({
-    entityType:'lancamento',entityId:rows[0].public_id,action:'criado',
-    summary:`Lançamento criado: ${data.description}`,data,user:req.usuario,
+      data.documentNumber,data.paymentMethod,instance.id,instance.name,req.usuario.name,req.usuario.id,clientId]
+  ).catch(async (error) => { // reenvio simultâneo do mesmo lançamento: devolve o primeiro
+    if (!isClientIdConflict(error)) throw error;
+    return { rows: [await findReplay(getDb(), req.usuario.id, clientId, data)] };
   });
+  if (rows[0].replayed) return res.status(200).json(rows[0]);
+  await ensureCreatedAudit(rows[0].public_id, data, req.usuario);
   await maybeAutoAllocateExpense(data, rows[0].id);
   res.status(201).json(rows[0]);
 }));
@@ -109,9 +114,7 @@ router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (re
   if (reason.length < 5) throw httpError(400, 'Informe o motivo do estorno com pelo menos 5 caracteres.');
   if (!validDate(reversalDate)) throw httpError(400, 'Informe uma data de estorno válida.');
   if (await isMonthClosed(reversalDate)) throw httpError(403, 'A competência escolhida para o estorno está fechada. Escolha uma competência aberta.');
-
-  const db = getDb();
-  const instance = getInstanceIdentity();
+  const db = getDb(), instance = getInstanceIdentity();
   let created;
   await db.transaction(async (tx) => {
     const originalResult = await tx.query(
@@ -270,7 +273,7 @@ async function maybeAutoAllocateExpense(data, transactionId) {
   );
   if (!contract.rows[0]) return;
   const existing = await db.query('SELECT 1 FROM expense_allocations WHERE transaction_id=$1 LIMIT 1', [transactionId]);
-  if (existing.rowCount) return;
+  if (existing.rows.length) return; // rowCount de SELECT vem 0 no PGlite
   await recordExpenseAllocation(db, {
     transactionId, costCenterId:data.costCenterId, amount:data.amount, contractId:contract.rows[0].id,
   });
@@ -337,9 +340,7 @@ async function validateRelations(data, requireActive) {
   if (requireActive && (!relation.center_active || !relation.category_active)) {
     throw httpError(400, 'Use um centro de custo e uma categoria ativos.');
   }
-  if (relation.category_type !== 'ambos' && relation.category_type !== data.type) {
-    throw httpError(400, 'A categoria não é compatível com o tipo do lançamento.');
-  }
+  if (relation.category_type !== 'ambos' && relation.category_type !== data.type) throw httpError(400, 'A categoria não é compatível com o tipo do lançamento.');
 }
 
 module.exports = router;

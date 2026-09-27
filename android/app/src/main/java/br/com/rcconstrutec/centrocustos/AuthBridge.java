@@ -89,6 +89,18 @@ final class AuthBridge {
         }
     }
 
+    /** Acoes pedidas pelo site do celular (suite://). So o que o app ja permite pelo menu nativo. */
+    void webAction(String action) {
+        if ("seguranca".equals(action) && auth.unlocked()) shell.openSecurity();
+        else if ("entrar".equals(action)) shell.sessionExpired();
+        else if ("sair".equals(action)) worker.execute(() -> {
+            String token = auth.activeToken();
+            auth.signOut(false);
+            ui(() -> shell.logout(false));
+            if (token != null) { try { auth.api.logout(token); } catch (java.io.IOException ignored) { /* sem rede */ } }
+        });
+    }
+
     private void bioEnroll(String id) throws Exception {
         byte[] key = auth.activeKeyCopy();
         if (key == null || !auth.vault.hasPin()) { reply(id, fail("SESSION_INVALID")); return; }

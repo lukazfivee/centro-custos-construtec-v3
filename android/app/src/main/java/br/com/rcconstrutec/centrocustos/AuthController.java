@@ -20,6 +20,8 @@ final class AuthController {
         void openLocalSetup();
         void moveToBack();
         void dropApp();
+        void openSecurity();
+        void sessionExpired();
         boolean online();
     }
 

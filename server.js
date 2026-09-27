@@ -159,6 +159,12 @@ function createApp({ orcamentosApp } = {}) {
   };
 
   app.get('/', sendIndex);
+  // Centro de Custos no celular (Fase 2 mobile): public/m/.
+  app.get(['/m', '/m/'], (req, res) => {
+    if (req.path === '/m') return res.redirect(301, '/m/');
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.sendFile(path.join(publicDir, 'm', 'index.html'));
+  });
   app.use(express.static(publicDir, {
     etag:true,index:false,
     setHeaders(res, filePath) {

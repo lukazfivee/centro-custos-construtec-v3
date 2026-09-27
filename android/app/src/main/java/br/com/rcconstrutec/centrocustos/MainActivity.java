@@ -128,11 +128,11 @@ public final class MainActivity extends Activity implements AuthController.Shell
         if (webView != null) { hideAuth(); toast(notice); return; }
         String base = BuildConfig.CENTRAL_WEB_BASE.replaceAll("/+$", "");
         io.execute(() -> {
-            String url = base + "/";
+            String url = base + "/m/";
             boolean offline = false;
             try {
                 String code = auth.handoffCode();
-                if (code != null) url = base + "/#handoff=" + Uri.encode(code);
+                if (code != null) url = base + "/m/#handoff=" + Uri.encode(code);
             } catch (AuthController.SessionRejected rejected) {
                 runOnUiThread(this::sessionRejected);
                 return;
@@ -145,6 +145,8 @@ public final class MainActivity extends Activity implements AuthController.Shell
         });
     }
 
+    @Override public void sessionExpired() { sessionRejected(); }
+    @Override public void openSecurity() { showAuth("security", null); }
     private void sessionRejected() {
         auth.sessionRevoked();
         dropApp();
@@ -158,6 +160,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
 
     @Override public void logout(boolean forget) {
         dropApp();
+        if (forget) WebStorage.getInstance().deleteAllData();
         showAuth("start", null, forget);
     }
 
@@ -174,8 +177,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
 
     @Override public void dropApp() {
         destroyWebView();
-        appLayer.removeAllViews();
-        WebStorage.getInstance().deleteAllData();
+        appLayer.removeAllViews(); // o armazenamento do site (fila offline) so e apagado ao esquecer o aparelho
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
     }
@@ -202,8 +204,6 @@ public final class MainActivity extends Activity implements AuthController.Shell
             showAuth("reset", null);
         }
     }
-
-    // ---- Servidor local (instalacao Windows) ----
 
     private void showSetup(String error) {
         destroyWebView();
@@ -248,7 +248,6 @@ public final class MainActivity extends Activity implements AuthController.Shell
     }
 
     // ---- App web (remoto): nunca recebe a ponte AndroidAuth ----
-
     private void showWebApp(String url, boolean central) {
         destroyWebView();
         appLayer.removeAllViews();
@@ -272,8 +271,9 @@ public final class MainActivity extends Activity implements AuthController.Shell
                 else showSetup(message != null ? message : "Não foi possível acessar esta instalação. Confirme o endereço e a rede Wi-Fi.");
             }
             @Override public void message(String message) { toast(message); }
+            @Override public void suiteLink(String action) { if (central && bridge != null) bridge.webAction(action); }
         });
-        if (central) AppWebView.addMenuButton(this, appLayer, v -> showAuth("menu", null));
+        if (central) settings.setUserAgentString(settings.getUserAgentString() + " SuiteConstrutec/" + BuildConfig.VERSION_NAME);
         webView.loadUrl(url);
     }
 
