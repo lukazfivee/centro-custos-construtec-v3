@@ -24,8 +24,11 @@ function safeCompare(a, b) {
 const DEFAULT_INTEGRATION_KEY = 'construtec-internal-integration-secret-2026';
 const MIN_CLOUD_KEY_LENGTH = 32;
 
+// Segredo colado com BOM (U+FEFF) ou espacos: compara os dois lados sem eles (o Orcamentos envia limpo).
+const cleanKey = (value) => String(value || '').replace(/^\uFEFF/, '').trim();
+
 function expectedIntegrationKey() {
-  const configured = process.env.CONSTRUTEC_INTEGRATION_KEY || '';
+  const configured = cleanKey(process.env.CONSTRUTEC_INTEGRATION_KEY);
   if (!process.env.DATABASE_URL) return configured || DEFAULT_INTEGRATION_KEY;
   if (configured.length < MIN_CLOUD_KEY_LENGTH || configured === DEFAULT_INTEGRATION_KEY) return null;
   return configured;
@@ -42,7 +45,7 @@ async function autenticarOuChaveIntegracao(req, res, next) {
     if (!expectedKey) {
       return res.status(503).json({ erro: 'Integração com o Orçamentos não configurada neste servidor.' });
     }
-    if (!safeCompare(integrationKey, expectedKey)) {
+    if (!safeCompare(cleanKey(integrationKey), expectedKey)) {
       return res.status(401).json({ erro: 'Chave de integração inválida.' });
     }
     req.usuario = { id: null, name: 'Sincronização Direta Orçamentos', role: 'admin' };
