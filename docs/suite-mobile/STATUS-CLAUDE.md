@@ -1,11 +1,48 @@
 # Status: Claude Code (app Android)
 
-Fase atual: 4 (notificações), publicada em 27/09/2026 (RC18) · PR #45. Antes: passo 4 da Fase 3 (#41; Orçamentos #94), Fase 3 (#37, #38, #39; Orçamentos #90, #92, #93)
+Fase atual: 5 (primeiro uso e cadastro), publicada em 27/09/2026 (RC19) · PR #47. Antes: Fase 4 (#45, RC18), passo 4 da Fase 3 (#41; Orçamentos #94), Fase 3 (#37, #38, #39; Orçamentos #90, #92, #93)
 
 ## Última atualização
 
-- Data e hora (BRT): 27/09/2026 02:50
-- Fase 3 feita pelo Claude Code, com merges e deploys autorizados pelo Lucas.
+- Data e hora (BRT): 27/09/2026 15:00
+- Fase 5 feita pelo Claude Code, com migração D1, merge e deploy autorizados pelo Lucas.
+
+## Fase 5 (27/09/2026): cadastro, convites, tour e tela de carregamento
+
+Decisões do Lucas:
+- cadastro no app com nome, e-mail, celular, código da empresa e senha forte, mais aceite;
+- o pedido fica pendente e os admins aprovam, escolhendo o perfil (padrão Supervisor);
+- convite por e-mail sai com a conta aprovada;
+- aprovação no celular e no Centro web;
+- código da empresa gerado pelo sistema, e o admin pode trocar;
+- tour de 4 telas só para conta nova;
+- tela de carregamento: a primeira versão (disciplinas em círculo) **não agradou**; ficou a versão "mais limpa e sóbria".
+
+- **Worker:**
+  - migração D1 `011-cadastro.sql` (aplicada em produção em 27/09);
+  - `signup.js`: `POST /v1/signup/request` público, limitado a 10 por IP a cada 15 min; rotas de admin `/v1/signup/*`; rota interna `/v1/internal/signup` com `x-sync-key`;
+  - aviso `pedido_acesso` só para admins;
+  - e-mails pelo Resend: aprovado, recusado e convite;
+  - `tour` no primeiro login (`tour_pending`), página `/cadastro` e `ANDROID_CERT_SHA256` nas vars;
+  - aprovar e recusar só alteram pedido ainda pendente.
+- **Centro:**
+  - `/api/cadastros`; sem conta central, a lista responde `disponivel:false`, para não gerar erro no console da tela de Usuários;
+  - no /m/: Menu › Pedidos de acesso (admin), aberto também pelo aviso `pedidos=1`;
+  - no web: painel na tela de Usuários (`public/users-signups.js`).
+- **App (RC19):**
+  - `screen-signup.js`: formulário, "Pedido enviado" e "Conta criada";
+  - App Link `/cadastro#convite=`;
+  - `screen-tour.js`: 4 telas antes de abrir o app, revistas pelo Menu nativo ou pelo /m/ (`suite://tour`);
+  - `assets/loading/index.html` sóbrio.
+- **Validação:**
+  - `npm run verify` 263 de 263; CI do PR, incluindo `assembleDebug` e `lintDebug`, passou;
+  - navegador com Worker falso e mock: cadastro com código, convite, login, PIN, tour, e pedidos no /m/ e no web;
+  - produção depois do deploy: `/cadastro` 200, `assetlinks.json` com a chave fixa, validação do cadastro e rotas de admin com 401 sem sessão.
+- **Falta verificar no aparelho:**
+  - cadastro real, com e-mail do Resend;
+  - link do convite abrindo o app (App Link verificado);
+  - tour;
+  - tela de carregamento nova.
 
 ## Fase 4 (27/09/2026): notificações
 
