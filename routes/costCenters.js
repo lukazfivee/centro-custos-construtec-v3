@@ -6,7 +6,7 @@ const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { csvLine, decimalBr } = require('../lib/csv');
-const { validDate, currentMonth, validMonth, monthRange } = require('../lib/dates');
+const { validDate, currentMonth, validMonth, monthRange, todaySql } = require('../lib/dates');
 const { recordAudit } = require('../services/audit');
 const { getCostCenterBudgetComparison } = require('../services/budgets/budgetComparison');
 const {
@@ -105,7 +105,7 @@ router.get('/:id/detalhes', asyncRoute(async (req, res) => {
       t.transaction_date::text AS data, t.due_date::text AS vencimento,
       t.financial_status AS status_financeiro, t.document_number AS documento,
       t.payment_method AS forma_pagamento, t.notes AS observacao,
-      CASE WHEN t.financial_status='pendente' AND t.due_date<CURRENT_DATE THEN 'vencido'
+      CASE WHEN t.financial_status='pendente' AND t.due_date<${todaySql()} THEN 'vencido'
         ELSE t.financial_status END AS situacao,
       c.name AS categoria
     FROM ${allocatedTransactionsSql} t JOIN categories c ON c.id=t.category_id

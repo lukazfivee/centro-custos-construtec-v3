@@ -3,7 +3,7 @@ const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
-const { currentMonth, validMonth, monthRange, monthsEndingAt } = require('../lib/dates');
+const { currentMonth, validMonth, monthRange, monthsEndingAt, todaySql } = require('../lib/dates');
 
 const router = express.Router();
 router.use(autenticar);
@@ -36,7 +36,7 @@ router.get('/resumo', asyncRoute(async (req, res) => {
     db.query(`
       SELECT COALESCE(SUM(amount * accounting_sign),0) AS total,COUNT(*) AS quantidade
       FROM ${sourceSql} t WHERE deleted_at IS NULL AND financial_status='pendente'
-        AND due_date<CURRENT_DATE AND accounting_sign=1 AND ($1::integer IS NULL OR cost_center_id=$1)
+        AND due_date<${todaySql()} AND accounting_sign=1 AND ($1::integer IS NULL OR cost_center_id=$1)
     `, [centerId]),
     db.query(`
       SELECT cc.id,cc.code AS codigo,cc.name AS nome,cc.client AS cliente,
@@ -61,7 +61,7 @@ router.get('/resumo', asyncRoute(async (req, res) => {
       SELECT t.id,t.type AS tipo,t.transaction_date::text AS data,t.description AS descricao,
         t.due_date::text AS vencimento,t.financial_status AS status_financeiro,
         t.accounting_sign AS sinal_contabil,t.reversal_of AS estorno_de,
-        CASE WHEN t.financial_status='pendente' AND t.due_date<CURRENT_DATE THEN 'vencido'
+        CASE WHEN t.financial_status='pendente' AND t.due_date<${todaySql()} THEN 'vencido'
           ELSE t.financial_status END AS situacao,
         t.amount AS valor,cc.name AS centro_nome,c.name AS categoria
       FROM ${sourceSql} t JOIN cost_centers cc ON cc.id=t.cost_center_id
