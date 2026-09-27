@@ -67,6 +67,14 @@ final class SystemBars {
         return caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
     }
 
+    /** Fragmento de https://<host>/cadastro#convite=<token>&codigo=..&email=.. (as telas leem), ou null. */
+    static String invite(Uri data, String host) {
+        if (data == null || host == null || !"https".equals(data.getScheme()) || !host.equalsIgnoreCase(data.getHost())) return null;
+        String fragment = data.getEncodedFragment();
+        if (!"/cadastro".equals(data.getPath()) || fragment == null || fragment.length() > 600) return null;
+        return fragment.matches("(^|.*&)convite=[A-Za-z0-9_-]{16,}(&.*|$)") ? fragment : null;
+    }
+
     /** Token de https://<host>/redefinir-senha#t=<token>, ou null se o link nao for esse. */
     static String resetToken(Uri data, String host) {
         if (data == null || host == null || !"https".equals(data.getScheme()) || !host.equalsIgnoreCase(data.getHost())) return null;

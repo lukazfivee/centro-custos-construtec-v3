@@ -3,10 +3,10 @@ import { sendPush } from './fcm.js';
 
 // Fase 4 da Suíte mobile: central de notificações, preferências e push (FCM).
 // Rotas do app (Bearer da sessão central) e internas (x-sync-key, do Container).
-export const TYPES = ['proposta_aprovada', 'acima_orcado', 'conta_vencer', 'novo_acesso'];
+export const TYPES = ['proposta_aprovada', 'acima_orcado', 'conta_vencer', 'novo_acesso', 'pedido_acesso'];
 const APPS = new Set(['centro-custos', 'orcamentos', 'conta']);
 // Mesmo formato do seletor Suíte: app e, se houver, o destino validado.
-const LINK = /^(centro-custos|orcamentos)(\?(obra=[0-9]{1,12}|proposta=[A-Za-z0-9-]{1,64}))?$/;
+const LINK = /^(centro-custos|orcamentos)(\?(obra=[0-9]{1,12}|proposta=[A-Za-z0-9-]{1,64}|pedidos=1))?$/;
 const clip = (value, max) => String(value ?? '').trim().slice(0, max);
 
 export function isNotificationRoute(pathname) {
@@ -30,8 +30,10 @@ export async function deliver(env, input) {
   const link = LINK.test(String(input.link || '')) ? input.link : null;
   const dedupeKey = input.dedupeKey ? clip(input.dedupeKey, 200) : null;
   if (!title || !body) return { created: 0, pushed: 0, error: 'TEXT_REQUIRED' };
-  let ids = input.audience === 'all'
-    ? ((await env.DB.prepare('SELECT id FROM cloud_users WHERE org_id=? AND active=1 AND deleted_at IS NULL').bind(ORG_ID).all()).results || []).map((r) => r.id)
+  const everyone = input.audience === 'all' || input.audience === 'admins';
+  const adminsOnly = input.audience === 'admins' ? " AND role='admin'" : '';
+  let ids = everyone
+    ? ((await env.DB.prepare(`SELECT id FROM cloud_users WHERE org_id=? AND active=1 AND deleted_at IS NULL${adminsOnly}`).bind(ORG_ID).all()).results || []).map((r) => r.id)
     : [String(input.userId || '')].filter(Boolean);
   if (type !== 'teste' && ids.length) {
     const off = (await env.DB.prepare(`SELECT user_id FROM notification_prefs WHERE type=? AND enabled=0 AND user_id IN (${placeholders(ids)})`)

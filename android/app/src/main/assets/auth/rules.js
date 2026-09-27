@@ -33,6 +33,14 @@
     FEATURE_UNAVAILABLE: 'Esta função ainda não está disponível no servidor.',
     SESSION_INVALID: 'Sua sessão terminou. Entre com e-mail e senha.',
     SESSION_EXPIRED: 'Sua sessão terminou. Entre com e-mail e senha.',
+    NAME_INVALID: 'Informe seu nome completo.',
+    EMAIL_INVALID: MSG.emailInvalid,
+    PHONE_INVALID: 'Informe o celular com DDD.',
+    PASSWORD_WEAK: MSG.passwordWeak,
+    TERMS_REQUIRED: 'Aceite os termos para criar a conta.',
+    EMAIL_IN_USE: 'Este e-mail já tem conta. Use Entrar ou Esqueci a senha.',
+    CODE_INVALID: 'Código da empresa incorreto. Confira com o administrador.',
+    INVITE_INVALID: 'Convite inválido ou vencido. Peça um novo ao administrador.',
   };
   const GENERIC_ERROR = 'Não foi possível entrar agora. Tente de novo.';
 
@@ -119,6 +127,34 @@
     return '';
   }
 
+  // Cadastro pelo app (Fase 5): mesma regra do servidor, para avisar antes de enviar.
+  function validateSignup(f) {
+    if (String(f.name || '').trim().length < 2) return CODE_MESSAGES.NAME_INVALID;
+    const email = validateEmail(f.email);
+    if (email) return email;
+    if (String(f.phone || '').replace(/\D/g, '').length < 10) return CODE_MESSAGES.PHONE_INVALID;
+    if (!f.invite && String(f.companyCode || '').replace(/[^A-Za-z0-9]/g, '').length < 6) return 'Informe o código da empresa que o administrador passou.';
+    const pw = validateNewPassword(f.password, f.confirm);
+    if (pw) return pw;
+    return f.accept ? '' : CODE_MESSAGES.TERMS_REQUIRED;
+  }
+
+  // Celular enquanto digita: (11) 98765-4321.
+  function formatPhone(value) {
+    const d = String(value || '').replace(/\D/g, '').slice(0, 11);
+    if (d.length <= 2) return d ? `(${d}` : '';
+    const rest = d.slice(2), cut = rest.length > 8 ? 5 : 4;
+    return `(${d.slice(0, 2)}) ${rest.slice(0, cut)}${rest.length > cut ? '-' + rest.slice(cut) : ''}`;
+  }
+
+  // Link do convite: #convite=<token>&codigo=<codigo>&email=<email>.
+  function parseInviteFragment(hash) {
+    const params = new URLSearchParams(String(hash || '').replace(/^#/, ''));
+    const token = params.get('convite') || '';
+    if (!/^[A-Za-z0-9_-]{16,}$/.test(token)) return null;
+    return { token, code: String(params.get('codigo') || '').slice(0, 40), email: String(params.get('email') || '').slice(0, 200) };
+  }
+
   function firstName(name) {
     return String(name || '').trim().split(/\s+/)[0] || '';
   }
@@ -150,7 +186,7 @@
     PIN_LENGTH, MAX_ATTEMPTS, RESEND_SECONDS, AUTO_LOCK, AUTO_LOCK_DEFAULT, MSG,
     messageForCode, validateEmail, validateLogin, isWeakPin, validatePinChoice,
     attemptState, pinAttemptMessage, passwordChecks, passwordStrength, passwordAcceptable,
-    validateNewPassword, firstName, initials, resendRemaining, autoLockLabel, parseResetFragment,
+    validateNewPassword, validateSignup, formatPhone, parseInviteFragment, firstName, initials, resendRemaining, autoLockLabel, parseResetFragment,
   };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.AuthRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);

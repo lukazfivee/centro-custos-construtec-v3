@@ -7,7 +7,7 @@
     ['obras', 'Obras', 'buildings', ['obras', 'obra']],
     ['lancar', 'Lançar', 'plus-circle', ['lancar', 'ok']],
     ['lancamentos', 'Lançamentos', 'list-bullets', ['lancamentos']],
-    ['menu', 'Menu', 'list', ['menu']],
+    ['menu', 'Menu', 'list', ['menu', 'pedidos']],
   ];
   let current = 'home', currentParams = {};
   let lensTimer;
@@ -82,6 +82,7 @@
     const hash = new URLSearchParams(location.hash.slice(1));
     const code = hash.get('handoff');
     const obra = Number(hash.get('obra')) || 0; // link direto #obra=<id> (seletor Suite)
+    const pedidos = hash.get('pedidos') === '1'; // aviso de pedido de acesso (admin)
     if (code) {
       try { await consumeHandoff(code); } catch (error) { if (!CC.session.token()) return signedOut(error.message); }
     }
@@ -97,10 +98,13 @@
     }
     // O app Android troca so o fragmento da WebView ja aberta para ir a uma obra.
     window.addEventListener('hashchange', () => {
-      const id = Number(new URLSearchParams(location.hash.slice(1)).get('obra')) || 0;
+      const target = new URLSearchParams(location.hash.slice(1));
+      const id = Number(target.get('obra')) || 0;
       if (id > 0 && CC.session.token()) CC.go('obra', { id });
+      if (target.get('pedidos') === '1' && CC.session.token()) CC.go('pedidos');
     });
     if (obra > 0) return CC.go('obra', { id: obra });
+    if (pedidos) return CC.go('pedidos');
     const start = location.hash.slice(1);
     CC.go(CC.screens[start] && !['ok', 'obra'].includes(start) ? start : 'home');
   }

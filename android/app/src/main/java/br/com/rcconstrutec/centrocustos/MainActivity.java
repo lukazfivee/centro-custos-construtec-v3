@@ -75,13 +75,13 @@ public final class MainActivity extends Activity implements AuthController.Shell
         auth = new AuthController(new SessionVault(this), new CentralApi(this));
         String saved = preferences.getString(SERVER_URL, "");
         centralMode = !"local".equals(preferences.getString(MODE, saved.isEmpty() ? "central" : "local"));
-        boolean resetLink = handleLink(getIntent());
+        String linkReason = handleLink(getIntent());
         pushTarget = SuitePush.target(getIntent());
-        if (!centralMode && !resetLink) {
+        if (!centralMode && linkReason == null) {
             if (saved.isEmpty()) showSetup(null); else showWebApp(SuiteViews.CENTRO_CUSTOS, saved, false);
         } else {
             centralMode = true;
-            showAuth(resetLink ? "reset" : "start", null);
+            showAuth(linkReason != null ? linkReason : "start", null);
         }
         watchNetwork();
     }
@@ -154,6 +154,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
 
     @Override public void sessionExpired() { sessionRejected(); }
     @Override public void openSecurity() { showAuth("security", null); }
+    @Override public void openTour() { showAuth("tour", null); }
     private void sessionRejected() {
         auth.sessionRevoked();
         dropApp();
@@ -195,20 +196,25 @@ public final class MainActivity extends Activity implements AuthController.Shell
         if (message != null && !message.isEmpty()) Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
-    /** App Link https://<base>/redefinir-senha#t=<token>: o token so vem no fragmento. */
-    private boolean handleLink(Intent intent) {
-        String token = SystemBars.resetToken(intent == null ? null : intent.getData(), Uri.parse(BuildConfig.CENTRAL_API_BASE).getHost());
-        if (token == null) return false;
-        auth.setResetToken(token);
-        return true;
+    /** App Links (so no fragmento): /redefinir-senha#t=<token> e /cadastro#convite=<token>. Devolve a tela ou null. */
+    private String handleLink(Intent intent) {
+        Uri data = intent == null ? null : intent.getData();
+        String host = Uri.parse(BuildConfig.CENTRAL_API_BASE).getHost();
+        String token = SystemBars.resetToken(data, host);
+        if (token != null) { auth.setResetToken(token); return "reset"; }
+        String invite = SystemBars.invite(data, host);
+        if (invite == null) return null;
+        auth.setInvite(invite);
+        return "signup";
     }
 
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (handleLink(intent)) {
+        String linkReason = handleLink(intent);
+        if (linkReason != null) {
             if (!centralMode) { centralMode = true; preferences.edit().putString(MODE, "central").apply(); }
-            showAuth("reset", null);
+            showAuth(linkReason, null);
         } else if ((pushTarget = SuitePush.target(intent)) != null && auth.unlocked() && !authVisible()) {
             enterApp(null);
         }
@@ -243,7 +249,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true); settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(false); settings.setAllowContentAccess(true); settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setMediaPlaybackRequiresUserGesture(true); settings.setBuiltInZoomControls(false); settings.setDisplayZoomControls(false);
-        AppWebView.attach(this, webView, frame, url, new AppWebView.Host() {
+        AppWebView.attach(this, webView, frame, url, SuiteViews.ORCAMENTOS.equals(app) ? "Orçamentos" : "Centro de Custos", new AppWebView.Host() {
             @Override public boolean openFileChooser(ValueCallback<Uri[]> callback, WebChromeClient.FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
                 fileCallback = callback;

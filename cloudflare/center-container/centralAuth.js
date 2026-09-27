@@ -216,7 +216,10 @@ async function handleLogin(request, env) {
   user.last_login_at = now;
   const session = await createSession(env, user, request);
   await noteLogin(env, user, request);
-  return json({ ok: true, sessionToken: session.token, expiresAt: session.expiresAt, user: publicUser(user) });
+  // Conta nova (cadastro ou convite): o app mostra o tour uma vez, neste primeiro login.
+  const tour = Number(user.tour_pending) === 1;
+  if (tour) await env.DB.prepare('UPDATE cloud_users SET tour_pending=0 WHERE id=?').bind(user.id).run();
+  return json({ ok: true, sessionToken: session.token, expiresAt: session.expiresAt, user: publicUser(user), tour });
 }
 
 async function handleBootstrap(request, env) {

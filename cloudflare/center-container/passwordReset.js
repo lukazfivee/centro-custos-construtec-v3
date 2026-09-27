@@ -13,7 +13,7 @@ function randomToken() {
 async function readBody(request) {
   try { return await request.json(); } catch { return null; }
 }
-async function rateAllowed(db, kind, value, max, now) {
+export async function rateAllowed(db, kind, value, max, now) {
   const bucket = `${kind}:${await sha256Text(value)}`;
   await db.prepare(`INSERT INTO mobile_auth_limits(bucket,count,expires_at) VALUES(?,1,?)
     ON CONFLICT(bucket) DO UPDATE SET count=CASE WHEN expires_at<=? THEN 1 ELSE count+1 END,
@@ -22,7 +22,7 @@ async function rateAllowed(db, kind, value, max, now) {
   const row = await db.prepare('SELECT count FROM mobile_auth_limits WHERE bucket=?').bind(bucket).first();
   return Number(row?.count || 0) <= max;
 }
-function strongPassword(password) {
+export function strongPassword(password) {
   const checks = [password.length >= 8, /[A-Z]/.test(password), /\d/.test(password), /[^\p{L}\p{N}\s]/u.test(password)];
   return checks[0] && checks.filter(Boolean).length >= 3;
 }

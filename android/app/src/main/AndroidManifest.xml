@@ -29,6 +29,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="${centralHost}" android:pathPrefix="/redefinir-senha" />
+                <!-- Convite por e-mail (Fase 5): https://<base>/cadastro#convite=<token> -->
+                <data android:scheme="https" android:host="${centralHost}" android:path="/cadastro" />
             </intent-filter>
         </activity>
         <!-- Notificacoes da Suite (Fase 4): Firebase Cloud Messaging -->

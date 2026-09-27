@@ -51,6 +51,8 @@ final class CentralApi {
     Response resetConfirm(String token, String password) throws IOException {
         return send("POST", "/v1/auth/password-reset/confirm", json("token", token, "password", password), null);
     }
+    /** Cadastro pelo app (Fase 5): pedido com o codigo da empresa ou conta criada pelo convite. */
+    Response signup(JSONObject body) throws IOException { return send("POST", "/v1/signup/request", body, null); }
     Response sessions(String token) throws IOException { return send("GET", "/v1/auth/sessions", null, token); }
     Response revokeOthers(String token) throws IOException { return send("POST", "/v1/auth/sessions/revoke-others", new JSONObject(), token); }
     Response handoff(String token, String target) throws IOException { return send("POST", "/v1/auth/handoff", json("target", target), token); }

@@ -81,3 +81,21 @@ test('token de redefinicao so e lido do fragmento', () => {
   assert.equal(rules.parseResetFragment('#t=curto'), '');
   assert.equal(rules.parseResetFragment(''), '');
 });
+
+test('cadastro (Fase 5): valida os campos, formata o celular e le o convite', () => {
+  const base = { name: 'Ana Lima', email: 'ana@exemplo.com', phone: '(11) 98765-4321', companyCode: 'CONST-ABC234', password: 'Obra@2026', confirm: 'Obra@2026', accept: true };
+  assert.equal(rules.validateSignup(base), '');
+  assert.equal(rules.validateSignup({ ...base, name: 'A' }), 'Informe seu nome completo.');
+  assert.equal(rules.validateSignup({ ...base, phone: '1198' }), 'Informe o celular com DDD.');
+  assert.match(rules.validateSignup({ ...base, companyCode: '' }), /código da empresa/);
+  assert.equal(rules.validateSignup({ ...base, companyCode: '', invite: true }), '', 'no convite o código vem do link');
+  assert.equal(rules.validateSignup({ ...base, confirm: 'outra' }), 'As duas senhas não são iguais.');
+  assert.equal(rules.validateSignup({ ...base, accept: false }), 'Aceite os termos para criar a conta.');
+  assert.equal(rules.formatPhone('11987654321'), '(11) 98765-4321');
+  assert.equal(rules.formatPhone('1134567890'), '(11) 3456-7890');
+  assert.equal(rules.formatPhone('(11) 9'), '(11) 9');
+  const token = 'a'.repeat(43);
+  assert.deepEqual(rules.parseInviteFragment(`#convite=${token}&codigo=CONST-ABC234&email=ana%40exemplo.com`), { token, code: 'CONST-ABC234', email: 'ana@exemplo.com' });
+  assert.equal(rules.parseInviteFragment('#convite=curto'), null);
+  assert.equal(rules.messageForCode('CODE_INVALID'), 'Código da empresa incorreto. Confira com o administrador.');
+});

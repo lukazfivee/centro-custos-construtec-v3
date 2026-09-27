@@ -40,7 +40,7 @@ final class SuiteViews {
     }
 
     /**
-     * "orcamentos?proposta=<id>" ou "centro-custos?obra=<n>" (seletor Suite, links suite://app/...):
+     * "orcamentos?proposta=<id>", "centro-custos?obra=<n>" ou "centro-custos?pedidos=1" (seletor Suite, links suite://app/...):
      * devolve { app, fragmento }. O fragmento so existe se o destino for valido; o id vai para a pagina.
      */
     static String[] parse(String spec) {
@@ -51,6 +51,7 @@ final class SuiteViews {
         String fragment = null;
         if (ORCAMENTOS.equals(app) && proposta != null && proposta.matches("[A-Za-z0-9-]{1,64}")) fragment = "proposta=" + proposta;
         if (CENTRO_CUSTOS.equals(app) && obra != null && obra.matches("[0-9]{1,12}")) fragment = "obra=" + obra;
+        if (CENTRO_CUSTOS.equals(app) && "1".equals(query.getQueryParameter("pedidos"))) fragment = "pedidos=1";
         return new String[] { app, fragment };
     }
 

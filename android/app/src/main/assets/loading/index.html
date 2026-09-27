@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; font-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Carregando</title>
+<!--
+  Tela de carregamento da Suite Construtec: sobria, so o simbolo, o nome do app
+  e a barra de progresso real. O app nativo chama setProgress(0-100) e finish().
+  Sem rede, sem armazenamento; com "reduzir movimento" fica parada.
+-->
+<style>
+  @font-face { font-family: 'IBM Plex Sans'; font-weight: 500; src: url(../auth/fonts/plex-500.woff2) format('woff2'); }
+  @font-face { font-family: 'IBM Plex Sans'; font-weight: 600; src: url(../auth/fonts/plex-600.woff2) format('woff2'); }
+  :root { --navy: #021820; --accent: #12a9d1; --muted: #6f8f9b; }
+  html, body { margin: 0; height: 100%; overflow: hidden; color: #fefefe; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+  body { background: radial-gradient(120% 70% at 50% 40%, #06303c 0%, var(--navy) 62%); transition: opacity .35s ease; }
+  body.done { opacity: 0; }
+  .center { position: fixed; left: 0; right: 0; top: 40%; transform: translateY(-50%); text-align: center; }
+  .mark { position: relative; width: 84px; height: 84px; margin: 0 auto 28px; }
+  .mark img { width: 100%; height: 100%; object-fit: contain; opacity: 0; transform: translateY(6px) scale(.96); animation: enter .7s cubic-bezier(.2, .7, .2, 1) .1s forwards; }
+  .mark::before { content: ''; position: absolute; inset: -22px; border-radius: 50%; background: radial-gradient(circle, rgba(18, 169, 209, .22), transparent 68%); opacity: 0; animation: breathe 2.8s ease-in-out .8s infinite; }
+  #title { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: .01em; opacity: 0; animation: rise .6s ease .45s forwards; }
+  .sub { margin: 6px 0 0; font-size: 13px; font-weight: 500; color: var(--muted); opacity: 0; animation: rise .6s ease .6s forwards; }
+  .foot { position: fixed; left: 32px; right: 32px; bottom: calc(52px + env(safe-area-inset-bottom)); }
+  .bar { height: 3px; max-width: 220px; margin: 0 auto; border-radius: 2px; background: rgba(254, 254, 254, .08); overflow: hidden; }
+  #fill { height: 100%; width: 3%; border-radius: 2px; background: var(--accent); transition: width .35s ease; }
+  .brand { margin: 18px 0 0; text-align: center; font-size: 11px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  @keyframes enter { to { opacity: 1; transform: none; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes breathe { 0%, 100% { opacity: .35; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.04); } }
+  @media (prefers-reduced-motion: reduce) {
+    .mark img, #title, .sub { animation: none; opacity: 1; transform: none; }
+    .mark::before { animation: none; opacity: .6; }
+    #fill { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="center">
+  <div class="mark"><img src="../auth/img/simbolo.png" alt=""></div>
+  <p id="title">Suíte Construtec</p>
+  <p class="sub" id="sub">Carregando</p>
+</div>
+<div class="foot" role="status" aria-live="polite">
+  <div class="bar" role="progressbar" aria-label="Carregando" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar"><div id="fill"></div></div>
+  <p class="brand">Construtec Engenharia</p>
+</div>
+<script>
+(function () {
+  'use strict';
+  var app = new URLSearchParams(location.search).get('app');
+  if (app) document.getElementById('title').textContent = app;
+  var fill = document.getElementById('fill'), bar = document.getElementById('bar');
+  var progress = 3;
+
+  window.setProgress = function (value) {
+    progress = Math.max(progress, Math.min(100, Number(value) || 0));
+    fill.style.width = Math.max(3, progress) + '%';
+    bar.setAttribute('aria-valuenow', String(Math.round(progress)));
+  };
+  window.finish = function () {
+    window.setProgress(100);
+    setTimeout(function () { document.body.classList.add('done'); }, 180);
+  };
+})();
+</script>
+</body>
+</html>

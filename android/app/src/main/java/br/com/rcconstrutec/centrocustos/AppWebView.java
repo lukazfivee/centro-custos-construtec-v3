@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
-import android.view.Gravity;
-import android.view.View;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -14,7 +12,6 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import android.widget.ProgressBar;
 
 /** Clientes da WebView remota (Centro de Custos web) e o botao de menu do shell. Sem ponte JavaScript. */
 final class AppWebView {
@@ -22,21 +19,20 @@ final class AppWebView {
         boolean openFileChooser(ValueCallback<Uri[]> callback, WebChromeClient.FileChooserParams params);
         void loadFailed(String message);
         void message(String message);
-        /** Links suite://seguranca, suite://sair, suite://entrar e suite://app/<id> vindos dos sites; action e "host" ou "host/caminho". */
+        /** Links suite://seguranca, suite://tour, suite://sair, suite://entrar e suite://app/<id> vindos dos sites; action e "host" ou "host/caminho". */
         void suiteLink(String action);
     }
 
     private AppWebView() {}
 
-    static void attach(Activity activity, WebView webView, FrameLayout layer, String url, Host host) {
-        float density = activity.getResources().getDisplayMetrics().density;
-        ProgressBar progress = new ProgressBar(activity);
-        layer.addView(progress, new FrameLayout.LayoutParams(Math.round(48 * density), Math.round(48 * density), Gravity.CENTER));
+    /** appName aparece na tela de carregamento ("Abrindo o Centro de Custos"). */
+    static void attach(Activity activity, WebView webView, FrameLayout layer, String url, String appName, Host host) {
+        LoadingOverlay loading = new LoadingOverlay(activity, layer, appName);
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 return host.openFileChooser(callback, params);
             }
-            @Override public void onProgressChanged(WebView view, int value) { progress.setVisibility(value >= 100 ? View.GONE : View.VISIBLE); }
+            @Override public void onProgressChanged(WebView view, int value) { loading.progress(value); }
         });
         Uri allowed = Uri.parse(url);
         webView.setWebViewClient(new WebViewClient() {
@@ -49,10 +45,11 @@ final class AppWebView {
             }
             @Override public void onReceivedSslError(WebView view, SslErrorHandler handler, android.net.http.SslError error) {
                 handler.cancel();
+                loading.finish();
                 host.loadFailed("O certificado HTTPS não é válido.");
             }
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) host.loadFailed(null);
+                if (request.isForMainFrame()) { loading.finish(); host.loadFailed(null); }
             }
         });
         webView.setDownloadListener((link, userAgent, contentDisposition, mimeType, length) -> {
