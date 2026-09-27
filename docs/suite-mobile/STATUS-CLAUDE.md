@@ -116,6 +116,10 @@ Fase atual: 1 · Branch: `feat/android-suite-auth`
   - Verificado: `POST /v1/auth/logout` sem token devolve 200 `{ ok: true, revoked: 0 }`; as demais rotas não mudaram.
   - A CI do `main` agora tem os jobs `test` (Node 20) e `test-node24`.
 
+- **Pendente no celular (adiado pelo Lucas em 26/09):**
+  - remover a cópia "Dual App" do Centro de Custos (perfil 95 da Samsung);
+  - instalar o APK final (`adb install -r`, mantém PIN, digital e sessão).
+
 ## Pedidos ao Codex
 
 1. **`expiresAt` sempre em epoch segundos**, também em `/v1/auth/session` e `/v1/auth/handoff`. O app assume segundos.
