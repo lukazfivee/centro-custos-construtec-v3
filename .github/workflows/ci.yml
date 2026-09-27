@@ -63,6 +63,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.9'
+      # Mesma chave fixa do workflow de publicacao (ver publish-v3-1.yml).
+      - name: Restaurar chave de assinatura
+        env:
+          ANDROID_DEBUG_KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$ANDROID_DEBUG_KEYSTORE_B64" ]; then echo "::warning::Sem ANDROID_DEBUG_KEYSTORE_B64: APK assinado com chave temporaria do runner."; exit 0; fi
+          dir="$RUNNER_TEMP/android-user"; mkdir -p "$dir"
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_B64" | base64 -d > "$dir/debug.keystore"
+          echo "ANDROID_USER_HOME=$dir" >> "$GITHUB_ENV"
+          keytool -list -v -keystore "$dir/debug.keystore" -storepass android | grep 'SHA256:'
       - name: Gerar APK e lint
         run: |
           gradle -p android assembleDebug lintDebug --no-daemon

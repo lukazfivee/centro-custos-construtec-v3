@@ -41,6 +41,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.9'
+      # Chave de assinatura fixa: a de debug do PC do Lucas, a mesma do app ja
+      # instalado no celular. Sem ela, cada execucao gera outra chave e uma RC
+      # nao instala por cima da outra. Sem o segredo, segue com a chave do runner.
+      - name: Restaurar chave de assinatura
+        env:
+          ANDROID_DEBUG_KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if (-not $env:ANDROID_DEBUG_KEYSTORE_B64) { Write-Output "::warning::Sem ANDROID_DEBUG_KEYSTORE_B64: APK assinado com chave temporaria do runner."; exit 0 }
+          $dir = Join-Path $env:RUNNER_TEMP 'android-user'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          [IO.File]::WriteAllBytes((Join-Path $dir 'debug.keystore'), [Convert]::FromBase64String($env:ANDROID_DEBUG_KEYSTORE_B64))
+          "ANDROID_USER_HOME=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          keytool -list -v -keystore (Join-Path $dir 'debug.keystore') -storepass android | Select-String 'SHA256:'
       - name: Gerar APK Android
         run: |
           gradle -p android assembleDebug --no-daemon
