@@ -35,9 +35,11 @@ export function isIdentityRoute(pathname) {
 }
 
 export function serviceKeyValid(request, env) {
-  const expected = String(env.CONSTRUTEC_IDENTITY_KEY || '');
+  // Segredo colado com BOM (U+FEFF) ou espacos: normaliza os dois lados (o Orcamentos envia sem).
+  const clean = (value) => String(value || '').replace(/^\uFEFF/, '').trim();
+  const expected = clean(env.CONSTRUTEC_IDENTITY_KEY);
   if (expected.length < MIN_SERVICE_KEY_LENGTH) return false;
-  return timingSafeEqual(request.headers.get('x-construtec-identity-key') || '', expected);
+  return timingSafeEqual(clean(request.headers.get('x-construtec-identity-key')), expected);
 }
 
 async function readJson(request) {
