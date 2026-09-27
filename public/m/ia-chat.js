@@ -1,5 +1,6 @@
 // Assistente do celular: folha de conversa com o Gemini (Firebase AI Logic). O SDK
-// so e baixado quando a folha abre. A conversa fica na memoria da pagina; nada e
+// e o App Check carregam em segundo plano logo depois da abertura do site; a resposta
+// aparece enquanto e escrita (streaming). A conversa fica na memoria da pagina; nada e
 // guardado no celular. Ferramentas em ia-tools.js, instrucoes em ia-config.js.
 (function (CC) {
   const { esc, icon } = CC;
@@ -8,13 +9,16 @@
   const PASSOS = { listar_obras: 'Procurando as obras', ver_obra: 'Abrindo a obra', orcado_realizado: 'Comparando orçado e realizado', resumo_geral: 'Somando o mês',
     buscar_lancamentos: 'Procurando lançamentos', listar_categorias: 'Lendo as categorias', listar_propostas: 'Consultando o Orçamentos', ver_proposta: 'Abrindo a proposta',
     abrir_tela: 'Preparando a tela', preparar_reporte: 'Montando o relato' };
-  const state = { chat: null, sdk: null, model: 0, busy: false, log: [], cards: [] };
+  const state = { chat: null, sdk: null, model: 0, busy: false, log: [], cards: [], live: '' };
 
   IA.ready = () => Boolean(CC.iaConfig && CC.iaConfig.firebase);
   CC.iaBtn = () => (IA.ready() ? `<button class="ia-btn" type="button" data-ia aria-label="Assistente">${icon('sparkle', 22)}</button>` : '');
 
-  async function sdk() {
-    if (state.sdk) return state.sdk;
+  function sdk() {
+    if (!state.sdk) state.sdk = load().catch((error) => { state.sdk = null; throw error; });
+    return state.sdk;
+  }
+  async function load() {
     const base = CC.iaConfig.sdk;
     const [app, ai] = await Promise.all([import(`${base}firebase-app.js`), import(`${base}firebase-ai.js`)]);
     const fb = app.getApps()[0] || app.initializeApp(CC.iaConfig.firebase);
@@ -24,15 +28,17 @@
       if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true; // teste local
       check.initializeAppCheck(fb, { provider: new check.ReCaptchaV3Provider(CC.iaConfig.recaptcha), isTokenAutoRefreshEnabled: true });
     }
-    state.sdk = { ai, backend: ai.getAI(fb, { backend: new ai.GoogleAIBackend() }) };
-    return state.sdk;
+    return { ai, backend: ai.getAI(fb, { backend: new ai.GoogleAIBackend() }) };
   }
+  // Pre-carrega o SDK e o token do App Check para a primeira pergunta nao esperar por eles.
+  IA.warm = () => { if (IA.ready() && !CC.offline()) sdk().catch(() => {}); };
 
   async function newChat(history) {
     const { ai, backend } = await sdk();
+    const m = CC.iaConfig.modelos[state.model];
     const model = ai.getGenerativeModel(backend, {
-      model: CC.iaConfig.modelos[state.model], systemInstruction: CC.iaPrompt(),
-      tools: IA.declarations(ai.Schema), generationConfig: { temperature: 0.3, maxOutputTokens: 1200 },
+      model: m.nome, systemInstruction: CC.iaPrompt(), tools: IA.declarations(ai.Schema),
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1200, thinkingConfig: { thinkingLevel: m.pensar } },
     });
     state.chat = model.startChat({ history: history || [] });
   }
@@ -44,19 +50,31 @@
 
   // Limite gratuito ou modelo sobrecarregado: segue no reserva com a mesma conversa;
   // no ultimo modelo, tenta mais uma vez depois de uma pausa curta.
+  // Texto parcial vai para a bolha ao vivo; devolve a resposta completa (com as chamadas de ferramenta).
+  async function stream(content) {
+    state.live = '';
+    const r = await state.chat.sendMessageStream(content);
+    for await (const chunk of r.stream) {
+      let t = '';
+      try { t = chunk.text(); } catch { t = ''; }
+      if (t) { state.live += t; live(); }
+    }
+    return { response: await r.response };
+  }
+
   async function send(content) {
     if (!state.chat) await newChat();
     try {
-      return await state.chat.sendMessage(content);
+      return await stream(content);
     } catch (error) {
-      if (!quota(error) && !busy(error)) throw error;
+      if (state.live || (!quota(error) && !busy(error))) throw error;
       if (state.model + 1 < CC.iaConfig.modelos.length) {
         state.model += 1;
         await newChat(await state.chat.getHistory());
       } else if (busy(error)) {
         await new Promise((resolve) => setTimeout(resolve, 1500));
       } else throw error;
-      return state.chat.sendMessage(content);
+      return stream(content);
     }
   }
 
@@ -92,11 +110,19 @@
     el.innerHTML = state.log.length ? state.log.map((m) => (m.report ? reportHtml(m.report) : `<div class="ia-msg ${m.who}">${m.who === 'ia' ? md(m.text) : esc(m.text)}${m.go ? `<button type="button" class="chip-act ia-go" data-go-ia="${state.log.indexOf(m)}">${icon('arrow-right', 16)}Ir para ${esc(m.label || 'a tela')}</button>` : ''}</div>`)).join('')
       : `<div class="ia-hello">${icon('sparkle-fill', 28)}<b>Como posso ajudar?</b><span>Pergunte sobre obras, custos, orçado x realizado e propostas, peça para abrir uma tela ou relate um problema.</span>
         <div class="ia-sug">${SUGESTOES.map((s) => `<button type="button" class="chip-act" data-sug="${esc(s)}">${esc(s)}</button>`).join('')}</div></div>`;
-    if (state.busy) el.insertAdjacentHTML('beforeend', `<div class="ia-msg ia busy" role="status"><span class="ia-dots"><i></i><i></i><i></i></span><small id="ia-step">${esc(state.step || 'Pensando')}</small></div>`);
+    if (state.busy && state.live) el.insertAdjacentHTML('beforeend', `<div class="ia-msg ia" id="ia-live">${md(state.live)}</div>`);
+    else if (state.busy) el.insertAdjacentHTML('beforeend', `<div class="ia-msg ia busy" role="status"><span class="ia-dots"><i></i><i></i><i></i></span><small id="ia-step">${esc(state.step || 'Pensando')}</small></div>`);
     CC.$$('[data-sug]', el).forEach((b) => b.addEventListener('click', () => ask(b.dataset.sug)));
     wireReports(el);
     CC.$$('[data-go-ia]', el).forEach((b) => b.addEventListener('click', () => { const m = state.log[Number(b.dataset.goIa)]; close(); if (m && m.go) m.go(); }));
     el.scrollTop = el.scrollHeight;
+  }
+
+  function live() {
+    const el = CC.$('#ia-live');
+    if (!el) return paint();
+    el.innerHTML = md(state.live);
+    const log = body(); if (log) log.scrollTop = log.scrollHeight;
   }
 
   async function ask(text) {
@@ -112,6 +138,7 @@
         const calls = result.response.functionCalls() || [];
         if (!calls.length) break;
         state.step = PASSOS[calls[0].name] || 'Consultando';
+        if (state.live) { state.live = ''; paint(); } // texto antes da consulta ("vou verificar") sai
         const step = CC.$('#ia-step'); if (step) step.textContent = state.step;
         const parts = [];
         for (const call of calls) parts.push({ functionResponse: { name: call.name, response: await IA.run(call) } });
@@ -127,7 +154,7 @@
       state.log.push({ who: 'erro', text: friendly(error) });
     } finally {
       state.log.push(...state.cards); // o cartão do relato vem depois do texto que o apresenta
-      state.busy = false;
+      state.busy = false; state.live = '';
       paint();
     }
     if (IA.pendingNav) {
@@ -216,4 +243,5 @@
   // A conversa pertence a conta: sair ou trocar de conta comeca do zero.
   IA.reset = () => { state.log = []; state.chat = null; state.model = 0; close(); };
   document.addEventListener('click', (event) => { if (event.target.closest('[data-ia]')) IA.open(); });
+  window.addEventListener('load', () => setTimeout(() => { if (CC.session.token()) IA.warm(); }, 2500));
 })(window.CC = window.CC || {});
