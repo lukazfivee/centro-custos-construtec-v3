@@ -24,8 +24,6 @@ import android.widget.Toast;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.net.URI;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -49,6 +47,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
     private long backgroundAt;
     private boolean suppressLock;
     private boolean centralMode;
+    private String[] pushTarget; // destino do toque numa notificacao, aberto ao entrar
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -77,6 +76,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         String saved = preferences.getString(SERVER_URL, "");
         centralMode = !"local".equals(preferences.getString(MODE, saved.isEmpty() ? "central" : "local"));
         boolean resetLink = handleLink(getIntent());
+        pushTarget = SuitePush.target(getIntent());
         if (!centralMode && !resetLink) {
             if (saved.isEmpty()) showSetup(null); else showWebApp(SuiteViews.CENTRO_CUSTOS, saved, false);
         } else {
@@ -125,7 +125,12 @@ public final class MainActivity extends Activity implements AuthController.Shell
         authView.evaluate("window.__setInsets&&window.__setInsets(" + Math.round(bars.top / density) + "," + Math.round(bottom / density) + ")");
     }
 
-    @Override public void enterApp(String notice) { openApp(views.activeApp() == null ? SuiteViews.CENTRO_CUSTOS : views.activeApp(), notice, null); }
+    @Override public void enterApp(String notice) {
+        String[] target = pushTarget;
+        pushTarget = null;
+        if (target != null) openApp(target[0], notice, target[1]);
+        else openApp(views.activeApp() == null ? SuiteViews.CENTRO_CUSTOS : views.activeApp(), notice, null);
+    }
 
     /** Abre (ou so mostra, sem recarregar) o app da Suite, no destino (proposta=/obra=) se houver; a 1a abertura entra pelo handoff. */
     private void openApp(String app, String notice, String fragment) {
@@ -204,6 +209,8 @@ public final class MainActivity extends Activity implements AuthController.Shell
         if (handleLink(intent)) {
             if (!centralMode) { centralMode = true; preferences.edit().putString(MODE, "central").apply(); }
             showAuth("reset", null);
+        } else if ((pushTarget = SuitePush.target(intent)) != null && auth.unlocked() && !authVisible()) {
+            enterApp(null);
         }
     }
 
@@ -212,7 +219,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         appLayer.removeAllViews();
         appLayer.addView(LocalSetup.build(this, preferences.getString(SERVER_URL, ""), error, new LocalSetup.Listener() {
             @Override public String connect(String rawUrl) {
-                String normalized = normalizeUrl(rawUrl);
+                String normalized = LocalSetup.normalizeUrl(rawUrl);
                 if (normalized == null) return "Use HTTPS ou um endereço privado da rede Wi-Fi.";
                 preferences.edit().putString(SERVER_URL, normalized).putString(MODE, "local").apply();
                 showWebApp(SuiteViews.CENTRO_CUSTOS, normalized, false);
@@ -225,28 +232,6 @@ public final class MainActivity extends Activity implements AuthController.Shell
                 showAuth("start", null);
             }
         }), match());
-    }
-
-    private String normalizeUrl(String raw) {
-        String value = raw == null ? "" : raw.trim();
-        if (!value.contains("://")) value = "http://" + value;
-        try {
-            URI uri = URI.create(value);
-            String scheme = String.valueOf(uri.getScheme()).toLowerCase(Locale.ROOT);
-            String host = String.valueOf(uri.getHost()).toLowerCase(Locale.ROOT);
-            if (host.isEmpty() || !(scheme.equals("https") || (scheme.equals("http") && isPrivateHost(host)))) return null;
-            return value.replaceAll("/+$", "");
-        } catch (RuntimeException ignored) { return null; }
-    }
-
-    private boolean isPrivateHost(String host) {
-        if (host.equals("10.0.2.2") || host.equals("127.0.0.1")) return true;
-        String[] parts = host.split("\\.");
-        if (parts.length != 4) return false;
-        try {
-            int first = Integer.parseInt(parts[0]); int second = Integer.parseInt(parts[1]);
-            return first == 10 || (first == 192 && second == 168) || (first == 172 && second >= 16 && second <= 31);
-        } catch (NumberFormatException ignored) { return false; }
     }
 
     // ---- App web (remoto): nunca recebe a ponte AndroidAuth ----

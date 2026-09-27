@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "56081262604",
+    "project_id": "suite-construtec",
+    "storage_bucket": "suite-construtec.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:56081262604:android:e192e7c8d23148fb936629",
+        "android_client_info": {
+          "package_name": "br.com.rcconstrutec.centrocustos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPxcyynYyAASweDe31sISGBpYupqzFIyc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

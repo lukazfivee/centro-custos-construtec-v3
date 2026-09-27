@@ -2,6 +2,7 @@ import { Container } from '@cloudflare/containers';
 import { env } from 'cloudflare:workers';
 import { handleCentralAuth } from './centralAuth.js';
 import { handleCommercialSync } from './commercialSync.js';
+import { handleNotifications, isNotificationRoute, runDailyNotices } from './notifications.js';
 import { assetLinks, resetPage } from './resetPage.js';
 
 // O Container passa cada valor de envVars pelo ambiente do processo, que so
@@ -43,7 +44,8 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/redefinir-senha') return resetPage();
     if (request.method === 'GET' && url.pathname === '/.well-known/assetlinks.json') return assetLinks(env);
-    if (url.pathname === '/api/auth/handoff-bridge') return new Response(null, { status: 404 });
+    if (url.pathname === '/api/auth/handoff-bridge' || url.pathname.startsWith('/api/interno/')) return new Response(null, { status: 404 });
+    if (isNotificationRoute(url.pathname)) return handleNotifications(request, env, url);
     if (url.pathname.startsWith('/v1/')) {
       const central = await handleCentralAuth(request, env);
       if (central) return central;
@@ -55,5 +57,10 @@ export default {
       return Response.json({ erro: 'Serviço aguardando configuração.' }, { status: 503 });
     }
     return env.API.getByName('production').fetch(request);
+  },
+
+  // Avisos diários (contas a vencer e itens acima do orçado), às 08:00 de Brasília.
+  async scheduled(_controller, env, ctx) {
+    ctx.waitUntil(runDailyNotices(env).catch(() => undefined));
   },
 };

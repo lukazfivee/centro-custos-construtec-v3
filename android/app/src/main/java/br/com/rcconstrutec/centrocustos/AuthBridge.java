@@ -70,7 +70,7 @@ final class AuthBridge {
             case "setAutoLock": auth.vault.setAutoLockSeconds(Math.max(0, a.optInt("seconds", 300))); return AuthController.ok();
             case "enterApp": {
                 String notice = a.optString("notice", "");
-                if (auth.unlocked()) ui(() -> shell.enterApp(notice));
+                if (auth.unlocked()) ui(() -> { shell.enterApp(notice); SuitePush.onEnter(activity, auth, worker); });
                 return auth.unlocked() ? AuthController.ok() : fail("SESSION_INVALID");
             }
             case "close": if (auth.unlocked()) ui(shell::closeOverlay); return AuthController.ok();

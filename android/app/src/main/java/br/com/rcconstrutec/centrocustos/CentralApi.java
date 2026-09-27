@@ -54,6 +54,8 @@ final class CentralApi {
     Response sessions(String token) throws IOException { return send("GET", "/v1/auth/sessions", null, token); }
     Response revokeOthers(String token) throws IOException { return send("POST", "/v1/auth/sessions/revoke-others", new JSONObject(), token); }
     Response handoff(String token, String target) throws IOException { return send("POST", "/v1/auth/handoff", json("target", target), token); }
+    /** Aparelho que recebe as notificacoes (Fase 4): token do Firebase deste app. */
+    Response registerPush(String token, String fcmToken) throws IOException { return send("POST", "/v1/push/register", json("fcmToken", fcmToken), token); }
     Response logout(String token) throws IOException { return send("POST", "/v1/auth/logout", new JSONObject(), token); }
 
     private Response send(String method, String path, JSONObject body, String bearer) throws IOException {

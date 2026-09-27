@@ -4,6 +4,7 @@ const { previewImport } = require('./budgetImportPreview');
 const { recordAudit } = require('../audit');
 const logger = require('../../lib/logger');
 const metrics = require('../../lib/metrics');
+const { notifyAll } = require('../notify');
 
 async function confirmImport(db, params, userId) {
   const { previewId, confirmedHash, costCenterId, envelope } = params;
@@ -372,6 +373,7 @@ async function confirmImportWithObservability(db, params, userId) {
     logger.info('budget_import_confirmed', {
       durationMs: Math.round(durationMs * 100) / 100, status: result.status, importId: result.importId,
     });
+    if (result.status === 'imported') await notifyApprovedProposal(db, result);
     return result;
   } catch (error) {
     const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
@@ -380,6 +382,27 @@ async function confirmImportWithObservability(db, params, userId) {
     throw error;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// Aviso "Proposta aprovada" (Fase 4 da Suíte): vai para todos com acesso ao Centro.
+async function notifyApprovedProposal(db, result) {
+  try {
+    const { rows } = await db.query(`
+      SELECT cc.name, pc.number, bi.source_revision AS revisao FROM cost_centers cc
+      JOIN project_contracts pc ON pc.id = $2 JOIN budget_imports bi ON bi.id = $3
+      WHERE cc.id = $1`, [result.costCenterId, result.contractId, result.importId]);
+    const info = rows[0];
+    if (!info) return;
+    const first = Number(info.revisao) === 0;
+    await notifyAll({
+      type: 'proposta_aprovada', app: 'centro-custos',
+      title: first ? 'Proposta aprovada' : 'Nova revisão aprovada',
+      body: first ? `${info.number} virou a obra ${info.name}.` : `${info.number} rev. ${info.revisao} atualizou a obra ${info.name}.`,
+      link: `centro-custos?obra=${result.costCenterId}`, dedupeKey: `proposta:${result.importId}`,
+    });
+  } catch (error) {
+    logger.warn('notification_failed', { type: 'proposta_aprovada', error });
   }
 }
 

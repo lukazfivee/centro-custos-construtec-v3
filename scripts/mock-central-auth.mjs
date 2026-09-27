@@ -132,6 +132,13 @@ export function createMockCentral(options = {}) {
       sessions.delete(auth.hash);
       return [200, { ok: true, revoked: 1 }];
     },
+    // Fase 4: o app registra o token do Firebase; o mock so guarda e mostra no terminal.
+    'POST /v1/push/register': (req, body) => {
+      const auth = bearer(req);
+      if (auth.error) return auth.error;
+      console.log('[mock] token do Firebase registrado:', String(body.fcmToken || '').slice(0, 24) + '...');
+      return [200, { ok: true }];
+    },
     'POST /v1/auth/handoff': (req, body) => {
       const auth = bearer(req);
       if (auth.error) return auth.error;

@@ -1,4 +1,7 @@
-plugins { id 'com.android.application' }
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+}
 
 // Enderecos da nuvem vem da configuracao de build (contrato, cabecalho): -PcentralApiBase=... -PcentralWebBase=...
 // Para testar com o mock no emulador: -PcentralApiBase=http://10.0.2.2:8787
@@ -16,8 +19,8 @@ android {
         applicationId 'br.com.rcconstrutec.centrocustos'
         minSdk 28
         targetSdk 35
-        versionCode 31017
-        versionName '3.1.0-rc.17'
+        versionCode 31018
+        versionName '3.1.0-rc.18'
         buildConfigField 'String', 'CENTRAL_API_BASE', "\"${centralApiBase}\""
         buildConfigField 'String', 'CENTRAL_WEB_BASE', "\"${centralWebBase}\""
         buildConfigField 'String', 'ORC_WEB_BASE', "\"${orcWebBase}\""
@@ -30,4 +33,10 @@ android {
     androidResources {
         ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:!dev-bridge.js'
     }
+}
+
+// Notificacoes (Fase 4): so o Firebase Messaging, pela BoM.
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-messaging'
 }

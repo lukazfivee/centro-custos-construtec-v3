@@ -21,7 +21,9 @@ test('acesso Android exige ativacao no Windows e restringe HTTP a rede privada',
   const desktop = read('desktop/main.js');
   const preload = read('desktop/preload.js');
   const server = read('server.js');
-  const android = read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/MainActivity.java');
+  // A validacao do endereco do servidor local fica no LocalSetup desde a Fase 4.
+  const android = read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/MainActivity.java')
+    + read('android/app/src/main/java/br/com/rcconstrutec/centrocustos/LocalSetup.java');
   assert.match(desktop, /mobileAccess === true \? '0\.0\.0\.0' : '127\.0\.0\.1'/);
   assert.match(preload, /setMobileAccess/);
   assert.match(server, /mobileUrls/);
@@ -45,17 +47,17 @@ test('QR Code do desktop abre diretamente a versao mobile HTTPS', () => {
   assert.match(app, /version\.mobileAppUrl/);
 });
 
-test('workflow RC17 publica instalador Windows e APK Android', () => {
+test('workflow RC18 publica instalador Windows e APK Android', () => {
   const workflow = read('.github/workflows/publish-v3-1.yml');
   const androidBuild = read('android/app/build.gradle');
   assert.match(workflow, /assembleDebug/);
-  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc.17\.apk/);
+  assert.match(workflow, /Centro-de-Custos-Construtec-Android-3\.1\.0-rc.18\.apk/);
   assert.match(workflow, /dist\/\*\.apk/);
   // Chave de assinatura fixa (segredo), para uma RC instalar por cima da outra.
   for (const file of ['.github/workflows/publish-v3-1.yml', '.github/workflows/ci.yml']) {
     assert.match(read(file), /secrets\.ANDROID_DEBUG_KEYSTORE_B64/);
     assert.match(read(file), /ANDROID_USER_HOME=/);
   }
-  assert.match(androidBuild, /versionCode 31017/);
-  assert.match(androidBuild, /versionName '3\.1\.0-rc.17'/);
+  assert.match(androidBuild, /versionCode 31018/);
+  assert.match(androidBuild, /versionName '3\.1\.0-rc.18'/);
 });

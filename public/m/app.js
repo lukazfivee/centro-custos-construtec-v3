@@ -90,6 +90,11 @@
     await CC.queue.refresh();
     CC.queue.paint();
     CC.queue.run();
+    // Contador do sino (Fase 4): na abertura e ao voltar para o app.
+    if (CC.notif) {
+      CC.notif.refresh();
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && CC.session.token()) CC.notif.refresh(); });
+    }
     // O app Android troca so o fragmento da WebView ja aberta para ir a uma obra.
     window.addEventListener('hashchange', () => {
       const id = Number(new URLSearchParams(location.hash.slice(1)).get('obra')) || 0;

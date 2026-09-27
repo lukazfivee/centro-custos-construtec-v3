@@ -152,6 +152,26 @@ body.no-tabs .tabs { display: none; }
 .suite-item.current { box-shadow: 0 0 0 1.5px var(--accent); }
 .suite-item.current em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--accent-300); }
 .suite-item.ctx { background: var(--accent-900); box-shadow: none; }
+
+.bell-btn { position: relative; flex: none; width: 44px; height: 44px; border: 0; border-radius: 22px; background: transparent; display: grid; place-items: center; }
+.bell-btn .ico { color: var(--accent-300); }
+.bell-count { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.chips { display: flex; gap: 8px; overflow-x: auto; margin: 4px -20px 12px; padding: 0 20px; }
+.chips .chip-act { flex: none; white-space: nowrap; }
+.chips .chip-act[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.lidas { width: 100%; margin-bottom: 4px; }
+.avisos { display: grid; gap: 8px; }
+.aviso { display: flex; gap: 10px; width: 100%; padding: 12px 14px; border: 0; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); text-align: left; }
+.aviso-dot { flex: none; width: 8px; height: 8px; margin-top: 7px; border-radius: 4px; background: transparent; }
+.aviso.novo .aviso-dot { background: var(--accent); }
+.aviso-text { display: grid; gap: 2px; min-width: 0; }
+.aviso-text b { font-size: 14px; font-weight: 600; }
+.aviso-text span { font-size: 13px; color: var(--text); }
+.aviso-text small { font-size: 12px; color: var(--n300); }
+.aviso:not(.novo) .aviso-text b { font-weight: 500; }
+.pref { justify-content: space-between; }
+.pref input { width: 22px; height: 22px; accent-color: var(--accent); }
+#teste { width: 100%; margin-top: 12px; }
 .tab { position: relative; z-index: 3; min-width: 0; border: 0; border-radius: 18px; background: transparent; color: var(--tab-ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; font-weight: 500; transition: transform .12s, color .2s; }
 .tab[aria-current="page"] { color: var(--tab-active); font-weight: 600; }
 .tab[aria-current="page"] .ico { color: inherit; }
