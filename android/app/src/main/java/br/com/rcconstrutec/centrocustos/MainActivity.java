@@ -125,18 +125,18 @@ public final class MainActivity extends Activity implements AuthController.Shell
         authView.evaluate("window.__setInsets&&window.__setInsets(" + Math.round(bars.top / density) + "," + Math.round(bottom / density) + ")");
     }
 
-    @Override public void enterApp(String notice) { openApp(views.activeApp() == null ? SuiteViews.CENTRO_CUSTOS : views.activeApp(), notice); }
+    @Override public void enterApp(String notice) { openApp(views.activeApp() == null ? SuiteViews.CENTRO_CUSTOS : views.activeApp(), notice, null); }
 
-    /** Abre (ou so mostra, sem recarregar) o app da Suite; a primeira abertura entra pelo handoff do destino certo. */
-    private void openApp(String app, String notice) {
-        if (views.has(app)) { views.show(app); hideAuth(); toast(notice); return; }
-        String start = SuiteViews.ORCAMENTOS.equals(app) ? BuildConfig.ORC_WEB_BASE.replaceAll("/+$", "") + "/" : BuildConfig.CENTRAL_WEB_BASE.replaceAll("/+$", "") + "/m/";
+    /** Abre (ou so mostra, sem recarregar) o app da Suite, no destino (proposta=/obra=) se houver; a 1a abertura entra pelo handoff. */
+    private void openApp(String app, String notice, String fragment) {
+        if (views.has(app)) { views.show(app); views.go(app, fragment); hideAuth(); toast(notice); return; }
+        String start = SuiteViews.start(app);
         io.execute(() -> {
-            String url = start;
+            String url = start + (fragment == null ? "" : "#" + fragment);
             boolean offline = false;
             try {
                 String code = auth.handoffCode(app);
-                if (code != null) url = start + "#handoff=" + Uri.encode(code);
+                if (code != null) url = start + "#handoff=" + Uri.encode(code) + (fragment == null ? "" : "&" + fragment);
             } catch (AuthController.SessionRejected rejected) {
                 runOnUiThread(this::sessionRejected);
                 return;
@@ -273,8 +273,8 @@ public final class MainActivity extends Activity implements AuthController.Shell
             }
             @Override public void message(String message) { toast(message); }
             @Override public void suiteLink(String action) {
-                String other = action.startsWith("app/") ? action.substring(4) : null; // suite://app/<id>: troca de app
-                if (central && other != null && SuiteViews.known(other) && auth.unlocked()) openApp(other, null);
+                String[] other = action.startsWith("app/") ? SuiteViews.parse(action.substring(4)) : null; // suite://app/<id>?destino
+                if (central && other != null && SuiteViews.known(other[0]) && auth.unlocked()) openApp(other[0], null, other[1]);
                 else if (central && other == null && bridge != null) bridge.webAction(action);
             }
         });

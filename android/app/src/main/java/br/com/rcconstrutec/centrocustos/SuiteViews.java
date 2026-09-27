@@ -1,10 +1,13 @@
 package br.com.rcconstrutec.centrocustos;
 
 import android.app.Activity;
+import android.net.Uri;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
+
+import org.json.JSONObject;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -30,6 +33,32 @@ final class SuiteViews {
     }
 
     static boolean known(String app) { return CENTRO_CUSTOS.equals(app) || ORCAMENTOS.equals(app); }
+
+    /** Endereco inicial de cada app web (bases vindas do Gradle). */
+    static String start(String app) {
+        return ORCAMENTOS.equals(app) ? BuildConfig.ORC_WEB_BASE.replaceAll("/+$", "") + "/" : BuildConfig.CENTRAL_WEB_BASE.replaceAll("/+$", "") + "/m/";
+    }
+
+    /**
+     * "orcamentos?proposta=<id>" ou "centro-custos?obra=<n>" (seletor Suite, links suite://app/...):
+     * devolve { app, fragmento }. O fragmento so existe se o destino for valido; o id vai para a pagina.
+     */
+    static String[] parse(String spec) {
+        int q = spec.indexOf('?');
+        String app = q < 0 ? spec : spec.substring(0, q);
+        Uri query = Uri.parse("suite://app/?" + (q < 0 ? "" : spec.substring(q + 1)));
+        String proposta = query.getQueryParameter("proposta"), obra = query.getQueryParameter("obra");
+        String fragment = null;
+        if (ORCAMENTOS.equals(app) && proposta != null && proposta.matches("[A-Za-z0-9-]{1,64}")) fragment = "proposta=" + proposta;
+        if (CENTRO_CUSTOS.equals(app) && obra != null && obra.matches("[0-9]{1,12}")) fragment = "obra=" + obra;
+        return new String[] { app, fragment };
+    }
+
+    /** Leva a WebView ja aberta ao destino trocando so o fragmento; o site escuta hashchange e nao recarrega. */
+    void go(String app, String fragment) {
+        WebView view = views.get(app);
+        if (view != null && fragment != null) view.evaluateJavascript("location.hash=" + JSONObject.quote(fragment), null);
+    }
 
     boolean isEmpty() { return views.isEmpty(); }
     boolean has(String app) { return views.containsKey(app); }

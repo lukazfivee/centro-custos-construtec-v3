@@ -170,14 +170,17 @@ export function createMockCentral(options = {}) {
 
   // Paginas dos dois apps web da Suite (Fase 3): cada uma consome o handoff do seu destino e troca de app por suite://app/<id>.
   // O campo de texto mostra que a WebView escondida nao recarrega na troca.
-  const webPage = (title, target, other, otherLabel) => '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
+  // "Ir direto" (passo 4): suite://app/<id>?destino; a pagina mostra o destino recebido no fragmento (#proposta= ou #obra=).
+  const webPage = (title, target, other, otherLabel, direct) => '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
     + '<title>' + title + '</title><body style="font:16px sans-serif;padding:24px"><h1>' + title + '</h1><p id="s">Sem handoff.</p>'
     + '<input id="nota" placeholder="Anotação" style="font:16px sans-serif;padding:8px;width:90%"><p><a id="troca" href="suite://app/' + other + '">Trocar para ' + otherLabel + '</a></p>'
+    + '<p><a id="direto" href="suite://app/' + other + '?' + direct + '">Ir direto (' + direct + ')</a></p><p id="destino">Sem destino.</p>'
+    + '<script>function d(){const p=new URLSearchParams(location.hash.slice(1));const v=p.get("proposta")||p.get("obra");if(v)document.getElementById("destino").textContent="Destino: "+v;}d();addEventListener("hashchange",d);</script>'
     + '<script>const m=/handoff=([^&]+)/.exec(location.hash);'
     + 'if(m){fetch("/v1/auth/handoff/consume",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:m[1],target:"' + target + '"})})'
     + '.then(r=>r.json()).then(j=>{history.replaceState(null,"",location.pathname);document.getElementById("s").textContent=j.ok?"Entrou como "+(j.usuario?j.usuario.nome:j.user.name):"Handoff recusado: "+j.code;});}</script>';
-  const webHome = webPage('Centro de Custos (mock)', 'centro-custos', 'orcamentos', 'o Orçamentos');
-  const orcHome = webPage('Orçamentos (mock)', 'orcamentos', 'centro-custos', 'o Centro de Custos');
+  const webHome = webPage('Centro de Custos (mock)', 'centro-custos', 'orcamentos', 'o Orçamentos', 'proposta=abc-123');
+  const orcHome = webPage('Orçamentos (mock)', 'orcamentos', 'centro-custos', 'o Centro de Custos', 'obra=42');
   const resetPage = '<!doctype html><meta charset="utf-8"><script>location.replace("/auth/index.html#reset&"+location.hash.slice(1))</script>';
 
   const server = http.createServer((req, res) => {
