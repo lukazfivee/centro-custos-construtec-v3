@@ -1,0 +1,70 @@
+/* Tokens do desktop: os mesmos do celular (docs/suite-mobile/design-tokens.json).
+   Tema claro em :root e escuro em [data-theme="escuro"]. */
+@font-face { font-family: 'IBM Plex Sans'; font-weight: 400; font-display: swap; src: url(../../m/fonts/plex-400.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Sans'; font-weight: 500; font-display: swap; src: url(../../m/fonts/plex-500.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Sans'; font-weight: 600; font-display: swap; src: url(../../m/fonts/plex-600.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Sans'; font-weight: 700; font-display: swap; src: url(../../m/fonts/plex-700.woff2) format('woff2'); }
+
+:root {
+  color-scheme: light;
+  --color-bg: #f2f8fa;
+  --color-surface: #fefefe;
+  --color-text: #0b2530;
+  --color-accent: #12a9d1;
+  --color-divider: #d6e4e9;
+  --color-neutral-300: #5d7480;
+  --color-neutral-500: #8fa6b0;
+  --color-neutral-600: #bad0d8;
+  --color-neutral-800: #d6e4e9;
+  --color-accent-300: #0a7896;
+  --color-accent-500: #12a9d1;
+  --color-accent-600: #0d7f9f;
+  --color-accent-700: #0b4a5c;
+  --color-accent-900: #e8f8fc;
+  --shadow-sm: 0 0 0 1px #d6e4e9;
+  --shadow-pop: 0 0 0 1px #d6e4e9, 0 18px 40px rgba(3, 31, 41, .16);
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-heading: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --c-warn: #8a5200;
+  --c-warn-bar: #e0a33a;
+  --c-warn-soft: #fff5d9;
+  --c-ok: #1d7a4f;
+  --c-ok-soft: #e3f6ec;
+  --c-err: #b8452c;
+  --c-err-soft: #fdecea;
+  --c-muted-soft: #eef1f3;
+  --c-muted: #3f5a66;
+  --c-tab: #031f29;
+  --side-bg: #031f29;
+  --side-w: 236px;
+  --top-h: 64px;
+  --drawer-w: 500px;
+}
+
+[data-theme="escuro"] {
+  color-scheme: dark;
+  --color-bg: #031f29;
+  --color-surface: #0b2f3b;
+  --color-text: #f2f8fa;
+  --color-divider: #164656;
+  --color-neutral-300: #b9d4dd;
+  --color-neutral-500: #6f8f9b;
+  --color-neutral-600: #2e5463;
+  --color-neutral-800: #123c4a;
+  --color-accent-300: #5fd0ee;
+  --color-accent-500: #12a9d1;
+  --color-accent-600: #0d7f9f;
+  --color-accent-700: #0b5a70;
+  --color-accent-900: #0a3a48;
+  --shadow-sm: 0 0 0 1px #164656;
+  --shadow-pop: 0 0 0 1px #164656, 0 18px 40px rgba(0, 0, 0, .4);
+  --c-warn: #f2b544;
+  --c-warn-soft: rgba(242, 181, 68, .14);
+  --c-ok: #3ccf8e;
+  --c-ok-soft: rgba(60, 207, 142, .14);
+  --c-err: #ff9d8a;
+  --c-err-soft: rgba(255, 120, 100, .16);
+  --c-muted-soft: rgba(185, 212, 221, .12);
+  --c-muted: #b9d4dd;
+  --c-tab: #021820;
+}

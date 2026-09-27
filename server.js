@@ -170,6 +170,12 @@ function createApp({ orcamentosApp } = {}) {
     res.setHeader('Cache-Control', 'no-cache');
     return res.sendFile(path.join(publicDir, 'm', 'index.html'));
   });
+  // Desktop novo do Centro de Custos (docs/suite-desktop): public/d/, ao lado do atual ate ficar pronto.
+  app.get(['/d', '/d/'], (req, res) => {
+    if (req.path === '/d') return res.redirect(301, '/d/');
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.sendFile(path.join(publicDir, 'd', 'index.html'));
+  });
   app.use(express.static(publicDir, {
     etag:true,index:false,
     setHeaders(res, filePath) {
