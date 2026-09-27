@@ -94,6 +94,8 @@ function createApp({ orcamentosApp } = {}) {
   app.use('/api/produtividade', require('./routes/productivity'));
   app.use('/api/bancos', require('./routes/banking'));
   app.use('/api/insights', require('./routes/insights'));
+  app.use('/api/notificacoes', require('./routes/notificacoes').router);
+  app.use('/api/interno', require('./routes/notificacoes').interno);
   app.use('/api/dashboard', require('./routes/dashboard'));
   app.use('/api/sincronizacao', require('./routes/sync'));
   app.use('/api/sincronizacao-inteligente', require('./routes/smartSync'));

@@ -14,6 +14,7 @@ import { requestPasswordReset, confirmPasswordReset } from './passwordReset.js';
 import { listSessions, revokeOtherSessions } from './mobileSessions.js';
 import { issueHandoff, consumeHandoff } from './sessionHandoff.js';
 import { checkSessionHash } from './sessionHash.js';
+import { noteLogin } from './notifications.js';
 
 const PASSWORD_ITERATIONS = 10000;
 export const ORG_ID = 'rcconstrutec.com.br';
@@ -214,6 +215,7 @@ async function handleLogin(request, env) {
   await env.DB.prepare('UPDATE cloud_users SET last_login_at=? WHERE id=?').bind(now, user.id).run();
   user.last_login_at = now;
   const session = await createSession(env, user, request);
+  await noteLogin(env, user, request);
   return json({ ok: true, sessionToken: session.token, expiresAt: session.expiresAt, user: publicUser(user) });
 }
 

@@ -16,6 +16,7 @@ import {
   json, text, validCorporateEmail, validEmail, validRole, requireSession, sessionUser,
   makePasswordRecord, publicUser, timingSafeEqual, sessionTokenHash,
 } from './centralAuth.js';
+import { forgetSessionDevice } from './notifications.js';
 
 const MIN_SERVICE_KEY_LENGTH = 32;
 const SERVICE_CREATED_ROLE = 'supervisor';
@@ -79,6 +80,7 @@ async function handleSession(request, env) {
 async function handleLogout(request, env) {
   const tokenHash = await sessionTokenHash(request, env);
   if (!tokenHash) return json({ ok: true, revoked: 0 });
+  await forgetSessionDevice(env, tokenHash).catch(() => undefined);
   const [sessions] = await env.DB.batch([
     env.DB.prepare('DELETE FROM cloud_sessions WHERE token_hash=? OR parent_session_hash=?').bind(tokenHash, tokenHash),
     env.DB.prepare('DELETE FROM session_handoffs WHERE session_hash=?').bind(tokenHash),
