@@ -59,10 +59,13 @@
       <div class="rows">
         <button class="menu-item" type="button" id="m-tema">${icon(dark ? 'sun' : 'moon', 22)}<span>${dark ? 'Modo claro' : 'Modo escuro'}</span></button>
         ${inApp ? `<button class="menu-item" type="button" id="m-seg">${icon('shield-check', 22)}<span>Segurança<small>PIN, digital, bloqueio automático e aparelhos</small></span></button>` : ''}
+        ${CC.isAdmin && CC.isAdmin() ? `<button class="menu-item" type="button" id="m-pedidos">${icon('user-plus', 22)}<span>Pedidos de acesso<small>Aprovar cadastros, convidar por e-mail e código da empresa</small></span></button>` : ''}
         <a class="menu-item" href="/" id="m-web" style="color:inherit;text-decoration:none">${icon('desktop', 22)}<span>Versão completa<small>Todas as telas do Centro de Custos</small></span></a>
         <button class="menu-item danger" type="button" id="m-sair">${icon('sign-out', 22)}<span>Sair</span></button>
       </div>`);
     CC.$('#m-tema', el).addEventListener('click', () => { CC.theme.toggle(); CC.screens.menu(); });
+    const pedidos = CC.$('#m-pedidos', el);
+    if (pedidos) pedidos.addEventListener('click', () => CC.go('pedidos'));
     const seg = CC.$('#m-seg', el);
     if (seg) seg.addEventListener('click', () => { location.href = 'suite://seguranca'; });
     CC.$('#m-sair', el).addEventListener('click', async () => {
