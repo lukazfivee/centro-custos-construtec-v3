@@ -12,7 +12,7 @@ import android.widget.FrameLayout;
 
 /**
  * Tela de carregamento da Suite (assets/loading/index.html): simbolo da Construtec,
- * disciplinas ligadas por trilhas de circuito e o progresso real da primeira carga do
+ * nome do app e o progresso real da primeira carga do
  * app web. Fica por cima da WebView do app e some quando a pagina termina de carregar.
  * WebView local, sem ponte JavaScript e sem rede.
  */
