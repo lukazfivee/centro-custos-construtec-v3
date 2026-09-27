@@ -55,6 +55,16 @@ Decisões do Lucas:
   - o service worker. O navegador interno do app recusa registrar service workers até em `localhost`; a verificação fica para o celular, em HTTPS, depois do deploy.
   - Achado fora do escopo: o servidor marca "vencida" pela data UTC (`CURRENT_DATE`). Depois das 21h de Brasília, uma conta que vence hoje já aparece vencida.
 
+- **Publicação (26/09/2026, autorizada pelo Lucas):**
+  - PR #34 no `main` (`2d51b8e`); o #33, substituído, foi fechado.
+  - Deploy do `centro-custos-api`, versão `4ab62eba-328c-465a-bace-dddd1f10d730`. O Container assumiu a imagem nova em cerca de 1 min.
+  - Verificado em produção:
+    - `/m/` serve o site do celular e `/m` redireciona (301) para `/m/`;
+    - `sw.js` sai como `application/javascript`;
+    - `/api/lancamentos` sem token responde 401.
+  - A migração 106 roda na inicialização do Container. O banco de produção não foi consultado diretamente; a confirmação vem no primeiro lançamento feito pelo celular.
+- **Pendente (adiado pelo Lucas):** instalar o APK novo no celular, que abre `/m/`, e verificar lá a câmera, o service worker e o modo sem internet.
+
 ## Feito (Fase 1)
 
 - **Telas de entrada locais** em `android/app/src/main/assets/auth/` (HTML, CSS e JS sem framework, fonte IBM Plex Sans e ícones Phosphor embutidos):
