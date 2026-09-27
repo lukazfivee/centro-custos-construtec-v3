@@ -58,6 +58,8 @@
     const el = CC.render(`${CC.header('Menu')}
       <div class="rows">
         <button class="menu-item" type="button" id="m-perfil">${CC.avatar(CC.perfilFoto, user.nome, 40)}<span>${esc(user.nome || 'Meu perfil')}<small>${esc(user.email || '')} · Meu perfil</small></span></button>
+        ${CC.ia && CC.ia.ready() ? `<button class="menu-item" type="button" id="m-ia">${icon('sparkle', 22)}<span>Assistente<small>Tire dúvidas sobre obras, custos e propostas e vá direto a qualquer tela</small></span></button>
+        <button class="menu-item" type="button" id="m-bug">${icon('bug', 22)}<span>Reportar problema<small>Conte o que aconteceu e o assistente monta o relato</small></span></button>` : ''}
         <button class="menu-item" type="button" id="m-tema">${icon(dark ? 'sun' : 'moon', 22)}<span>${dark ? 'Modo claro' : 'Modo escuro'}</span></button>
         ${inApp ? `<button class="menu-item" type="button" id="m-seg">${icon('shield-check', 22)}<span>Segurança<small>PIN, digital, bloqueio automático e aparelhos</small></span></button>` : ''}
         ${CC.isAdmin && CC.isAdmin() ? `<button class="menu-item" type="button" id="m-pedidos">${icon('user-plus', 22)}<span>Pedidos de acesso<small>Aprovar cadastros, convidar por e-mail e código da empresa</small></span></button>` : ''}
@@ -76,6 +78,10 @@
         if (slot && CC.perfilFoto) slot.outerHTML = CC.avatar(CC.perfilFoto, data.nome, 40);
       }).catch(() => { CC.perfilFoto = undefined; });
     }
+    const ia = CC.$('#m-ia', el);
+    if (ia) ia.addEventListener('click', () => CC.ia.open());
+    const bug = CC.$('#m-bug', el);
+    if (bug) bug.addEventListener('click', () => CC.ia.open('Quero reportar um problema no app.'));
     const pedidos = CC.$('#m-pedidos', el);
     if (pedidos) pedidos.addEventListener('click', () => CC.go('pedidos'));
     const seg = CC.$('#m-seg', el);
@@ -91,6 +97,7 @@
         b.querySelector('span').textContent = pending === 1 ? '1 lançamento ainda não foi enviado. Ele fica guardado neste celular. Toque de novo para sair.' : `${pending} lançamentos ainda não foram enviados. Eles ficam guardados neste celular. Toque de novo para sair.`;
         return;
       }
+      if (CC.ia) CC.ia.reset();
       CC.session.clear(); // a fila do celular continua guardada para quando esta conta voltar
       if (inApp) { location.href = 'suite://sair'; return; }
       location.href = '/';

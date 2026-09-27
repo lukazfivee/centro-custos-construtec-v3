@@ -1,8 +1,9 @@
 // Guarda o site do celular para abrir sem internet. A API nunca e guardada aqui:
 // os dados offline ficam no IndexedDB (queue.js), com a fila de lancamentos.
-const CACHE = 'cc-celular-v5';
+const CACHE = 'cc-celular-v6';
 const SHELL = ['./', 'index.html', 'm.css', 'anim.css', 'icons.js', 'core.js', 'queue.js', 'app.js',
-  'screen-home.js', 'screen-obra.js', 'screen-lancar.js', 'screen-misc.js', 'suite.js', 'screen-avisos.js', 'screen-pedidos.js', 'screen-perfil.js', 'simbolo.png',
+  'screen-home.js', 'screen-obra.js', 'screen-lancar.js', 'screen-misc.js', 'suite.js', 'screen-avisos.js', 'screen-pedidos.js', 'screen-perfil.js',
+  'ia-config.js', 'ia-tools.js', 'ia-chat.js', 'simbolo.png',
   'fonts/plex-400.woff2', 'fonts/plex-500.woff2', 'fonts/plex-600.woff2', 'fonts/plex-700.woff2'];
 
 self.addEventListener('install', (event) => {

@@ -12,6 +12,7 @@
   let current = 'home', currentParams = {};
   let lensTimer;
   CC.nav = 0;
+  CC.current = () => current; // o assistente conta a tela aberta para a IA
 
   function paintTabs() {
     const nav = document.getElementById('tabs');
@@ -66,7 +67,7 @@
       <span>${inApp ? 'Entre de novo no aplicativo.' : 'Entre pela versão completa e volte para esta página.'}</span>
       <a class="btn" href="${inApp ? 'suite://entrar' : '/'}" style="padding:0 22px;text-decoration:none">Entrar</a></div>`);
   }
-  CC.onUnauthorized = () => signedOut('Sua sessão terminou');
+  CC.onUnauthorized = () => { if (CC.ia && CC.ia.reset) CC.ia.reset(); signedOut('Sua sessão terminou'); };
   CC.onQueueSent = () => { if (['home', 'lancamentos', 'obra'].includes(current)) CC.go(current, currentParams); };
 
   async function consumeHandoff(code) {

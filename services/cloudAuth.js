@@ -106,6 +106,15 @@ async function session(sessionToken) {
   return request('/v1/auth/session', { method:'GET', headers:{ Authorization:`Bearer ${sessionToken}` } });
 }
 
+// Código de uso único para abrir outro app da Suíte com a mesma sessão (contrato §6).
+async function handoff(sessionToken, target) {
+  return request('/v1/auth/handoff', {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${sessionToken}` },
+    body:JSON.stringify({ target }),
+  });
+}
+
 async function sessionHash(sessionHashValue, userId) {
   if (!process.env.SYNC_SHARED_KEY || process.env.SYNC_SHARED_KEY.length < 32) {
     const error = new Error('Validação da sessão central indisponível.');
@@ -179,6 +188,7 @@ async function removeProfilePhoto(sessionToken) {
 
 module.exports = {
   session,
+  handoff,
   sessionHash,
   deleteUser,
   listAuthorizedEmails,
