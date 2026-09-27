@@ -1,5 +1,5 @@
 const { financialTransactionsSql, allocatedTransactionsSql } = require('../services/financialProjection');
-const { currentMonth, validMonth, monthRange } = require('../lib/dates');
+const { currentMonth, validMonth, monthRange, todaySql } = require('../lib/dates');
 const express=require('express');
 const {getDb}=require('../db');
 const {autenticar}=require('../middleware/auth');
@@ -12,7 +12,7 @@ router.get('/atencao',asyncRoute(async(req,res)=>{
   const db=getDb();
   const {month,range}=reportMonth(req.query);
   const [overdue,noAttachment,duplicate,budget,bank]=await Promise.all([
-    db.query(`SELECT COUNT(*)::int AS quantidade,COALESCE(SUM(amount*accounting_sign),0) AS valor FROM ${financialTransactionsSql} t WHERE deleted_at IS NULL AND reversal_of IS NULL AND financial_status='pendente' AND due_date<CURRENT_DATE`),
+    db.query(`SELECT COUNT(*)::int AS quantidade,COALESCE(SUM(amount*accounting_sign),0) AS valor FROM ${financialTransactionsSql} t WHERE deleted_at IS NULL AND reversal_of IS NULL AND financial_status='pendente' AND due_date<${todaySql()}`),
     db.query(`SELECT COUNT(*)::int AS quantidade FROM ${financialTransactionsSql} t WHERE t.deleted_at IS NULL AND t.reversal_of IS NULL AND NOT EXISTS(SELECT 1 FROM transaction_attachments a WHERE a.transaction_id=t.id)`),
     db.query(`SELECT COUNT(*)::int AS quantidade FROM (SELECT type,counterparty,amount,transaction_date,COUNT(*) FROM ${financialTransactionsSql} t WHERE deleted_at IS NULL AND reversal_of IS NULL GROUP BY type,counterparty,amount,transaction_date HAVING COUNT(*)>1) d`),
     db.query(`SELECT COUNT(*)::int AS quantidade FROM (SELECT cc.id,cc.monthly_budget,COALESCE(SUM(t.amount*t.accounting_sign) FILTER(WHERE t.type='despesa' AND t.deleted_at IS NULL),0) gasto FROM cost_centers cc LEFT JOIN ${allocatedTransactionsSql} t ON t.cost_center_id=cc.id AND t.transaction_date >= $1 AND t.transaction_date < $2 WHERE cc.active=TRUE GROUP BY cc.id,cc.monthly_budget HAVING cc.monthly_budget>0 AND COALESCE(SUM(t.amount*t.accounting_sign) FILTER(WHERE t.type='despesa' AND t.deleted_at IS NULL),0)>cc.monthly_budget) q`,[range.start,range.end]),

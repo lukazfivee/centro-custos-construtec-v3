@@ -6,7 +6,7 @@ const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { buildTransactionFilters } = require('../lib/transactionFilters');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
-const { validDate } = require('../lib/dates');
+const { validDate, todaySql } = require('../lib/dates');
 const { csvLine, decimalBr } = require('../lib/csv');
 const { recordAudit } = require('../services/audit');
 const { recordExpenseAllocation } = require('../services/budgets/budgetAllocations');
@@ -23,7 +23,7 @@ const selectSql = `
     EXISTS(SELECT 1 FROM transactions tr WHERE tr.reversal_of=t.public_id AND tr.deleted_at IS NULL) AS estornado,
     t.transaction_date::text AS data,t.due_date::text AS vencimento,
     t.settlement_date::text AS data_liquidacao,t.financial_status AS status_financeiro,
-    CASE WHEN t.financial_status='pendente' AND t.due_date<CURRENT_DATE THEN 'vencido'
+    CASE WHEN t.financial_status='pendente' AND t.due_date<${todaySql()} THEN 'vencido'
       ELSE t.financial_status END AS situacao,
     t.document_number AS documento,t.payment_method AS forma_pagamento,
     t.notes AS observacao,t.revision,t.updated_at,
