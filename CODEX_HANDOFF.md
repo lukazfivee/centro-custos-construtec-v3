@@ -1,5 +1,12 @@
 # Handoff — Centro de Custos
 
+## 2026-09-27 02:45 BRT — Suíte mobile, Fase 3 publicada (Claude Code)
+
+- Orçamentos dentro do app Android: `POST /v1/auth/handoff` com `target: "orcamentos"` (migração D1 `009`, aplicada), sessão central filha "Orçamentos web" (PR #37); app com uma WebView por app e troca por `suite://app/<id>`, RC16 (PR #38); chave de serviço com BOM (PR #39).
+- Produção: Worker `centro-custos-api` versão `12ab2b17`; pré-lançamento `v3.1.0-rc.16` com o APK no GitHub.
+- No Orçamentos: identidade compartilhada (#90), correção do login em produção (#92) e entrada pelo app (#93), publicados.
+- Detalhes, validação e pendências: `docs/suite-mobile/STATUS-CLAUDE.md`, seção "Fase 3".
+
 ## 2026-09-14 15:01 BRT — auditoria Impeccable + correções (KILO-LEAD)
 
 - Comando: `.github/skills/impeccable/scripts/impeccable.cmd detect public/` → 17 anti-patterns (2 advisory).
