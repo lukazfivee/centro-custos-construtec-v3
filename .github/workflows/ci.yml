@@ -64,9 +64,16 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Gerar APK e lint
-        run: gradle -p android assembleDebug lintDebug --no-daemon
+        run: |
+          gradle -p android assembleDebug lintDebug --no-daemon
+          mkdir -p apk && cp android/app/build/outputs/apk/debug/app-debug.apk apk/app-debug.apk
+      # Mesmo app apontado para o mock do contrato no emulador (scripts/mock-central-auth.mjs na porta 8787).
+      - name: Gerar APK do mock
+        run: |
+          gradle -p android assembleDebug --no-daemon -PcentralApiBase=http://10.0.2.2:8787 -PorcWebBase=http://10.0.2.2:8787/orc
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk/app-debug-mock.apk
       - uses: actions/upload-artifact@v7
         with:
           name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: apk/*.apk
           retention-days: 7

@@ -138,15 +138,18 @@ export function createMockCentral(options = {}) {
       if (!['centro-custos', 'orcamentos'].includes(body.target)) return [400, { ok: false, error: 'Destino inválido.', code: 'HANDOFF_INVALID' }];
       const code = randomToken();
       const expiresAt = Math.floor((now() + MIN) / 1000);
-      handoffs.set(sha(code), { userId: auth.user.id, expiresAt, instanceName: auth.session.instanceName });
+      handoffs.set(sha(code), { userId: auth.user.id, expiresAt, instanceName: auth.session.instanceName, target: body.target });
       return [200, { ok: true, code, expiresAt }];
     },
     'POST /v1/auth/handoff/consume': (req, body) => {
       const hash = sha(body.code || '');
       const item = handoffs.get(hash);
       handoffs.delete(hash);
-      if (!item || item.expiresAt * 1000 <= now()) return [400, { ok: false, error: 'Código inválido.', code: 'HANDOFF_INVALID' }];
+      const target = body.target || 'centro-custos';
+      if (!item || item.expiresAt * 1000 <= now() || item.target !== target) return [400, { ok: false, error: 'Código inválido.', code: 'HANDOFF_INVALID' }];
       const user = userById(item.userId);
+      // Orcamentos (contrato §6): sessao central filha, no formato do login central.
+      if (target === 'orcamentos') return [200, { ok: true, sessionToken: randomToken(), expiresAt: Math.floor((now() + 8 * 3600 * 1000) / 1000), user: { id: user.id, name: user.name, email: user.email, role: user.role, active: true } }];
       // Formato real do login web (STATUS-CODEX): { token, usuario: { id, nome, email, role }, instancia: { id, name } }.
       return [200, { ok: true, token: randomToken(), usuario: { id: user.id, nome: user.name, email: user.email, role: user.role }, instancia: { id: 'mock', name: item.instanceName } }];
     },
@@ -165,16 +168,23 @@ export function createMockCentral(options = {}) {
     return send(res, 200, fs.readFileSync(file), TYPES[path.extname(file)] || 'application/octet-stream');
   }
 
-  const webHome = '<!doctype html><meta charset="utf-8"><title>Centro de Custos (mock)</title><body style="font:16px sans-serif;padding:24px">'
-    + '<h1>Centro de Custos (mock)</h1><p id="s">Sem handoff.</p><script>const m=/handoff=([^&]+)/.exec(location.hash);'
-    + 'if(m){fetch("/v1/auth/handoff/consume",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:m[1]})})'
-    + '.then(r=>r.json()).then(j=>{history.replaceState(null,"",location.pathname);document.getElementById("s").textContent=j.ok?"Entrou como "+j.usuario.nome:"Handoff recusado: "+j.code;});}</script>';
+  // Paginas dos dois apps web da Suite (Fase 3): cada uma consome o handoff do seu destino e troca de app por suite://app/<id>.
+  // O campo de texto mostra que a WebView escondida nao recarrega na troca.
+  const webPage = (title, target, other, otherLabel) => '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
+    + '<title>' + title + '</title><body style="font:16px sans-serif;padding:24px"><h1>' + title + '</h1><p id="s">Sem handoff.</p>'
+    + '<input id="nota" placeholder="Anotação" style="font:16px sans-serif;padding:8px;width:90%"><p><a id="troca" href="suite://app/' + other + '">Trocar para ' + otherLabel + '</a></p>'
+    + '<script>const m=/handoff=([^&]+)/.exec(location.hash);'
+    + 'if(m){fetch("/v1/auth/handoff/consume",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:m[1],target:"' + target + '"})})'
+    + '.then(r=>r.json()).then(j=>{history.replaceState(null,"",location.pathname);document.getElementById("s").textContent=j.ok?"Entrou como "+(j.usuario?j.usuario.nome:j.user.name):"Handoff recusado: "+j.code;});}</script>';
+  const webHome = webPage('Centro de Custos (mock)', 'centro-custos', 'orcamentos', 'o Orçamentos');
+  const orcHome = webPage('Orçamentos (mock)', 'orcamentos', 'centro-custos', 'o Centro de Custos');
   const resetPage = '<!doctype html><meta charset="utf-8"><script>location.replace("/auth/index.html#reset&"+location.hash.slice(1))</script>';
 
   const server = http.createServer((req, res) => {
     const { pathname } = new URL(req.url, 'http://mock.local');
     if (req.method === 'GET' && pathname.startsWith('/auth/')) return serveStatic(res, pathname);
-    if (req.method === 'GET' && pathname === '/') return send(res, 200, webHome, 'text/html; charset=utf-8');
+    if (req.method === 'GET' && (pathname === '/' || pathname === '/m/')) return send(res, 200, webHome, 'text/html; charset=utf-8');
+    if (req.method === 'GET' && pathname === '/orc/') return send(res, 200, orcHome, 'text/html; charset=utf-8');
     if (req.method === 'GET' && pathname === '/redefinir-senha') return send(res, 200, resetPage, 'text/html; charset=utf-8');
     const route = routes[`${req.method} ${pathname}`];
     if (!route) return send(res, 404, { ok: false, error: 'Rota não encontrada.', code: 'NOT_FOUND' });
