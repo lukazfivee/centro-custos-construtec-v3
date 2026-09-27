@@ -55,8 +55,9 @@
     const inApp = /SuiteConstrutec/.test(navigator.userAgent) || new URLSearchParams(location.search).has('app');
     const dark = CC.theme.get() === 'escuro';
     const user = CC.session.user() || {};
-    const el = CC.render(`${CC.header('Menu')}<p class="sub">${esc(user.nome || '')}${user.email ? ` · ${esc(user.email)}` : ''}</p>
+    const el = CC.render(`${CC.header('Menu')}
       <div class="rows">
+        <button class="menu-item" type="button" id="m-perfil">${CC.avatar(CC.perfilFoto, user.nome, 40)}<span>${esc(user.nome || 'Meu perfil')}<small>${esc(user.email || '')} · Meu perfil</small></span></button>
         <button class="menu-item" type="button" id="m-tema">${icon(dark ? 'sun' : 'moon', 22)}<span>${dark ? 'Modo claro' : 'Modo escuro'}</span></button>
         ${inApp ? `<button class="menu-item" type="button" id="m-seg">${icon('shield-check', 22)}<span>Segurança<small>PIN, digital, bloqueio automático e aparelhos</small></span></button>` : ''}
         ${CC.isAdmin && CC.isAdmin() ? `<button class="menu-item" type="button" id="m-pedidos">${icon('user-plus', 22)}<span>Pedidos de acesso<small>Aprovar cadastros, convidar por e-mail e código da empresa</small></span></button>` : ''}
@@ -65,6 +66,16 @@
         <button class="menu-item danger" type="button" id="m-sair">${icon('sign-out', 22)}<span>Sair</span></button>
       </div>`);
     CC.$('#m-tema', el).addEventListener('click', () => { CC.theme.toggle(); CC.screens.menu(); });
+    CC.$('#m-perfil', el).addEventListener('click', () => CC.go('perfil'));
+    // A foto chega depois (uma vez por abertura do site) e entra no lugar das iniciais.
+    if (CC.perfilFoto === undefined) {
+      CC.perfilFoto = null;
+      CC.api('/perfil').then(({ data }) => {
+        CC.perfilFoto = data.foto || null;
+        const slot = CC.$('#m-perfil .avatar');
+        if (slot && CC.perfilFoto) slot.outerHTML = CC.avatar(CC.perfilFoto, data.nome, 40);
+      }).catch(() => { CC.perfilFoto = undefined; });
+    }
     const pedidos = CC.$('#m-pedidos', el);
     if (pedidos) pedidos.addEventListener('click', () => CC.go('pedidos'));
     const seg = CC.$('#m-seg', el);

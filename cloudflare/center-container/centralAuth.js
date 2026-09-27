@@ -59,7 +59,7 @@ export function base64ToBytes(value) {
   return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
 }
 
-function validateProfilePhoto(body) {
+export function validateProfilePhoto(body) {
   const mime = text(body?.mime).toLowerCase();
   const contentBase64 = String(body?.contentBase64 || '').replace(/\s/g, '');
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) return { error: 'Use uma foto JPG, PNG ou WEBP.', status: 400 };

@@ -110,6 +110,10 @@ button { cursor: pointer; }
 .photo .thumb { width: 60px; height: 78px; flex: none; border-radius: 8px; background: var(--n800) center/cover no-repeat; display: grid; place-items: center; color: var(--n300); }
 .alert { font-size: 12.5px; font-weight: 600; color: var(--warn); display: flex; gap: 6px; align-items: flex-start; }
 .alert:empty { display: none; }
+.avatar { flex: none; width: var(--a); height: var(--a); border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--accent-900); color: var(--accent-300); font-weight: 700; font-size: calc(var(--a) * .38); box-shadow: inset 0 0 0 1px var(--divider); }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.perfil-foto { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 4px; }
+.perfil-foto .grid2 { width: 100%; }
 
 .btn { min-height: 52px; border: 0; border-radius: 10px; background: #12a9d1; color: #fefefe; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .12s; }
 .btn2 { min-height: 48px; border: 0; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--divider); font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .12s; }
