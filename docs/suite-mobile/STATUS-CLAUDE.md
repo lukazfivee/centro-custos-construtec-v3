@@ -7,7 +7,7 @@ Fase atual: 5 (primeiro uso e cadastro), publicada em 27/09/2026 (RC19) · PR #4
 - Data e hora (BRT): 27/09/2026 15:00
 - Fase 5 feita pelo Claude Code, com migração D1, merge e deploy autorizados pelo Lucas.
 
-## iPhone pelo site do celular (27/09/2026)
+## iPhone pelo site do celular (27/09/2026), publicado (PR #54, deploy conferido ~17:20)
 
 Pedido do Lucas: usar no iPhone sem app de loja (opção "rápida": /m/ como app da tela de início).
 - `public/m/manifest.webmanifest` (escopo `/m/`, standalone), ícones `icon-180/192/512.png` (símbolo sobre navy), metas `apple-mobile-web-app-*` e `apple-touch-icon` no `index.html`.
