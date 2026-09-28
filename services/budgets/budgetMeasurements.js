@@ -61,9 +61,9 @@ async function recordLaborMeasurement(pool, params) {
  */
 async function listLaborMeasurements(pool, contractId) {
   const res = await pool.query(`
-    SELECT lm.id, lm.contract_id, lm.cost_center_id, lm.period_start, lm.period_end,
-           lm.status, lm.team_hours, lm.cost_amount, lm.notes, lm.created_at
-    FROM labor_measurements lm
+    SELECT lm.id, lm.contract_id, lm.cost_center_id, lm.period_start::text AS period_start, lm.period_end::text AS period_end,
+           lm.status, lm.team_hours, lm.cost_amount, lm.notes, lm.created_at, u.name AS created_by_name
+    FROM labor_measurements lm LEFT JOIN users u ON u.id = lm.created_by
     WHERE lm.contract_id = $1
     ORDER BY lm.period_start DESC
   `, [contractId]);
@@ -118,9 +118,9 @@ async function recordContractMeasurement(pool, params) {
 async function listContractMeasurements(pool, contractId) {
   const res = await pool.query(`
     SELECT cm.id, cm.contract_id, cm.cost_center_id, cm.measurement_number,
-           cm.period_start, cm.period_end, cm.measured_amount, cm.billed_transaction_id,
-           cm.status, cm.notes, cm.created_at
-    FROM contract_measurements cm
+           cm.period_start::text AS period_start, cm.period_end::text AS period_end, cm.measured_amount, cm.billed_transaction_id,
+           cm.status, cm.notes, cm.created_at, u.name AS created_by_name
+    FROM contract_measurements cm LEFT JOIN users u ON u.id = cm.created_by
     WHERE cm.contract_id = $1
     ORDER BY cm.measurement_number ASC
   `, [contractId]);

@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { autenticar } = require('../middleware/auth');
+const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError } = require('../lib/http');
 const { getDb } = require('../db');
 const { previewImport, confirmImportWithObservability: confirmImport } = require('../services/budgets/budgetImportService');
@@ -57,7 +57,10 @@ async function autenticarOuChaveIntegracao(req, res, next) {
 const router = express.Router();
 router.use(autenticarOuChaveIntegracao);
 
-router.post('/previas', asyncRoute(async (req, res) => {
+// Importar orcamento e escrita na obra: so admin e gestor (a chave de integracao entra como admin).
+const podeImportar = exigirPapel('admin', 'gestor');
+
+router.post('/previas', podeImportar, asyncRoute(async (req, res) => {
   try {
     const preview = await previewImport(getDb(), req.body, req.usuario?.id, req.body.options);
     res.json(preview);
@@ -69,7 +72,7 @@ router.post('/previas', asyncRoute(async (req, res) => {
   }
 }));
 
-router.post('/previas/:id/confirmar', asyncRoute(async (req, res) => {
+router.post('/previas/:id/confirmar', podeImportar, asyncRoute(async (req, res) => {
   try {
     const result = await confirmImport(getDb(), {
       previewId: req.params.id,
@@ -115,8 +118,8 @@ const handleDirectSync = asyncRoute(async (req, res) => {
   }
 });
 
-router.post('/confirmar-direto', handleDirectSync);
-router.post('/sync-direto', handleDirectSync);
+router.post('/confirmar-direto', podeImportar, handleDirectSync);
+router.post('/sync-direto', podeImportar, handleDirectSync);
 
 router.get('/importacoes/:id', asyncRoute(async (req, res) => {
   const result = await getDb().query(`
