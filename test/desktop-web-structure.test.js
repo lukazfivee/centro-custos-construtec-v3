@@ -96,3 +96,20 @@ test('D1 Início: lançamento rápido com client_id e painel com 12 meses', () =
   assert.match(src('telas/inicio-blocos.js'), /cc_first_use_dismissed/);
   assert.match(src('telas/inicio-blocos.js'), /p > 1 \? 'estourado' : \(p > 0\.8 \? 'alerta' : 'normal'\)/);
 });
+
+test('D2 Lançamentos: sem loop de requisições, fila offline e client_id', () => {
+  // O problema 2 do sistema atual vinha de observar a tabela; aqui nenhum arquivo observa o DOM.
+  for (const f of dFiles.filter((x) => x.endsWith('.js'))) assert.doesNotMatch(src(f), /MutationObserver/, f);
+  const filtros = src('telas/lancamentos-filtros.js');
+  assert.match(filtros, /D\.debounce\(mudar, 300\)/);
+  assert.match(src('index.html'), /<script src="\.\.\/m\/queue\.js"><\/script>/);
+  const form = src('telas/lancamento-form.js');
+  assert.match(form, /client_id: clientId/);
+  assert.match(form, /CC\.queue\.add\(\{ client_id: clientId, payload: body \}\)/);
+  assert.match(form, /revisao: Number\(l\.revision\)/);
+  assert.match(form, /L\.abrir = async/);
+  const lista = src('telas/lancamentos.js');
+  assert.match(lista, /L\.soLeitura = \(l\) => !!\(l\.estorno_de \|\| l\.estornado \|\| L\.fechamento\(l\.data\)\)/);
+  assert.match(lista, /const podeGerir = \(\) => D\.pode\('cadastrar'\)/);
+  assert.match(src('telas/lancamento-acoes.js'), /motivo\.length < 5/);
+});

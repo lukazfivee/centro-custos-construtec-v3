@@ -17,8 +17,13 @@
     return h < 24 ? `há ${h} h` : `em ${D.data(new Date(ms).toISOString())}`;
   }
 
+  // Fila de lancamentos feitos sem internet (public/m/queue.js), se houver.
+  const fila = () => (CC.queue ? CC.queue.state : { pending: 0, syncing: false });
+
   function texto() {
-    if (estado.modo === 'off') return 'Sem internet';
+    const f = fila();
+    if (f.syncing) return f.pending === 1 ? 'Enviando 1 lançamento…' : `Enviando ${f.pending} lançamentos…`;
+    if (estado.modo === 'off') return f.pending ? `Sem internet · ${f.pending} na fila` : 'Sem internet';
     if (estado.modo === 'enviando') return 'Enviando…';
     if (estado.modo === 'falha') return 'Falha ao sincronizar';
     if (estado.modo === 'ok') return `Sincronizado · ${ha(estado.ultima)}`;
@@ -35,7 +40,7 @@
   function pintar() {
     const bt = CC.$('[data-selo]');
     if (!bt) return;
-    bt.className = `selo ${estado.modo}`;
+    bt.className = `selo ${fila().syncing ? 'enviando' : estado.modo}`;
     CC.$('[data-selo-txt]', bt).textContent = texto();
     bt.title = dica();
     bt.setAttribute('aria-label', `${texto()}. ${dica()}`);
@@ -84,6 +89,7 @@
       else CC.toast(dica(), 'info');
     });
     if (navigator.onLine === false) estado.modo = 'off';
+    if (CC.queue) { CC.queue.on(pintar); CC.queue.refresh().catch(() => {}); }
     pintar();
     estado.elegivel = await verificar();
     if (estado.modo !== 'off') estado.modo = estado.elegivel && estado.ultima ? 'ok' : 'local';

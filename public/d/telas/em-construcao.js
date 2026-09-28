@@ -6,7 +6,6 @@
 
   // chave: [fase, o que a tela vai ter]
   const PLANO = {
-    lancamentos: ['D2', ['Lista com filtros, ordenação, paginação, total e CSV', 'Novo, editar, documentos, estorno e excluir no painel lateral', 'Cadeado e faixa nos meses fechados']],
     obras: ['D3', ['Carteira com indicadores, alertas e cartões', 'Detalhe com orçado × realizado, medições, Curva S e notas fiscais', 'Importação do orçamento e vínculo de gastos a insumos']],
     cobrancas: ['D4', ['Situação de cada obra em 4 passos: medição, NF, e-mail e pagamento', 'Acompanhamento no painel lateral', 'E-mail ao cliente com rascunho, autorização e envio']],
     categorias: ['D5', ['Tabela com tipo, cor, lançamentos e total do mês', 'Nova e editar no painel lateral', 'Nome repetido recusado']],
@@ -40,13 +39,6 @@
       </div></div>`;
   }
 
-  // Lancamento vindo da busca: mostra os dados no painel lateral (a edicao chega na D2).
-  function abrirLancamento(id) {
-    D.verLancamento(D.lancCache.get(String(id)), {
-      aoFechar: () => { if (D.lerRota().query.id) history.replaceState(null, '', '#/lancamentos'); },
-    });
-  }
-
   async function obra(el, id, vivo) {
     el.innerHTML = `<div class="pagina">${D.ui.carregando('Abrindo a obra…')}</div>`;
     const { data } = await CC.api('/centros-custo');
@@ -67,7 +59,6 @@
     if (!D.podeTela(rota.nome)) return semAcesso(el);
     if (rota.nome === 'obras' && rota.id) return obra(el, rota.id, vivo);
     pagina(el, rota.nome);
-    if (rota.nome === 'lancamentos' && rota.query.id) abrirLancamento(rota.query.id);
     return undefined;
   };
 

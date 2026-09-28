@@ -86,7 +86,7 @@
           <div class="bcab"><b id="ini-cat">Despesas por categoria</b></div>
           <div class="lista-cat">${I.categorias(resumo.porCategoria)}</div></section>
       </div>`;
-    CC.$$('[data-lanc]', el).forEach((b) => b.addEventListener('click', () => D.verLancamento(D.lancCache.get(b.dataset.lanc))));
+    CC.$$('[data-lanc]', el).forEach((b) => b.addEventListener('click', () => D.lanc.abrirPorId(b.dataset.lanc)));
   }
 
   D.tela('inicio', { render });

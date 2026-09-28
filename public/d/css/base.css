@@ -63,7 +63,7 @@ input::placeholder, textarea::placeholder { color: var(--color-neutral-500); }
 .tbl td { height: 56px; padding: 6px 14px; border-bottom: 1px solid var(--color-divider); vertical-align: middle; }
 .tbl tr.rw { cursor: pointer; transition: background-color .12s ease; }
 .tbl tr.rw:hover { background: var(--color-accent-900); }
-.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.num, .tbl th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bar { display: block; height: 8px; border-radius: 4px; background: var(--color-neutral-800); overflow: hidden; }
 .bar > span { display: block; height: 100%; border-radius: 4px; }
 .tab { height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--color-neutral-300); font: 600 13.5px var(--font-body); cursor: pointer; margin-bottom: -1px; }
