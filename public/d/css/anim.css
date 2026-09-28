@@ -1,0 +1,21 @@
+/* Animacoes. O sucesso (check, estouro, simbolo) segue public/m/anim.css, com os tokens do desktop. */
+.success { position: relative; display: block; width: var(--s, 72px); height: var(--s, 72px); margin: 0 auto; }
+.success .ring { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 3px #12a9d1; opacity: 0; animation: ctRing .55s ease-out .70s both; }
+.success .p { position: absolute; left: 50%; top: 50%; border-radius: 50%; opacity: 0; animation: ctBurst .6s ease-out .74s both; }
+.success .p.big { width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background: #12a9d1; }
+.success .p.small { width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; background: #5fd0ee; }
+.success .check { position: absolute; inset: 0; border-radius: 50%; background: var(--color-accent-900); color: #12a9d1; display: grid; place-items: center; opacity: 0; animation: ctCheck 1.05s cubic-bezier(.2, .8, .2, 1) 0s both; }
+.success .check .ph-fill { font-size: calc(var(--s, 72px) * .6); }
+.success .logo { position: absolute; left: 14%; top: 14%; width: 72%; height: 72%; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(18, 169, 209, .4)); animation: ctLogo .5s cubic-bezier(.2, .8, .2, 1) .80s both; }
+
+@keyframes ctCheck { 0% { opacity: 1; transform: scale(0) } 20% { opacity: 1; transform: scale(1.14) } 32% { opacity: 1; transform: scale(1) } 64% { opacity: 1; transform: scale(1) } 74% { opacity: 0; transform: scale(1.35) } 100% { opacity: 0; transform: scale(1.35) } }
+@keyframes ctRing { 0% { opacity: .9; transform: scale(.85) } 100% { opacity: 0; transform: scale(1.8) } }
+@keyframes ctBurst { 0% { opacity: 0; transform: rotate(var(--r)) translateY(0) scale(.4) } 15% { opacity: 1 } 100% { opacity: 0; transform: rotate(var(--r)) translateY(var(--d)) scale(1) } }
+@keyframes ctLogo { 0% { opacity: 0; transform: scale(.3) rotate(-30deg) } 60% { opacity: 1; transform: scale(1.12) rotate(5deg) } 100% { opacity: 1; transform: scale(1) rotate(0) } }
+@keyframes spin { to { transform: rotate(360deg) } }
+@keyframes blink { 50% { opacity: .35 } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(40px) } to { opacity: 1; transform: none } }
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(12px) } to { opacity: 1; transform: translateX(-50%) } }
+@keyframes shakeA { 10%, 90% { transform: translateX(-2px) } 20%, 80% { transform: translateX(4px) } 30%, 50%, 70% { transform: translateX(-7px) } 40%, 60% { transform: translateX(7px) } }
