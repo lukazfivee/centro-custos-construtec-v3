@@ -6,7 +6,6 @@
 
   // chave: [fase, o que a tela vai ter]
   const PLANO = {
-    inicio: ['D1', ['Seis indicadores do mês: recebido, pago, resultado, a receber, a pagar e vencidos', 'Evolução mensal de 12 meses, com médias e margem', 'Atividades recentes e obras com realizado × orçado', 'Lançamento rápido no painel lateral']],
     lancamentos: ['D2', ['Lista com filtros, ordenação, paginação, total e CSV', 'Novo, editar, documentos, estorno e excluir no painel lateral', 'Cadeado e faixa nos meses fechados']],
     obras: ['D3', ['Carteira com indicadores, alertas e cartões', 'Detalhe com orçado × realizado, medições, Curva S e notas fiscais', 'Importação do orçamento e vínculo de gastos a insumos']],
     cobrancas: ['D4', ['Situação de cada obra em 4 passos: medição, NF, e-mail e pagamento', 'Acompanhamento no painel lateral', 'E-mail ao cliente com rascunho, autorização e envio']],
@@ -43,28 +42,7 @@
 
   // Lancamento vindo da busca: mostra os dados no painel lateral (a edicao chega na D2).
   function abrirLancamento(id) {
-    const l = D.lancCache.get(String(id));
-    const v = l ? D.valorSinal(l) : null;
-    const linha = (rotulo, valor) => (valor ? `<dt>${esc(rotulo)}</dt><dd>${valor}</dd>` : '');
-    const corpo = l
-      ? `<dl class="dados">
-          ${linha('Descrição', esc(l.descricao))}
-          ${linha('Valor', `<b class="${v.entrada ? 'entrada' : ''}">${esc(v.texto)}</b>`)}
-          ${linha('Situação', D.ui.situacao(l))}
-          ${linha('Obra', esc([l.centro_codigo, l.centro_nome].filter(Boolean).join(' · ')))}
-          ${linha('Categoria', esc(l.categoria))}
-          ${linha('Favorecido', esc(l.favorecido))}
-          ${linha('Competência', esc(D.data(l.data)))}
-          ${linha('Vencimento', esc(D.data(l.vencimento)))}
-          ${linha('Pagamento', esc(D.data(l.data_liquidacao)))}
-          ${linha('Documento', esc(l.documento))}
-          ${linha('Observação', esc(l.observacao))}
-        </dl>${D.ui.faixa('info', 'info', 'Editar, anexar e estornar por aqui chega na fase D2.')}`
-      : D.ui.vazio('receipt', 'Abra este lançamento pela busca.', 'O link direto para um lançamento chega na fase D2.');
-    D.painel.abrir({
-      icone: 'receipt', titulo: 'Lançamento', sub: l ? l.descricao : '',
-      corpo,
-      rodape: '<button type="button" class="btn btn-s" data-fechar>Fechar</button><a class="btn btn-p" href="/">Abrir no sistema atual</a>',
+    D.verLancamento(D.lancCache.get(String(id)), {
       aoFechar: () => { if (D.lerRota().query.id) history.replaceState(null, '', '#/lancamentos'); },
     });
   }
@@ -94,5 +72,6 @@
   };
 
   D.tela('em-construcao', { render });
-  Object.keys(PLANO).forEach((chave) => D.tela(chave, { render }));
+  D.telaEmConstrucao = render;
+  Object.keys(PLANO).forEach((chave) => { if (!D.temTela(chave)) D.tela(chave, { render }); });
 })(window.CC);

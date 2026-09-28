@@ -17,7 +17,10 @@ router.get('/resumo', asyncRoute(async (req, res) => {
   const sourceSql = centerId ? allocatedTransactionsSql : financialTransactionsSql;
   const params = [range.start, range.end, centerId];
   const db = getDb();
-  const months = monthsEndingAt(month);
+  // Quantos meses na evolucao: 6 por padrao (painel atual); o desktop novo pede 12.
+  const trendCount = req.query.meses == null ? 6 : Number(req.query.meses);
+  if (!Number.isInteger(trendCount) || trendCount < 1 || trendCount > 24) throw httpError(400, 'Meses da evolução inválidos. Use de 1 a 24.');
+  const months = monthsEndingAt(month, trendCount);
 
   const [summary, overdue, centers, categories, recent, trend] = await Promise.all([
     db.query(`
@@ -30,7 +33,11 @@ router.get('/resumo', asyncRoute(async (req, res) => {
           AND COALESCE(due_date,transaction_date) >= $1 AND COALESCE(due_date,transaction_date) < $2),0) AS a_receber,
         COALESCE(SUM(amount * accounting_sign) FILTER (WHERE type='despesa' AND financial_status='pendente'
           AND COALESCE(due_date,transaction_date) >= $1 AND COALESCE(due_date,transaction_date) < $2),0) AS a_pagar,
-        COUNT(*) FILTER (WHERE transaction_date >= $1 AND transaction_date < $2) AS qtd_lancamentos
+        COUNT(*) FILTER (WHERE transaction_date >= $1 AND transaction_date < $2) AS qtd_lancamentos,
+        COUNT(DISTINCT id) FILTER (WHERE type='receita' AND financial_status='liquidado' AND accounting_sign=1
+          AND transaction_date >= $1 AND transaction_date < $2) AS qtd_recebidos,
+        COUNT(DISTINCT id) FILTER (WHERE type='despesa' AND financial_status='liquidado' AND accounting_sign=1
+          AND transaction_date >= $1 AND transaction_date < $2) AS qtd_pagos
       FROM ${sourceSql} t WHERE deleted_at IS NULL AND ($3::integer IS NULL OR cost_center_id=$3)
     `, params),
     db.query(`
@@ -63,7 +70,9 @@ router.get('/resumo', asyncRoute(async (req, res) => {
         t.accounting_sign AS sinal_contabil,t.reversal_of AS estorno_de,
         CASE WHEN t.financial_status='pendente' AND t.due_date<${todaySql()} THEN 'vencido'
           ELSE t.financial_status END AS situacao,
-        t.amount AS valor,cc.name AS centro_nome,c.name AS categoria
+        t.amount AS valor,cc.name AS centro_nome,c.name AS categoria,
+        t.counterparty AS favorecido,t.document_number AS documento,
+        t.settlement_date::text AS data_liquidacao,cc.code AS centro_codigo
       FROM ${sourceSql} t JOIN cost_centers cc ON cc.id=t.cost_center_id
       JOIN categories c ON c.id=t.category_id
       WHERE t.deleted_at IS NULL AND t.transaction_date >= $1 AND t.transaction_date < $2
@@ -101,6 +110,8 @@ router.get('/resumo', asyncRoute(async (req, res) => {
     comprometido:committed,
     saldoOrcamento:budget - committed,
     qtdLancamentos:Number(totals.qtd_lancamentos),
+    qtdRecebidos:Number(totals.qtd_recebidos),
+    qtdPagos:Number(totals.qtd_pagos),
     porCentro:centers.rows,
     porCategoria:categories.rows,
     ultimosLancamentos:recent.rows,

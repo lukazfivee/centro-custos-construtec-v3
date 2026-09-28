@@ -83,3 +83,16 @@ test('servidor abre /d/ sem cache, ao lado do /m/', () => {
   assert.match(server, /app\.get\(\['\/d', '\/d\/'\]/);
   assert.match(server, /path\.join\(publicDir, 'd', 'index\.html'\)/);
 });
+
+test('D1 Início: lançamento rápido com client_id e painel com 12 meses', () => {
+  const rapido = src('telas/lancamento-rapido.js');
+  assert.match(rapido, /clientId: CC\.uuid\(\)/);
+  assert.match(rapido, /client_id: estado\.clientId/);
+  assert.match(rapido, /CC\.parseMoney\(estado\.valor\)/);
+  assert.match(rapido, /if \(enviando\) return;/);
+  assert.match(rapido, /D\.painel\.abrir\(/);
+  const inicio = src('telas/inicio.js');
+  assert.match(inicio, /\/dashboard\/resumo\?mes=\$\{mes\}&meses=12/);
+  assert.match(src('telas/inicio-blocos.js'), /cc_first_use_dismissed/);
+  assert.match(src('telas/inicio-blocos.js'), /p > 1 \? 'estourado' : \(p > 0\.8 \? 'alerta' : 'normal'\)/);
+});

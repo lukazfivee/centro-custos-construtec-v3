@@ -52,6 +52,18 @@
           if (alvo) alvo.innerHTML = `${D.ic('warning-circle', 14)}${esc(msg)}`;
         });
       },
+      // Troca icone, titulo e subtitulo (ex.: o formulario vira "Lancamento registrado").
+      cabecalho({ icone, titulo, sub }) {
+        if (icone) CC.$('.dic', raiz).innerHTML = D.ic(icone);
+        if (titulo != null) CC.$('#drw-tit', raiz).textContent = titulo;
+        const alvo = CC.$('.dtit', raiz);
+        CC.$$('.dtit > span', raiz).forEach((e) => e.remove());
+        if (sub) alvo.appendChild(D.el(`<span>${esc(sub)}</span>`));
+      },
+      botoes(html) {
+        ctl.rodape.innerHTML = html || '';
+        ctl.rodape.hidden = !html;
+      },
       desenhar(conteudo) {
         corpo.innerHTML = '';
         if (typeof conteudo === 'function') conteudo(corpo, ctl);
