@@ -145,6 +145,19 @@ router.put('/notas-fiscais/:nfId', exigirPapel('admin', 'gestor'), asyncRoute(as
   res.json(publicLedgerEntry(rows[0]));
 }));
 
+// Baixa o PDF da nota fiscal (o desktop novo lista e baixa as NFs da obra).
+router.get('/notas-fiscais/:nfId/arquivo', asyncRoute(async (req, res) => {
+  const nfId = positiveId(req.params.nfId, 'Identificador da nota fiscal');
+  const { rows } = await getDb().query('SELECT original_name,size_bytes,content FROM cost_center_invoices_ledger WHERE id=$1', [nfId]);
+  if (!rows[0]) throw httpError(404, 'Nota fiscal não encontrada.');
+  if (!rows[0].content) throw httpError(404, 'Esta nota fiscal não tem PDF anexado.');
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Length', String(rows[0].size_bytes));
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(rows[0].original_name || `nota-fiscal-${nfId}.pdf`)}`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.send(Buffer.from(rows[0].content));
+}));
+
 router.delete('/notas-fiscais/:nfId', exigirPapel('admin', 'gestor'), asyncRoute(async (req, res) => {
   const nfId = positiveId(req.params.nfId, 'Identificador da nota fiscal');
   const existing = await ledgerById(nfId);

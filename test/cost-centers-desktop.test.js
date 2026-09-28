@@ -69,4 +69,23 @@ test('obras: revisão na edição, rotas de orçamento e gasto preso à obra', a
   await request(`/centros-custo/${b}/apropriacoes`, 'POST', { allocationId: aloc.id, controlItemId: null }, 404);
   await request(`/centros-custo/${a}/apropriacoes/nao-e-uuid/desmapear`, 'POST', {}, 400);
   await request(`/centros-custo/${a}/apropriacoes/${aloc.id}/desmapear`, 'POST', {}, 200);
+
+  // NF com PDF: lista e baixa pelo endereco novo; sem PDF, 404.
+  const pdf = Buffer.from('%PDF-1.4 nota').toString('base64');
+  const nf = await request(`/centros-custo/${a}/notas-fiscais`, 'POST', { tipo: 'fornecedor', status: 'paga', dataEmissao: '2026-09-10', valor: 100, nome: 'nf.pdf', conteudoBase64: pdf }, 201);
+  const baixada = await fetch(`${base}/centros-custo/notas-fiscais/${nf.id}/arquivo`, { headers: { Authorization: `Bearer ${token}` } });
+  assert.equal(baixada.status, 200);
+  assert.equal(baixada.headers.get('content-type'), 'application/pdf');
+  assert.match(Buffer.from(await baixada.arrayBuffer()).toString('ascii'), /^%PDF-1\.4 nota/);
+  const semPdf = await request(`/centros-custo/${a}/notas-fiscais`, 'POST', { tipo: 'cliente', status: 'nao_paga', dataEmissao: '2026-09-10', valor: 50 }, 201);
+  await request(`/centros-custo/notas-fiscais/${semPdf.id}/arquivo`, 'GET', undefined, 404);
+
+  // Resumo da carteira traz os numeros por obra (cartoes do desktop novo), sem mudar o resumo geral.
+  const carteira = await request('/centros-custo/portfolio-summary', 'GET', undefined, 200);
+  assert.ok(carteira.portfolio && typeof carteira.portfolio.totalCenters === 'number');
+  const daA = carteira.porObra.find((o) => o.id === a);
+  assert.equal(daA.realizedCost, 100);
+  assert.equal(daA.baseCost, 0);
+  assert.equal(daA.burnRate, null);
+  assert.equal(daA.billed, 0);
 });
