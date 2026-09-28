@@ -66,7 +66,7 @@
     return q.toString();
   };
 
-  const alterado = (f) => f.busca || f.tipo || f.sit || f.obra || f.categoria || f.de || f.ate || f.mes !== CC.month() || f.ordenar !== 'data' || f.ordem !== 'desc';
+  const alterado = (f, fixa) => f.busca || f.tipo || f.sit || (f.obra && !fixa) || f.categoria || f.de || f.ate || f.mes !== (fixa ? '' : CC.month()) || f.ordenar !== 'data' || f.ordem !== 'desc';
 
   function meses() {
     const [a, m] = CC.month().split('-').map(Number);
@@ -76,7 +76,7 @@
     });
   }
 
-  L.filtrosHtml = (f, a) => {
+  L.filtrosHtml = (f, a, opcoes = {}) => {
     const opc = (lista, valor, vazio) => `<option value="">${esc(vazio)}</option>${lista.map((o) => `<option value="${esc(o.valor)}"${String(o.valor) === String(valor) ? ' selected' : ''}>${esc(o.rotulo)}</option>`).join('')}`;
     const listaMeses = meses();
     if (f.mes && !listaMeses.includes(f.mes)) listaMeses.push(f.mes);
@@ -87,10 +87,10 @@
         ${U.seg('sit', [{ valor: '', rotulo: 'Todas' }, { valor: 'a_pagar', rotulo: 'A pagar' }, { valor: 'vencidos', rotulo: 'Vencidos' }, { valor: 'pagos', rotulo: 'Pagos' }, { valor: 'a_receber', rotulo: 'A receber' }, { valor: 'recebidos', rotulo: 'Recebidos' }], f.sit, 'Situação')}
       </div>
       <div class="linha">
-        <select class="inp" data-f="obra" aria-label="Obra" style="width:240px">${opc(a.obras.map((o) => ({ valor: o.id, rotulo: [o.codigo, o.nome].filter(Boolean).join(' · ') })), f.obra, 'Todas as obras')}</select>
+        ${opcoes.obraFixa ? '' : `<select class="inp" data-f="obra" aria-label="Obra" style="width:240px">${opc(a.obras.map((o) => ({ valor: o.id, rotulo: [o.codigo, o.nome].filter(Boolean).join(' · ') })), f.obra, 'Todas as obras')}</select>`}
         <select class="inp" data-f="mes" aria-label="Competência" style="width:200px">${opc(listaMeses.map((m) => ({ valor: m, rotulo: D.mesAno(m) })), f.mes, 'Todos os meses')}</select>
         <button type="button" class="btn btn-g" data-mais aria-expanded="${f.mais ? 'true' : 'false'}">${D.ic('sliders-horizontal')}Mais filtros</button>
-        ${alterado(f) ? `<button type="button" class="btn btn-g" data-limpar>${D.ic('x')}Limpar filtros</button>` : ''}
+        ${alterado(f, opcoes.obraFixa) ? `<button type="button" class="btn btn-g" data-limpar>${D.ic('x')}Limpar filtros</button>` : ''}
       </div>
       <div class="linha mais"${f.mais ? '' : ' hidden'}>
         <select class="inp" data-f="categoria" aria-label="Categoria" style="width:220px">${opc(a.categorias.map((c) => ({ valor: c.id, rotulo: c.nome })), f.categoria, 'Todas as categorias')}</select>
@@ -103,8 +103,9 @@
   };
 
   // Liga os filtros: cada mudanca pede UMA busca (a digitacao espera 300 ms). Sem observar a tabela.
-  L.ligarFiltros = (raiz, f, aoMudar) => {
-    const mudar = () => { f.pagina = 1; L.guardarFiltros(f); aoMudar(); };
+  L.ligarFiltros = (raiz, f, aoMudar, opcoes = {}) => {
+    const guardar = () => { if (opcoes.salvar !== false) L.guardarFiltros(f); };
+    const mudar = () => { f.pagina = 1; guardar(); aoMudar(); };
     const digitar = D.debounce(mudar, 300);
     CC.$$('[data-f]', raiz).forEach((el) => {
       el.addEventListener(el.dataset.f === 'busca' ? 'input' : 'change', () => {
@@ -125,11 +126,11 @@
     // Mostrar ou esconder "Mais filtros" nao busca de novo.
     if (mais) mais.addEventListener('click', () => {
       f.mais = !f.mais;
-      L.guardarFiltros(f);
+      guardar();
       CC.$('.linha.mais', raiz).hidden = !f.mais;
       mais.setAttribute('aria-expanded', f.mais ? 'true' : 'false');
     });
     const limpar = CC.$('[data-limpar]', raiz);
-    if (limpar) limpar.addEventListener('click', () => { Object.assign(f, L.padrao(), { mais: f.mais }); mudar(); });
+    if (limpar) limpar.addEventListener('click', () => { Object.assign(f, L.padrao(), { mais: f.mais }, opcoes.obraFixa ? { obra: String(opcoes.obraFixa), mes: '' } : {}); mudar(); });
   };
 })(window.CC);

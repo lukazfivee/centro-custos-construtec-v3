@@ -63,24 +63,21 @@
     }
   }
 
-  async function render(el, rota, vivo) {
-    const f = L.lerFiltros();
-    L.esquecerApoio(); // ao abrir a tela, le de novo obras, categorias e meses fechados
-    el.innerHTML = `<div class="pagina lancamentos">
-      ${U.cabecalho({ grupo: 'Operação', titulo: 'Lançamentos', sub: ' ', acoes: `<button type="button" class="btn btn-s" data-csv>${D.ic('download-simple')}Exportar CSV</button><button type="button" class="btn btn-p" data-novo>${D.ic('plus')}Novo lançamento</button>` })}
-      <div data-faixa></div><div data-filtros></div><div data-tabela>${U.carregando('Carregando os lançamentos…')}</div></div>`;
-    CC.$('[data-csv]', el).addEventListener('click', () => baixarCsv(f));
-    CC.$('[data-novo]', el).addEventListener('click', () => L.formulario(null));
+  // Lista (filtros, faixa do mes fechado e tabela) dentro de "raiz". Usada pela tela de Lancamentos
+  // e pela aba Lancamentos da obra (obraFixa: filtro de obra travado e nada salvo no navegador).
+  L.montarLista = function (raiz, { f, vivo, obraFixa, aoContar }) {
+    raiz.innerHTML = `<div data-faixa></div><div data-filtros></div><div data-tabela>${U.carregando('Carregando os lançamentos…')}</div>`;
+    if (obraFixa) f.obra = String(obraFixa);
     let vez = 0;
 
     async function carregar() {
       const minha = ++vez;
       const a = await L.apoio();
       if (!vivo() || minha !== vez) return;
-      CC.$('[data-filtros]', el).innerHTML = L.filtrosHtml(f, a);
-      L.ligarFiltros(CC.$('[data-filtros]', el), f, carregar);
-      CC.$('[data-faixa]', el).innerHTML = faixaFechado(f);
-      const alvo = CC.$('[data-tabela]', el);
+      CC.$('[data-filtros]', raiz).innerHTML = L.filtrosHtml(f, a, { obraFixa });
+      L.ligarFiltros(CC.$('[data-filtros]', raiz), f, carregar, { salvar: !obraFixa, obraFixa });
+      CC.$('[data-faixa]', raiz).innerHTML = faixaFechado(f);
+      const alvo = CC.$('[data-tabela]', raiz);
       let r;
       try {
         r = (await CC.api(`/lancamentos?${L.query(f)}`)).data;
@@ -94,12 +91,12 @@
       }
       if (!vivo() || minha !== vez) return;
       const p = r.paginacao || { total: r.itens.length, pagina: 1, limite: f.limite };
-      CC.$('.cab .sub', el).textContent = `${p.total} lançamento${p.total === 1 ? '' : 's'}${f.mes ? ` em ${D.mesAno(f.mes).toLowerCase()}` : ''}`;
+      if (aoContar) aoContar(`${p.total} lançamento${p.total === 1 ? '' : 's'}${f.mes ? ` em ${D.mesAno(f.mes).toLowerCase()}` : ''}`);
       const ini = p.total ? (p.pagina - 1) * p.limite + 1 : 0;
       const fim = Math.min(p.total, p.pagina * p.limite);
       alvo.innerHTML = `<div class="card tabela">${U.tabela({ colunas: COLUNAS, linhas: r.itens.map(linha), vazio: 'Nenhum lançamento com esses filtros.' })}
         <div class="rodape"><span class="muted">Exibindo ${ini}–${fim} de ${p.total}</span>
-          <span class="total">Total líquido <b class="${Number(r.totalLiquido) >= 0 ? 'entrada' : ''}">${esc(CC.money(r.totalLiquido || 0))}</b></span>
+          <span class="total">Total líquido <b class="${Number(r.totalLiquido) >= 0 ? 'entrada' : ''}">${esc(Number(r.totalLiquido) ? CC.signed(r.totalLiquido) : CC.money(0))}</b></span>
           <span class="pager"><button type="button" class="btn btn-s" data-pag="-1"${p.temAnterior ? '' : ' disabled'} aria-label="Página anterior">${D.ic('caret-left')}</button>
           <button type="button" class="btn btn-s" data-pag="1"${p.temProxima ? '' : ' disabled'} aria-label="Próxima página">${D.ic('caret-right')}</button></span></div></div>`;
       CC.$$('[data-pag]', alvo).forEach((b) => b.addEventListener('click', () => { f.pagina += Number(b.dataset.pag); carregar(); }));
@@ -116,7 +113,19 @@
       });
     }
     L.recarregar = () => { if (vivo()) { L.esquecerApoio(); carregar(); } };
-    await carregar();
+    return carregar();
+  };
+  L.baixarCsv = baixarCsv;
+
+  async function render(el, rota, vivo) {
+    const f = L.lerFiltros();
+    L.esquecerApoio(); // ao abrir a tela, le de novo obras, categorias e meses fechados
+    el.innerHTML = `<div class="pagina lancamentos">
+      ${U.cabecalho({ grupo: 'Operação', titulo: 'Lançamentos', sub: ' ', acoes: `<button type="button" class="btn btn-s" data-csv>${D.ic('download-simple')}Exportar CSV</button><button type="button" class="btn btn-p" data-novo>${D.ic('plus')}Novo lançamento</button>` })}
+      <div data-lista></div></div>`;
+    CC.$('[data-csv]', el).addEventListener('click', () => baixarCsv(f));
+    CC.$('[data-novo]', el).addEventListener('click', () => L.formulario(null));
+    await L.montarLista(CC.$('[data-lista]', el), { f, vivo, aoContar: (t) => { CC.$('.cab .sub', el).textContent = t; } });
 
     // #/lancamentos?id=5 abre o lancamento; ?novo=1 abre o formulario.
     if (rota.query.novo) L.formulario(null);

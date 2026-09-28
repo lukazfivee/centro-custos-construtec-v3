@@ -1,11 +1,11 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
-Fase atual: D2 pronta, aguardando revisão do Lucas · Branch: `feat/desktop-lancamentos` (worktree `../wt-cc-desktop`)
+Fase atual: D3a pronta, aguardando revisão do Lucas · Branch: `feat/desktop-obras` (worktree `../wt-cc-desktop`)
 
 ## Última atualização
 
 - Data e hora (BRT): 28/09/2026
-- Commit base: `c636eb0` (`origin/main`, com a D0 e a D1 mergeadas pelos PRs #57 e #59)
+- Commit base: `d3463b3` (`origin/main`, com D0, D1 e D2 mergeadas pelos PRs #57, #59 e #60)
 
 ## Decisões do Lucas
 
@@ -17,10 +17,31 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 4. **Recorrentes quinzenais:** saem do protótipo. Só voltam, na D5, se aparecerem custos quinzenais de verdade.
 5. **Visibilidade por obra:** entra na D6, junto com os papéis e os testes de 403 por URL.
 6. **Aba Sincronização:** sai do menu. As rotas `/api/sincronizacao*` continuam no servidor até a troca do `/` pelo novo.
+9. **Obras (D3, 28/09/2026):** a fase foi dividida em D3a (carteira, detalhe, orçado × realizado, lançamentos e NF) e D3b (medições, Curva S, relatório, importar e vincular). Importar orçamento passa a ser só para admin e gestor (na D3b). A edição da obra confere a revisão quando a tela a envia.
 8. **Sem internet (D2, 28/09/2026):** opção 1. O novo lançamento entra na fila do celular (`public/m/queue.js`), guardada neste navegador, e sai quando a conexão volta.
 7. **Lançamento rápido (D1, 28/09/2026):** segue o protótipo. Sem o campo de fornecedor, que volta pelo Editar na D2. Com competência e vencimento escolhidos pela pessoa.
 
 ## Feito
+
+### D3a · Obras (carteira e detalhe)
+
+- **Servidor (sem migração):**
+  - `routes/costCenters.js` tinha 369 linhas. Baselines, orçado × realizado, apropriações e medições foram para `routes/costCenterBudget.js`, no mesmo `/api/centros-custo`;
+  - `PUT /centros-custo/:id` confere a `revisao` quando ela vem e responde 409 se outra pessoa alterou. Sem `revisao`, o sistema atual continua como hoje;
+  - **falha corrigida:** vincular e desvincular um gasto (`/apropriacoes` e `/apropriacoes/:id/desmapear`) agora exige que ele seja da obra do endereço. Antes, aceitava gasto de outra obra;
+  - `portfolio-summary` ganha `porObra`, com custo base, realizado, consumo e medido ao cliente de cada obra. O resumo geral não muda;
+  - nova rota `GET /centros-custo/notas-fiscais/:nfId/arquivo`: o PDF da NF era gravado, mas não havia como baixar.
+- **Telas (`public/d/telas/`):**
+  - `obras.js`: a carteira do print 30, com os 6 indicadores do cockpit atual, o alerta das obras acima de 80%, o filtro por situação e os cartões com consumo do orçado e medido ao cliente;
+  - `obra-form.js`: nova e editar no painel lateral, com o **orçamento** (problema 3) e a revisão;
+  - `obra.js`: o detalhe em página inteira, com "REV 02" em dois dígitos (problema 9), Editar obra, e "Lançar despesa" que já vem com a obra. A aba Lançamentos reaproveita a lista da D2 com a obra fixa;
+  - `obra-orcado.js`: a aba do print 31, com saldo, consumo, maior desvio, os 5 indicadores, a planilha com filtro e CSV, o contrato com o PDF da proposta, os totais por tipo e o cartão de gastos sem vínculo;
+  - `obra-nf.js`: o print 35, com Fornecedor e Cliente final, lançar com PDF, alternar a situação, baixar e excluir;
+  - a lista de Lançamentos virou `L.montarLista`, usada pela tela e pela aba da obra. O total líquido negativo sai como "− R$".
+- **CSS:** `css/obras.css`.
+- **Testes:**
+  - `test/cost-centers-desktop.test.js`: revisão (200, 409, sem revisão, 400, 404), rotas movidas respondendo, gasto de outra obra com 404, `porObra`, e o PDF da NF (200 e 404 sem PDF);
+  - mais um teste de estrutura da D3a.
 
 ### D2 · Lançamentos
 
@@ -113,6 +134,21 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 
 ## Como validei
 
+### D3a
+
+- `npm run check`: 150 arquivos. `npm test`: **289 testes, 289 passando**.
+- No navegador, com a proposta de exemplo do repositório (`test/fixtures/proposal-approved.v1.example.json`) importada no servidor de teste, um gasto vinculado, um sem vínculo e duas medições:
+  - **Obra nova:** a validação pede o código e recusa término antes do início. O orçamento de R$ 20.000,00 é gravado.
+  - **Conflito de revisão:** "Esta obra foi alterada por outra pessoa…".
+  - **Lançar despesa:** o painel abre já com "OB-900 · Galpão Teste".
+  - **Orçado × realizado:** os números batem com a mesma rota que o sistema atual usa (saldo R$ 2.130,00, 23% de consumo, 36 de 88 h, 1 gasto sem vínculo de R$ 180,00).
+  - **NF:** lançar com PDF, baixar (200, application/pdf), alternar para Paga e excluir com o diálogo.
+- **Prints:** 52 em `validacao/D3a/`:
+  - carteira, filtro e nova e editar obra;
+  - orçado × realizado (rolado e só mão de obra);
+  - lançamentos da obra, notas fiscais e lançar NF;
+  - lançar despesa, obra sem orçamento e a aba de medições (D3b).
+
 ### D2
 
 - `npm run check`: 144 arquivos. `npm test`: **286 testes, 286 passando**.
@@ -176,6 +212,10 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 - **Editar e anexar sem internet:** não entram na fila, por decisão de escopo. O painel avisa e mantém o que foi digitado.
 
 ## Achados fora do escopo
+
+- **D3a · realizado da carteira:** o `portfolio-summary` soma o realizado de **todas** as obras, mas divide pelo orçado só das obras com orçamento importado. Com obras sem orçamento, o "% do orçado total" e o "Saldo da carteira" ficam distorcidos (no teste deu 45.174%). O cockpit atual mostra a mesma conta. Vale decidir se o realizado deve contar só as obras importadas.
+- **D3a · número da NF:** as notas fiscais da obra não têm campo de número. A coluna "Número" mostra a observação, e o formulário chama o campo de "Número / observação". Um campo próprio seria uma migração aditiva.
+- **D3a · detalhe sem revisão:** o `/detalhes` da obra não devolve a `revision`. A tela a lê da lista. Não é um problema, mas custa uma chamada a mais.
 
 - **D2 · fila compartilhada:** a fila usa o mesmo banco do navegador do celular (IndexedDB `cc-celular`). No mesmo navegador e no mesmo endereço, `/m/` e `/d/` enxergam a mesma fila da mesma conta. Isso é o esperado, e cada item só é enviado uma vez por causa do `client_id`.
 - **D2 · aprovação:** o banco tem `approval_status` (rascunho, pendente, aprovado, rejeitado). A lista agora traz o campo, mas a tela ainda não mostra um selo para "pendente" ou "rejeitado". Hoje o estorno já some quando o lançamento não está aprovado. Vale decidir se entra um chip.

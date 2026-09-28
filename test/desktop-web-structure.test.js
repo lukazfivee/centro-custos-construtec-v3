@@ -113,3 +113,15 @@ test('D2 Lançamentos: sem loop de requisições, fila offline e client_id', () 
   assert.match(lista, /const podeGerir = \(\) => D\.pode\('cadastrar'\)/);
   assert.match(src('telas/lancamento-acoes.js'), /motivo\.length < 5/);
 });
+
+test('D3a Obras: carteira, detalhe com abas, orçamento no formulário e revisão', () => {
+  const form = src('telas/obra-form.js');
+  assert.match(form, /name: 'orcamento'/);
+  assert.match(form, /revisao: Number\(o\.revision\)/);
+  const obra = src('telas/obra.js');
+  assert.match(obra, /padStart\(2, '0'\)/, 'REV com dois dígitos (problema 9)');
+  assert.match(obra, /D\.lanc\.formulario\(null, null, c\.id\)/);
+  assert.match(obra, /obraFixa: obra\.id/);
+  assert.match(src('telas/obras.js'), /portfolio-summary/);
+  assert.match(src('telas/obra-nf.js'), /notas-fiscais\/\$\{n\.id\}\/arquivo/);
+});

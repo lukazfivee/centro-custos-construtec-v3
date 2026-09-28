@@ -103,7 +103,27 @@ async function getPortfolioSummary(pool) {
     }
   });
 
+  // 8. Por obra: custo base, realizado e medido ao cliente (cartoes da carteira no desktop novo).
+  const billedRes = await pool.query(`
+    SELECT pc.cost_center_id, COALESCE(SUM(cm.measured_amount), 0) AS billed
+    FROM contract_measurements cm JOIN project_contracts pc ON pc.id = cm.contract_id
+    WHERE cm.status = 'approved' GROUP BY pc.cost_center_id
+  `);
+  const billedByCenter = new Map(billedRes.rows.map((r) => [r.cost_center_id, Number(r.billed || 0)]));
+  const contractByCenter = new Map(baselines.map((b) => [b.cost_center_id, Number(b.contract_value || 0)]));
+  const porObra = centersExpensesRes.rows.map((row) => {
+    const baseCost = baselineByCenter.get(row.id) || 0;
+    const realizedCost = Number(row.realized || 0);
+    return {
+      id: row.id, baseCost, realizedCost,
+      burnRate: baseCost > 0 ? Math.round((realizedCost / baseCost) * 1000) / 10 : null,
+      contractValue: contractByCenter.get(row.id) || 0,
+      billed: billedByCenter.get(row.id) || 0,
+    };
+  });
+
   return {
+    porObra,
     portfolio: {
       totalCenters: centers.length,
       statusCounts,
