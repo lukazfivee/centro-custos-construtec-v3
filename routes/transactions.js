@@ -11,6 +11,7 @@ const { csvLine, decimalBr } = require('../lib/csv');
 const { recordAudit } = require('../services/audit');
 const { recordExpenseAllocation } = require('../services/budgets/budgetAllocations');
 const { readClientId, findReplay, isClientIdConflict, ensureCreatedAudit } = require('../lib/transactionIdempotency');
+const { transactionOrder, validatePayload, validateRelations } = require('../lib/transactionPayload');
 
 const router = express.Router();
 router.use(autenticar);
@@ -29,7 +30,8 @@ const selectSql = `
     t.notes AS observacao,t.revision,t.updated_at,
     t.origin_instance_name AS origem_nome,t.last_modified_instance_name AS alterado_em_instalacao,
     t.origin_user_name AS criado_por_nome,cc.code AS centro_codigo,cc.name AS centro_nome,
-    c.name AS categoria
+    c.name AS categoria,t.approval_status AS aprovacao,
+    (SELECT COUNT(*)::int FROM transaction_attachments ta WHERE ta.transaction_id=t.id) AS qtd_anexos
   FROM transactions t
   JOIN cost_centers cc ON cc.id=t.cost_center_id
   JOIN categories c ON c.id=t.category_id`;
@@ -53,11 +55,14 @@ router.get('/', asyncRoute(async (req, res) => {
       `${selectSql} ${where} ORDER BY ${orderBy} LIMIT $${limitPosition} OFFSET $${offsetPosition}`,
       [...values, limit, offset],
     ),
-    getDb().query(`SELECT COUNT(*)::int AS total FROM transactions t ${where}`, values),
+    // Total liquido de tudo o que o filtro achou (receita soma, despesa subtrai, estorno inverte).
+    getDb().query(`SELECT COUNT(*)::int AS total,
+      COALESCE(SUM(t.amount * t.accounting_sign * CASE WHEN t.type='receita' THEN 1 ELSE -1 END),0) AS liquido
+      FROM transactions t ${where}`, values),
   ]);
   const total = Number(countResult.rows[0]?.total || 0);
   res.setHeader('X-Total-Count', String(total));
-  return res.json({ itens:dataResult.rows, paginacao:paginationMeta(total, page, limit) });
+  return res.json({ itens:dataResult.rows, paginacao:paginationMeta(total, page, limit), totalLiquido:Number(countResult.rows[0]?.liquido || 0) });
 }));
 
 router.get('/exportar.csv', asyncRoute(async (req, res) => {
@@ -74,6 +79,13 @@ router.get('/exportar.csv', asyncRoute(async (req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="relatorio-lancamentos.csv"');
   res.send(`\uFEFF${lines.join('\r\n')}`);
+}));
+
+router.get('/:id', asyncRoute(async (req, res) => {
+  const id = positiveId(req.params.id, 'Lançamento');
+  const { rows } = await getDb().query(`${selectSql} WHERE t.id=$1 AND t.deleted_at IS NULL`, [id]);
+  if (!rows[0]) throw httpError(404, 'Lançamento não encontrado.');
+  res.json(rows[0]);
 }));
 
 router.post('/', asyncRoute(async (req, res) => {
@@ -277,70 +289,6 @@ async function maybeAutoAllocateExpense(data, transactionId) {
   await recordExpenseAllocation(db, {
     transactionId, costCenterId:data.costCenterId, amount:data.amount, contractId:contract.rows[0].id,
   });
-}
-
-function transactionOrder(query) {
-  const fields = {
-    data:'t.transaction_date',
-    vencimento:'t.due_date',
-    valor:'t.amount',
-    criado:'t.created_at',
-    atualizado:'t.updated_at',
-  };
-  const field = fields[String(query.ordenarPor || 'data')] || fields.data;
-  const direction = String(query.ordem || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-  return `${field} ${direction},t.id ${direction}`;
-}
-
-function validatePayload(body) {
-  const type = String(body.tipo || '');
-  const description = String(body.descricao || '').trim();
-  const counterparty = String(body.favorecido || '').trim() || null;
-  const notes = String(body.observacao || '').trim() || null;
-  const amount = Number(body.valor);
-  const date = String(body.data || '');
-  const requestedDueDate = String(body.vencimento || '').trim() || null;
-  const requestedSettlement = String(body.data_liquidacao || '').trim() || null;
-  const financialStatus = String(body.status_financeiro || 'liquidado');
-  const documentNumber = String(body.documento || '').trim() || null;
-  const paymentMethod = String(body.forma_pagamento || '').trim() || null;
-  if (!['receita','despesa'].includes(type)) throw httpError(400, 'Informe se o lançamento é receita ou despesa.');
-  if (!description) throw httpError(400, 'Informe a descrição.');
-  if (!Number.isFinite(amount) || amount <= 0 || amount > 999999999999.99) {
-    throw httpError(400, 'O valor precisa ser maior que zero e estar dentro do limite permitido.');
-  }
-  if (!validDate(date)) throw httpError(400, 'Informe uma data válida.');
-  if (requestedDueDate && !validDate(requestedDueDate)) throw httpError(400, 'Informe um vencimento válido.');
-  if (requestedSettlement && !validDate(requestedSettlement)) {
-    throw httpError(400, 'Informe uma data de pagamento ou recebimento válida.');
-  }
-  if (!['pendente','liquidado'].includes(financialStatus)) throw httpError(400, 'Situação financeira inválida.');
-  const dueDate = requestedDueDate || date;
-  const settlementDate = financialStatus === 'liquidado' ? (requestedSettlement || date) : null;
-  return {
-    type,
-    costCenterId:positiveId(body.cost_center_id, 'Centro de custo'),
-    categoryId:positiveId(body.category_id, 'Categoria'),
-    description:description.slice(0, 240),
-    counterparty:counterparty?.slice(0, 160),
-    amount,date,notes:notes?.slice(0, 5000),dueDate,settlementDate,financialStatus,
-    documentNumber:documentNumber?.slice(0, 80),
-    paymentMethod:paymentMethod?.slice(0, 40),
-  };
-}
-
-async function validateRelations(data, requireActive) {
-  const { rows } = await getDb().query(
-    `SELECT cc.active AS center_active,c.active AS category_active,c.type AS category_type
-     FROM cost_centers cc CROSS JOIN categories c WHERE cc.id=$1 AND c.id=$2`,
-    [data.costCenterId,data.categoryId]
-  );
-  const relation = rows[0];
-  if (!relation) throw httpError(400, 'Centro de custo ou categoria não encontrado.');
-  if (requireActive && (!relation.center_active || !relation.category_active)) {
-    throw httpError(400, 'Use um centro de custo e uma categoria ativos.');
-  }
-  if (relation.category_type !== 'ambos' && relation.category_type !== data.type) throw httpError(400, 'A categoria não é compatível com o tipo do lançamento.');
 }
 
 module.exports = router;
