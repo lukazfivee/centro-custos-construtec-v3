@@ -1,11 +1,11 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
-Fase atual: D1 pronta, aguardando revisão do Lucas · Branch: `feat/desktop-inicio` (worktree `../wt-cc-desktop`)
+Fase atual: D2 pronta, aguardando revisão do Lucas · Branch: `feat/desktop-lancamentos` (worktree `../wt-cc-desktop`)
 
 ## Última atualização
 
 - Data e hora (BRT): 28/09/2026
-- Commit base: `2401583` (`origin/main`, com a D0 mergeada pelo PR #57)
+- Commit base: `c636eb0` (`origin/main`, com a D0 e a D1 mergeadas pelos PRs #57 e #59)
 
 ## Decisões do Lucas
 
@@ -17,9 +17,45 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 4. **Recorrentes quinzenais:** saem do protótipo. Só voltam, na D5, se aparecerem custos quinzenais de verdade.
 5. **Visibilidade por obra:** entra na D6, junto com os papéis e os testes de 403 por URL.
 6. **Aba Sincronização:** sai do menu. As rotas `/api/sincronizacao*` continuam no servidor até a troca do `/` pelo novo.
+8. **Sem internet (D2, 28/09/2026):** opção 1. O novo lançamento entra na fila do celular (`public/m/queue.js`), guardada neste navegador, e sai quando a conexão volta.
 7. **Lançamento rápido (D1, 28/09/2026):** segue o protótipo. Sem o campo de fornecedor, que volta pelo Editar na D2. Com competência e vencimento escolhidos pela pessoa.
 
 ## Feito
+
+### D2 · Lançamentos
+
+- **Servidor (sem migração):**
+  - a busca procura também no documento, o número da NF (`lib/transactionFilters.js`);
+  - cada item da lista traz `qtd_anexos` e `aprovacao`;
+  - a lista paginada devolve `totalLiquido` do filtro inteiro;
+  - nova rota `GET /api/lancamentos/:id`;
+  - a validação e a ordenação saíram de `routes/transactions.js` para `lib/transactionPayload.js`, sem mudar regras, porque a rota estava com 346 de 350 linhas.
+- **Telas (`public/d/telas/`):**
+  - `lancamentos-filtros.js`:
+    - busca com espera de 300 ms, e segmentados de tipo e de situação (a situação acerta o tipo);
+    - obra, competência (os últimos 24 meses ou todos), e "Mais filtros" com categoria, de/até, ordenação e tamanho da página;
+    - "Limpar filtros", e tudo fica salvo no navegador;
+  - `lancamentos.js`:
+    - tabela do print 10, com o vencido em vermelho, o cadeado nos meses fechados e o contador de documentos;
+    - estornar e excluir só para admin e gestor, e só quando o servidor aceita;
+    - rodapé "Exibindo N–M de T", total líquido e páginas;
+    - Exportar CSV com os filtros;
+    - faixa do mês fechado (print 73);
+    - `#/lancamentos?id=` e `?novo=1`;
+  - `lancamento-form.js`:
+    - novo e editar (prints 14, 15 e 17), com sugestão de fornecedor, e data e forma de pagamento quando está Pago ou Recebido;
+    - revisão no PUT, e os erros do servidor no topo do painel com os campos marcados;
+    - competência fechada recusada antes de enviar, com a frase do print 74;
+    - sem internet, o novo vai para a fila ("Guardado na fila");
+    - estorno, estornado e mês fechado abrem só a leitura e os documentos (problema 6);
+  - `lancamento-docs.js`: o print 18, com tipo, arrastar ou clicar, 8 MB, duplicado recusado pelo servidor, baixar, e excluir para admin e gestor;
+  - `lancamento-acoes.js`: estorno (print 19), com data não anterior e motivo de 5 caracteres ou mais, e excluir (print 20) com o diálogo próprio.
+- **Topo:** o selo mostra "Sem internet · N na fila" e "Enviando N lançamentos…" a partir da fila.
+- **Início:** clicar numa atividade recente abre o lançamento de verdade (editar ou só leitura).
+- **CSS:** `css/lancamentos.css`. Os títulos das colunas numéricas ficam alinhados à direita (`base.css`).
+- **Testes:**
+  - `test/transactions-desktop-lista.test.js`: NF na busca, documentos, aprovação, total líquido com estorno, lista sem paginação continua array, GET por id, 404 depois de excluir e 400 com id inválido;
+  - mais um teste de estrutura da D2.
 
 ### D1 · Início (painel financeiro)
 
@@ -77,6 +113,32 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 
 ## Como validei
 
+### D2
+
+- `npm run check`: 144 arquivos. `npm test`: **286 testes, 286 passando**.
+  - Numa rodada com o servidor de teste aberto, `test/database-lock.test.js` falhou uma vez. Passou 3 vezes sozinho e na rodada completa seguinte. Parece instabilidade do teste de PID quando a máquina está carregada.
+- No navegador, contra o servidor local:
+  - **Filtros:** cada mudança de filtro faz 1 chamada. Digitar "alarme" faz 1 chamada, e nenhuma depois (sem loop). O total líquido confere com a conta à mão.
+  - **Criar, editar e documentos:**
+    - criar: validação, Pago com forma Pix, e a tela de sucesso;
+    - editar: salva e mostra "Alterações salvas";
+    - anexar um PDF, com o contador indo de 0 para 1 na aba e na linha;
+    - anexar o mesmo arquivo de novo mostra "Este mesmo arquivo já está anexado ao lançamento.".
+  - **Conflito de revisão:** "Este lançamento foi alterado. Atualize a lista antes de editar novamente.".
+  - **Estorno:** o motivo curto é recusado. Depois do estorno, o original aparece como "Estornado" e o estorno como "Estorno", com o sinal contrário. Os dois só mostram documentos e abrem só para leitura.
+  - **Excluir:** o diálogo próprio e o toast "Lançamento excluído".
+  - **Mês fechado (08/2026):**
+    - aparecem a faixa com quem fechou e quando, e o cadeado;
+    - ficam só os documentos, e a linha abre só para leitura;
+    - o novo lançamento é recusado com a frase do print 74 e o campo marcado.
+  - **Sem internet (simulado):** "Guardado na fila" e o selo "Sem internet · 1 na fila". Com a volta da rede, o lançamento chega ao servidor e a fila zera.
+  - **Supervisor:** só vê documentos, sem estornar, excluir ou apagar anexo.
+- **Prints:** 52 em `validacao/D2/` (1440 × 900 e 1280 × 800, claro e escuro):
+  - lista, filtro A pagar e mais filtros;
+  - novo, validação e novo Pago;
+  - editar, documentos, estorno e excluir;
+  - mês fechado, lançar em mês fechado, e sem internet com fila.
+
 ### D1
 
 - `npm run check`: 138 arquivos. `npm test`: **285 testes, 285 passando**.
@@ -110,9 +172,13 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 - O conteúdo real das telas, da D1 à D7.
 - O contador de Cobranças no menu entra na D4. O sino fica escondido até existir algo real para contar, como no mobile.
 - "Ver o sistema como" fica para a D6.
-- **Selo "N na fila":** o desktop ainda não tem fila offline. A decisão sobre isso é da D2.
+- **Fila, itens recusados:** um lançamento da fila que o servidor recusar (por exemplo, mês fechado) fica marcado como erro no navegador. O celular mostra esses itens na tela de fila. O desktop ainda não tem essa tela: entra junto com Reports, na D7, que também tem fila.
+- **Editar e anexar sem internet:** não entram na fila, por decisão de escopo. O painel avisa e mantém o que foi digitado.
 
 ## Achados fora do escopo
+
+- **D2 · fila compartilhada:** a fila usa o mesmo banco do navegador do celular (IndexedDB `cc-celular`). No mesmo navegador e no mesmo endereço, `/m/` e `/d/` enxergam a mesma fila da mesma conta. Isso é o esperado, e cada item só é enviado uma vez por causa do `client_id`.
+- **D2 · aprovação:** o banco tem `approval_status` (rascunho, pendente, aprovado, rejeitado). A lista agora traz o campo, mas a tela ainda não mostra um selo para "pendente" ou "rejeitado". Hoje o estorno já some quando o lançamento não está aprovado. Vale decidir se entra um chip.
 
 - **D1 · evolução de 6 meses:** a evolução do `/api/dashboard/resumo` devolvia 6 meses, não 12 como diz o `02-LACUNAS-SERVIDOR.md`. O painel atual tem o título "Evolução mensal (12 meses)" e mostra 6. Resolvi com o parâmetro `meses=12`, sem mudar o atual. Se quiser, o painel atual pode passar a pedir 12 também (uma linha no `public/app.js`).
 - **D1 · filtro de obra do painel atual vazio:** o seletor de obras do painel atual (`#dash-centro`) vem sem nenhuma obra. É provável que seja o problema 1 do inventário: o `startApp` trava em `#usuario-papel` antes de `loadReferences`. No desktop novo o filtro funciona.
