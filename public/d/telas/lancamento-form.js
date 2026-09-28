@@ -12,10 +12,10 @@
   };
   const valorBr = (n) => (Number(n) ? Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
 
-  function estadoDe(l, a) {
+  function estadoDe(l, a, obraInicial) {
     const hoje = CC.today();
     const ativa = a.obras.find((o) => o.ativo !== false);
-    if (!l) return { tipo: 'despesa', obra: String(ativa ? ativa.id : ''), descricao: '', categoria: '', valor: '', favorecido: '', data: hoje, vencimento: hoje, status: 'pendente', liquidacao: hoje, forma: '', documento: '', observacao: '' };
+    if (!l) return { tipo: 'despesa', obra: String(obraInicial || (ativa ? ativa.id : '')), descricao: '', categoria: '', valor: '', favorecido: '', data: hoje, vencimento: hoje, status: 'pendente', liquidacao: hoje, forma: '', documento: '', observacao: '' };
     return {
       tipo: l.tipo, obra: String(l.cost_center_id), descricao: l.descricao || '', categoria: String(l.category_id), valor: valorBr(l.valor),
       favorecido: l.favorecido || '', data: l.data || hoje, vencimento: l.vencimento || l.data || hoje, status: l.status_financeiro,
@@ -81,10 +81,11 @@
     ctl.marcarSalvo();
   }
 
-  L.formulario = async function (l, aba) {
+  // obraInicial: o novo ja vem com a obra (Lancar despesa no detalhe da obra).
+  L.formulario = async function (l, aba, obraInicial) {
     const a = await L.apoio();
     if (!l && !a.obras.some((o) => o.ativo !== false)) { await D.avisar('Cadastre uma obra primeiro', 'O lançamento precisa de uma obra ou centro de custo ativo.'); return; }
-    const e = estadoDe(l, a);
+    const e = estadoDe(l, a, obraInicial);
     const clientId = CC.uuid();
     let enviando = false;
     const desenharDados = (ctl) => {

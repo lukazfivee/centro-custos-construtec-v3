@@ -1,12 +1,11 @@
 // Telas que ainda nao foram feitas: mostram o que vem, em que fase, e o link para o sistema atual.
-// Tambem abre o lancamento (painel lateral) e a obra vindos da busca global.
+// Telas que ainda nao foram feitas (fases seguintes).
 (function (CC) {
   const D = CC.d;
   const { esc } = CC;
 
   // chave: [fase, o que a tela vai ter]
   const PLANO = {
-    obras: ['D3', ['Carteira com indicadores, alertas e cartões', 'Detalhe com orçado × realizado, medições, Curva S e notas fiscais', 'Importação do orçamento e vínculo de gastos a insumos']],
     cobrancas: ['D4', ['Situação de cada obra em 4 passos: medição, NF, e-mail e pagamento', 'Acompanhamento no painel lateral', 'E-mail ao cliente com rascunho, autorização e envio']],
     categorias: ['D5', ['Tabela com tipo, cor, lançamentos e total do mês', 'Nova e editar no painel lateral', 'Nome repetido recusado']],
     fornecedores: ['D5', ['Tabela com CPF/CNPJ, contato e gasto do mês', 'Detalhe com os últimos lançamentos', 'Documento repetido recusado com o nome de quem já o tem']],
@@ -39,25 +38,12 @@
       </div></div>`;
   }
 
-  async function obra(el, id, vivo) {
-    el.innerHTML = `<div class="pagina">${D.ui.carregando('Abrindo a obra…')}</div>`;
-    const { data } = await CC.api('/centros-custo');
-    if (!vivo()) return;
-    const o = (Array.isArray(data) ? data : []).find((x) => String(x.id) === String(id));
-    if (!o) {
-      el.innerHTML = `<div class="pagina">${D.ui.cabecalho({ grupo: 'Operação', titulo: 'Obra não encontrada' })}<div class="card">${D.ui.vazio('buildings', 'Esta obra não existe ou foi removida.')}</div></div>`;
-      return;
-    }
-    pagina(el, 'obras', { titulo: o.nome, sub: [o.codigo, o.cliente].filter(Boolean).join(' · ') });
-  }
-
   const render = async (el, rota, vivo) => {
     if (!D.itemMenu(rota.nome)) {
       el.innerHTML = `<div class="pagina"><div class="card">${D.ui.vazio('compass', 'Esta tela não existe.', 'Use o menu ao lado para escolher uma tela.')}</div></div>`;
       return undefined;
     }
     if (!D.podeTela(rota.nome)) return semAcesso(el);
-    if (rota.nome === 'obras' && rota.id) return obra(el, rota.id, vivo);
     pagina(el, rota.nome);
     return undefined;
   };
