@@ -9,10 +9,10 @@
     <div class="tit">${grupo ? `<span class="eyebrow">${esc(grupo)}</span>` : ''}<h1>${esc(titulo)}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</div>
     <div class="acoes">${acoes || ''}</div></div>`;
 
-  // tom: '', 'ok', 'warn', 'err' (cor do icone e do valor).
-  U.kpi = ({ rotulo, valor, det, icone, tom }) => `<div class="card kpi ${esc(tom || '')}">
-    <div class="topo"><span class="lbl">${esc(rotulo)}</span><span class="ic">${D.ic(icone || 'chart-bar')}</span></div>
-    <span class="val">${esc(valor)}</span>${det ? `<span class="det">${esc(det)}</span>` : ''}</div>`;
+  // tom: cor do icone (ok, saida, info, warn, err). tomValor: cor do valor (ok, err).
+  U.kpi = ({ rotulo, valor, det, icone, tom, tomValor }) => `<div class="card kpi">
+    <div class="topo"><span class="lbl">${esc(rotulo)}</span><span class="ic ${esc(tom || 'info')}">${D.ic(icone || 'chart-bar')}</span></div>
+    <span class="val ${esc(tomValor || '')}">${esc(valor)}</span>${det ? `<span class="det">${esc(det)}</span>` : ''}</div>`;
 
   // tom: ok, warn, err, info, neutro.
   U.chip = (texto, tom, icone) => `<span class="chip ${esc(tom || 'neutro')}">${icone ? D.ic(icone) : ''}${esc(texto)}</span>`;

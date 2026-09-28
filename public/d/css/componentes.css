@@ -13,11 +13,12 @@
 .kpi .ic .ph { font-size: 16px; }
 .kpi .val { font: 600 21px/1.2 var(--font-heading); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kpi .det { font-size: 12px; color: var(--color-neutral-300); }
-.kpi.ok .val { color: var(--c-ok); }
-.kpi.err .val { color: var(--c-err); }
-.kpi.ok .ic { background: var(--c-ok-soft); color: var(--c-ok); }
-.kpi.warn .ic { background: var(--c-warn-soft); color: var(--c-warn); }
-.kpi.err .ic { background: var(--c-err-soft); color: var(--c-err); }
+.kpi .val.ok { color: var(--c-ok); }
+.kpi .val.err { color: var(--c-err); }
+.kpi .ic.ok { background: var(--c-ok-soft); color: var(--c-ok); }
+.kpi .ic.saida { background: var(--c-out-soft); color: var(--c-out); }
+.kpi .ic.warn { background: var(--c-warn-soft); color: var(--c-warn); }
+.kpi .ic.err { background: var(--c-err-soft); color: var(--c-err); }
 
 .faixa { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; }
 .faixa .ph { font-size: 18px; flex: none; }
