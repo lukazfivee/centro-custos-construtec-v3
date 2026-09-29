@@ -6,7 +6,6 @@
 
   // chave: [fase, o que a tela vai ter]
   const PLANO = {
-    cobrancas: ['D4', ['Situação de cada obra em 4 passos: medição, NF, e-mail e pagamento', 'Acompanhamento no painel lateral', 'E-mail ao cliente com rascunho, autorização e envio']],
     categorias: ['D5', ['Tabela com tipo, cor, lançamentos e total do mês', 'Nova e editar no painel lateral', 'Nome repetido recusado']],
     fornecedores: ['D5', ['Tabela com CPF/CNPJ, contato e gasto do mês', 'Detalhe com os últimos lançamentos', 'Documento repetido recusado com o nome de quem já o tem']],
     recorrentes: ['D5', ['Modelos com frequência, dia e parcelas', 'Botão "Gerar lançamentos do mês" com prévia', 'Mês já gerado não duplica']],

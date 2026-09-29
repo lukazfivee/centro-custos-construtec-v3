@@ -588,6 +588,20 @@ function defaultFollowup(center) {
   return { operationalStatus: project === 'concluido' ? 'finalizada' : 'em_execucao', financialStatus: 'a_faturar', clientName: text(center.client), clientEmails: [], responsible: text(center.responsible), invoiceNumber: '', contractAmount: Number(center.contractAmount || 0), receivableAmount: Number(center.contractAmount || 0), completionDate: center.endDate || null, dueDate: null, notes: '' };
 }
 
+async function markFollowupSent(env, auth, publicId, now) {
+  const center = await centerByPublicId(env, auth.user.org_id, publicId);
+  if (!center) return;
+  const base = defaultFollowup(center);
+  await env.DB.prepare(`INSERT INTO client_followups
+    (org_id,cost_center_public_id,client_name,client_emails,responsible,operational_status,financial_status,invoice_number,contract_amount,receivable_amount,completion_date,due_date,notes,updated_by_email,updated_at)
+    VALUES(?,?,?,?,?,?,'aguardando_pagamento',?,?,?,?,?,?,?,?)
+    ON CONFLICT(org_id,cost_center_public_id) DO UPDATE SET financial_status='aguardando_pagamento',updated_by_email=excluded.updated_by_email,updated_at=excluded.updated_at
+    WHERE client_followups.financial_status IN ('a_faturar','nf_emitida','enviada')`)
+    .bind(auth.user.org_id, publicId, base.clientName, JSON.stringify(base.clientEmails), base.responsible,
+      base.operationalStatus, base.invoiceNumber, base.contractAmount, base.receivableAmount,
+      base.completionDate, base.dueDate, base.notes, auth.user.email, now).run();
+}
+
 async function centerByPublicId(env, orgId, publicId) {
   const row = await env.DB.prepare("SELECT payload FROM sync_entities WHERE org_id=? AND entity_type='obra' AND public_id=?").bind(orgId, publicId).first();
   return row ? parseJson(row.payload, null) : null;
@@ -682,11 +696,13 @@ async function handleSaveDraft(request, env) {
   if (!to.length) return json({ ok: false, error: 'Informe pelo menos um e-mail de destinatario.' }, 400);
   if (!subject || bodyText.length < 5) return json({ ok: false, error: 'Informe assunto e mensagem.' }, 400);
   const now = new Date().toISOString();
-  await env.DB.prepare(`
+  const saved = await env.DB.prepare(`
     INSERT INTO client_email_drafts(org_id,cost_center_public_id,to_json,cc_json,subject,body_text,status,authorized_by_email,authorized_at,sent_by_email,sent_at,resend_email_id,last_error,attachments_json,updated_at)
     VALUES(?,?,?,?,?,?,'draft',NULL,NULL,NULL,NULL,NULL,NULL,'[]',?)
     ON CONFLICT(org_id,cost_center_public_id) DO UPDATE SET to_json=excluded.to_json,cc_json=excluded.cc_json,subject=excluded.subject,body_text=excluded.body_text,status='draft',authorized_by_email=NULL,authorized_at=NULL,sent_by_email=NULL,sent_at=NULL,resend_email_id=NULL,last_error=NULL,attachments_json='[]',updated_at=excluded.updated_at
+    WHERE client_email_drafts.status <> 'sending'
   `).bind(auth.user.org_id, publicId, JSON.stringify(to), JSON.stringify(cc), subject, bodyText, now).run();
+  if (!saved.meta?.changes) return json({ ok: false, error: 'O envio esta em andamento. Confira o historico antes de alterar o rascunho.' }, 409);
   await env.DB.prepare('INSERT INTO client_email_events(org_id,cost_center_public_id,action,actor_email,recipients_json,detail,created_at) VALUES(?,?,?,?,?,?,?)').bind(auth.user.org_id, publicId, 'draft_saved', auth.user.email, JSON.stringify({ to, cc }), 'Rascunho salvo ou alterado.', now).run();
   return json({ ok: true, status: 'draft', updatedAt: now });
 }
@@ -700,8 +716,11 @@ async function handleAuthorizeDraft(request, env) {
   const publicId = text(body.costCenterPublicId);
   const row = await env.DB.prepare('SELECT * FROM client_email_drafts WHERE org_id=? AND cost_center_public_id=?').bind(auth.user.org_id, publicId).first();
   if (!row) return json({ ok: false, error: 'Salve o rascunho antes de autorizar.' }, 404);
+  if (!['draft', 'failed'].includes(row.status)) return json({ ok: false, error: 'Salve o rascunho novamente antes de autorizar outro envio.' }, 409);
   const now = new Date().toISOString();
-  await env.DB.prepare("UPDATE client_email_drafts SET status='authorized',authorized_by_email=?,authorized_at=?,updated_at=? WHERE org_id=? AND cost_center_public_id=?").bind(auth.user.email, now, now, auth.user.org_id, publicId).run();
+  const authorized = await env.DB.prepare("UPDATE client_email_drafts SET status='authorized',authorized_by_email=?,authorized_at=?,updated_at=? WHERE org_id=? AND cost_center_public_id=? AND status IN ('draft','failed') AND to_json=? AND cc_json=? AND subject=? AND body_text=?")
+    .bind(auth.user.email, now, now, auth.user.org_id, publicId, row.to_json, row.cc_json, row.subject, row.body_text).run();
+  if (!authorized.meta?.changes) return json({ ok: false, error: 'O rascunho mudou. Confira os dados e autorize novamente.' }, 409);
   await env.DB.prepare('INSERT INTO client_email_events(org_id,cost_center_public_id,action,actor_email,recipients_json,detail,created_at) VALUES(?,?,?,?,?,?,?)').bind(auth.user.org_id, publicId, 'authorized', auth.user.email, JSON.stringify({ to: parseJson(row.to_json, []), cc: parseJson(row.cc_json, []) }), 'Envio autorizado explicitamente.', now).run();
   return json({ ok: true, status: 'authorized', authorizedByEmail: auth.user.email, authorizedAt: now });
 }
@@ -709,7 +728,7 @@ async function handleAuthorizeDraft(request, env) {
 function validatePdfAttachments(value) {
   const attachments = Array.isArray(value) ? value : [];
   if (attachments.length > 1) return { error: 'Anexe somente uma nota fiscal em PDF por envio.', status: 400 };
-  if (!attachments.length) return { attachments: [] };
+  if (!attachments.length) return { error: 'Anexe a nota fiscal em PDF antes de enviar.', status: 409 };
   const item = attachments[0] || {};
   const filename = text(item.filename).slice(0, 200);
   const contentBase64 = text(item.contentBase64);
@@ -724,7 +743,7 @@ function validatePdfAttachments(value) {
   return { attachments: [{ filename, contentBase64, contentType: 'application/pdf' }] };
 }
 
-async function sendClientEmail(env, draft, attachments) {
+async function sendClientEmail(env, draft, attachments, idempotencyKey) {
   if (!env.RESEND_API_KEY || !env.CLIENT_EMAIL_FROM) throw new Error('Envio de cobrancas ainda nao configurado no Worker.');
   const to = parseJson(draft.to_json, []);
   const cc = parseJson(draft.cc_json, []);
@@ -733,9 +752,9 @@ async function sendClientEmail(env, draft, attachments) {
   const payload = { from: env.CLIENT_EMAIL_FROM, to, subject: draft.subject, text: draft.body_text, html };
   if (cc.length) payload.cc = cc;
   if (attachments.length) payload.attachments = attachments.map((a) => ({ filename: a.filename, content: a.contentBase64 }));
-  const response = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+  const response = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json', 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(payload) });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || `Resend HTTP ${response.status}`);
+  if (!response.ok) { const error = new Error(data.message || `Resend HTTP ${response.status}`); error.resendRejected = response.status >= 400 && response.status < 500 && ![409, 429].includes(response.status); throw error; }
   return data.id || null;
 }
 
@@ -747,21 +766,44 @@ async function handleSendDraft(request, env) {
   const publicId = text(body.costCenterPublicId);
   const draft = await env.DB.prepare('SELECT * FROM client_email_drafts WHERE org_id=? AND cost_center_public_id=?').bind(auth.user.org_id, publicId).first();
   if (!draft) return json({ ok: false, error: 'Rascunho nao encontrado.' }, 404);
-  if (draft.status !== 'authorized') return json({ ok: false, error: 'Este e-mail precisa ser autorizado por administrador ou gestor antes do envio.' }, 409);
+  if (!['authorized', 'sending'].includes(draft.status)) return json({ ok: false, error: 'Este e-mail precisa ser autorizado por administrador ou gestor antes do envio.' }, 409);
+  if (draft.status === 'sending' && Date.now() - Date.parse(draft.updated_at) > 23 * 60 * 60 * 1000)
+    return json({ ok: false, error: 'O envio ficou sem confirmacao por mais de 23 horas. Confira com o suporte antes de tentar novamente.' }, 409);
+  if (draft.status === 'sending' && Date.now() - Date.parse(draft.updated_at) < 60 * 1000)
+    return json({ ok: false, error: 'Este envio ja esta em andamento. Aguarde um minuto antes de tentar novamente.' }, 409);
+  if (!env.RESEND_API_KEY || !env.CLIENT_EMAIL_FROM) return json({ ok: false, error: 'Envio de cobrancas ainda nao configurado no Worker.' }, 503);
+  if (!parseJson(draft.to_json, []).length) return json({ ok: false, error: 'Destinatario ausente.' }, 400);
   const checked = validatePdfAttachments(body.attachments);
   if (checked.error) return json({ ok: false, error: checked.error }, checked.status);
   const attachments = checked.attachments;
   const now = new Date().toISOString();
-  try {
-    const emailId = await sendClientEmail(env, draft, attachments);
-    const meta = attachments.map((a) => ({ filename: a.filename, contentType: a.contentType }));
-    await env.DB.prepare("UPDATE client_email_drafts SET status='sent',sent_by_email=?,sent_at=?,resend_email_id=?,last_error=NULL,attachments_json=?,updated_at=? WHERE org_id=? AND cost_center_public_id=?").bind(auth.user.email, now, emailId, JSON.stringify(meta), now, auth.user.org_id, publicId).run();
-    await env.DB.prepare('INSERT INTO client_email_events(org_id,cost_center_public_id,action,actor_email,recipients_json,attachments_json,detail,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(auth.user.org_id, publicId, 'sent', auth.user.email, JSON.stringify({ to: parseJson(draft.to_json, []), cc: parseJson(draft.cc_json, []) }), JSON.stringify(meta), emailId || 'sent', now).run();
-    return json({ ok: true, status: 'sent', sentByEmail: auth.user.email, sentAt: now, emailId });
-  } catch (error) {
-    await env.DB.prepare("UPDATE client_email_drafts SET status='failed',last_error=?,updated_at=? WHERE org_id=? AND cost_center_public_id=?").bind(String(error.message || error).slice(0, 1000), now, auth.user.org_id, publicId).run();
-    return json({ ok: false, error: String(error.message || error).slice(0, 500) }, 502);
+  if (draft.status === 'authorized') {
+    const claimed = await env.DB.prepare("UPDATE client_email_drafts SET status='sending',updated_at=? WHERE org_id=? AND cost_center_public_id=? AND status='authorized'")
+      .bind(now, auth.user.org_id, publicId).run();
+    if (!claimed.meta?.changes) return json({ ok: false, error: 'Este envio ja esta em andamento ou foi concluido.' }, 409);
   }
+  const idempotencyKey = `billing/${auth.user.org_id}/${publicId}/${draft.authorized_at || draft.updated_at}`;
+  let emailId;
+  try {
+    emailId = await sendClientEmail(env, draft, attachments, idempotencyKey);
+  } catch (error) {
+    if (error.resendRejected) await env.DB.prepare("UPDATE client_email_drafts SET status='failed',last_error=?,updated_at=? WHERE org_id=? AND cost_center_public_id=? AND status='sending'")
+      .bind(String(error.message || error).slice(0, 1000), now, auth.user.org_id, publicId).run();
+    return json({ ok: false, error: error.resendRejected ? String(error.message || error).slice(0, 500) : 'Nao foi possivel confirmar o envio. Confira o historico antes de tentar novamente.' }, 502);
+  }
+  const meta = attachments.map((a) => ({ filename: a.filename, contentType: a.contentType }));
+  try {
+    const saved = await env.DB.prepare("UPDATE client_email_drafts SET status='sent',sent_by_email=?,sent_at=?,resend_email_id=?,last_error=NULL,attachments_json=?,updated_at=? WHERE org_id=? AND cost_center_public_id=? AND status='sending'").bind(auth.user.email, now, emailId, JSON.stringify(meta), now, auth.user.org_id, publicId).run();
+    if (!saved.meta?.changes) throw new Error('O rascunho mudou durante o envio.');
+  } catch {
+    return json({ ok: false, error: 'E-mail aceito pelo provedor, mas o registro local falhou. Nao reenvie; confira o historico.' }, 502);
+  }
+  let postSendWarning = false;
+  try {
+    await env.DB.prepare('INSERT INTO client_email_events(org_id,cost_center_public_id,action,actor_email,recipients_json,attachments_json,detail,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(auth.user.org_id, publicId, 'sent', auth.user.email, JSON.stringify({ to: parseJson(draft.to_json, []), cc: parseJson(draft.cc_json, []) }), JSON.stringify(meta), emailId || 'sent', now).run();
+  } catch { postSendWarning = true; }
+  try { await markFollowupSent(env, auth, publicId, now); } catch { postSendWarning = true; }
+  return json({ ok: true, status: 'sent', sentByEmail: auth.user.email, sentAt: now, emailId, postSendWarning });
 }
 
 export default {
