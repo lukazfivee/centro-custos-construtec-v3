@@ -41,7 +41,7 @@ test('API local cobre obras, fluxo financeiro, fornecedores, sincronização, au
   assert.equal(centers[0].situacao, 'execucao');
 
   const supplier = await request('/fornecedores', {
-    method:'POST',token:auth,body:{nome:'Fornecedor Teste',documento:'00.000.000/0001-00',contato:'Contato',email:'fornecedor@teste.local'},
+    method:'POST',token:auth,body:{nome:'Fornecedor Teste',documento:'11.222.333/0001-81',contato:'Contato',email:'fornecedor@teste.local'},
   });
   assert.ok(supplier.id);
   const categories = await request('/categorias', { token: auth });

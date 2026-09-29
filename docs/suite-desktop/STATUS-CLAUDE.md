@@ -1,6 +1,6 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
-Fase atual: D4 validada no PR #63 · Branch: `feat/desktop-cobrancas` (worktree `../wt-cc-desktop`), a partir do main com a D3 completa
+Fase atual: D5 IN_PROGRESS (revisão e integração após o PR #63) · Branch: `feat/desktop-cadastros` (worktree `../wt-cc-cadastros`)
 
 ## Última atualização
 
@@ -18,6 +18,7 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 5. **Visibilidade por obra:** entra na D6, junto com os papéis e os testes de 403 por URL.
 6. **Aba Sincronização:** sai do menu. As rotas `/api/sincronizacao*` continuam no servidor até a troca do `/` pelo novo.
 10. **Cobranças (D4, 29/09/2026):** e-mail sem NF é barrado no servidor (vale para a tela atual também); "Pedir autorização" (print 44) fica para a D6; só a NF vai anexada, sem o boletim.
+11. **Recorrentes por mês (D5, 29/09/2026):** o `/gerar` antigo escolhia o mês pela parcela (a parcela k caía no k-ésimo mês do ano corrente), então um modelo criado em setembro gerava primeiro um lançamento datado de janeiro. O Lucas aprovou corrigir: cada modelo tem o mês da primeira parcela (`starts_on`), a parcela k cai em início + (k−1) × intervalo e a geração é por mês.
 9. **Obras (D3, 28/09/2026):** a fase foi dividida em D3a (carteira, detalhe, orçado × realizado, lançamentos e NF) e D3b (medições, Curva S, relatório, importar e vincular). Importar orçamento passa a ser só para admin e gestor (na D3b). A edição da obra confere a revisão quando a tela a envia.
 8. **Sem internet (D2, 28/09/2026):** opção 1. O novo lançamento entra na fila do celular (`public/m/queue.js`), guardada neste navegador, e sai quando a conexão volta.
 7. **Lançamento rápido (D1, 28/09/2026):** segue o protótipo. Sem o campo de fornecedor, que volta pelo Editar na D2. Com competência e vencimento escolhidos pela pessoa.
@@ -39,6 +40,19 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 - **Depois de enviar**, o Worker muda a situação financeira para "Aguardando pagamento" se estava em a faturar, NF emitida ou enviada.
 - **CSS:** `css/cobrancas.css`.
 - **Testes:** `test/cobrancas-desktop.test.js`, contra o Worker de mentira: fluxo rascunho, autorização e envio; sem autorização dá 409, sem NF dá 409, arquivo que não é PDF dá 400; editar o rascunho depois de enviar exige autorizar de novo; a NF vinculada à obra vale como anexo; supervisor recebe 403 ao salvar, autorizar e enviar; e-mail fora da empresa recebe 403. Mais um teste de estrutura da D4.
+### D5 · Cadastros (Categorias, Fornecedores e Recorrentes)
+
+Branch `feat/desktop-cadastros` (worktree `../wt-cc-cadastros`), a partir do `main` com a D3b (PR #62). Sem push.
+
+- **Servidor (migração `107_desktop_cadastros.sql`, só aditiva):**
+  - `categories.color` e `description`; o servidor aceita só as 7 cores da paleta do painel. Nome repetido dá 409 com o nome de quem já usa, sem diferença de maiúsculas, acentos e espaços. A lista traz `lancamentos_mes` e `total_mes` (`?mes=AAAA-MM`; estorno não conta como lançamento);
+  - `suppliers.default_category_id` (a "categoria mais comum" do painel). CPF e CNPJ conferem o dígito verificador, ficam formatados e o repetido dá 409 com o nome ("Já existe um fornecedor com esse CNPJ: …"). Documento antigo mal digitado não trava a edição de outros campos: a regra só vale se o documento mudou. A lista traz `gasto_mes` e `lancamentos_mes`; `GET /fornecedores/:id/resumo?mes=` traz os lançamentos do mês. O lançamento só liga ao fornecedor pelo nome (`counterparty`), então os números casam por nome;
+  - `recurring_templates.starts_on` (decisão 10). Modelos existentes: a próxima parcela cai no mês em que foram criados. Rotas novas: `GET /recorrentes/previa?mes=` (o que será criado e o que já foi criado, sem gravar), `GET /recorrentes/proxima` (data da próxima geração, para o formulário) e `POST /recorrentes/gerar` com `mes` (só até o mês atual, tudo ou nada, idempotente). A lista traz `inicio`, `geradas` e `proxima_geracao`. Corrigido de passagem: a chave de idempotência dos modelos sem total de parcelas não casava com a descrição gravada (a proteção contra repetição não valia para eles); agora casa;
+  - `lib/documento.js`, `lib/texto.js`, `services/recurringSchedule.js`.
+- **Telas** (`public/d/telas/`): `categorias.js` e `categoria-form.js`, `fornecedores.js` e `fornecedor-form.js`, `recorrentes.js`, `recorrente-form.js` e `recorrente-gerar.js`, com `cadastros-base.js` e `css/cadastros.css`. O botão "Gerar lançamentos de <mês>" mostra o diálogo com a lista e depois vira "<Mês> já gerado · N lançamentos". "Próximas gerações" é a prévia do mês seguinte. Menu e regras de papel iguais aos de hoje (Recorrentes só para admin).
+- **Fora desta fase:** recorrentes quinzenais (decisão 4); a sugestão da categoria do fornecedor no lançamento pelo celular (`public/m/` não foi alterado); escolher outro mês para gerar pela tela (a API aceita `mes`, a tela usa o mês atual).
+- **Testes:** `test/cadastros-d5.test.js` (documento, agenda, categorias, fornecedores, recorrentes por mês, estrutura). `test/api.integration.test.js` passou a usar um CNPJ válido. `npm run check` ok.
+- **Prints:** 40 em `docs/suite-desktop/validacao/D5/` (10 estados, 1440×900 e 1280×800, claro e escuro). Em 1280 a coluna "Próximas gerações" passa para baixo da tabela.
 
 ### D3b · Obras (medições, Curva S e ferramentas)
 
