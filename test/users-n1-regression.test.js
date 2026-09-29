@@ -73,6 +73,7 @@ test('GET /api/usuarios (corporativo) não é N+1 (queries O(1) em relação a N
 
   assert.equal(resp.status, 200, `HTTP status: ${resp.status}`);
   assert.equal(data.length, 50, `esperados 50 usuários, recebeu ${data.length}`);
+  assert.ok(data.every((user) => user.cloud_managed === true), 'a tela deve identificar as contas gerenciadas pelo diretório central');
   // Anti-N+1: queries devem ser O(1), não O(N). 50 usuários remotos não deve gerar 100+ queries.
   assert.ok(snap.database.total <= 6, `queries demais para 50 usuários remotos (N+1?): ${snap.database.total}`);
   assert.ok(ms(t0, t1) < 2000, `latência alta: ${ms(t0, t1)}ms`);

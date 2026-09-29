@@ -1,5 +1,45 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
+## D6 em andamento — 29/09/2026
+
+O Lucas autorizou o CODEX a iniciar a D6 sem Maestri e pediu um gancho para o
+Claude continuar caso o contexto termine. Branch local
+`feat/desktop-usuarios` em
+`C:\Users\Suporte\Documents\PROJETOS LUCAS\_worktrees\centro\wt-cc-desktop`,
+criada de `origin/main` no commit `a492a63`. Não houve push nem deploy.
+
+Primeira entrega em andamento: `public/d/telas/usuarios.js` e
+`public/d/css/usuarios.css` implementam a lista de usuários, cadastro com
+senha provisória, convite pelo endpoint da Fase 5, ativação/desativação e
+e-mails externos. `public/d/index.html` os carrega. `routes/users.js`
+informa `cloud_managed` na lista para impedir edição local de perfil
+corporativo. A interface usa apenas os três papéis atuais; ainda não há
+migração, matriz, restrição por obra ou seis papéis.
+
+Validação desta entrega parcial: `npm run check` passou (172 arquivos),
+`node --test test/desktop-web-structure.test.js
+test/users-n1-regression.test.js` passou (14/14) e `npm test` passou
+(308/308). A tela ainda precisa de conferência visual em 1440 × 900 e
+1280 × 800, nos temas claro e escuro. Os fluxos de convite exigem a conta
+central real para validação de ponta a ponta.
+
+**Atenção para continuar:** o diretório central D1 ainda usa
+`admin/gestor/supervisor`. `services/cloudUserMirror.js` e o upsert em
+`routes/users.js` regravam `users.role` com o papel remoto a cada
+login/listagem. Migrar a coluna local isoladamente para seis papéis causaria
+reversão de acesso. Implementar D6 em conjunto com o contrato do Worker
+central e os fluxos de login/handoff. Revisar as 53 chamadas de
+`exigirPapel` e proteger leitura por obra no servidor antes de expor
+`user_cost_centers` na tela. O plano e a matriz estão em
+`03-PLANO-FASES.md` e `01-ESPEC-TELAS.md`, seção 6.
+
+Próximos passos: (1) validar a primeira tela em navegador nos dois temas;
+(2) conferir os testes e corrigir regressões; (3) desenhar migração 109
+aditiva, modelo de papéis e matriz no diretório central e no banco local;
+(4) aplicar filtros de obra em dashboard, obras, lançamentos e cobranças com
+testes de 403 por URL; (5) completar telas de papéis, permissões, apps,
+obras e simulação; (6) só então avaliar PR, migração e publicação.
+
 Estado atual em 29/09/2026: D4 (PR #63), D5 e exclusão de centro de custo
 (PR #64) mescladas; o Container do Centro foi publicado e as migrações 107 e
 108 foram aplicadas em produção. O PR #65 registrou o mapa dos bancos. As

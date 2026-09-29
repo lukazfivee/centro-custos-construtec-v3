@@ -1,0 +1,22 @@
+/* D6: usuarios e e-mails externos, usando os componentes do desktop. */
+.usu-abas { display: flex; gap: 20px; border-bottom: 1px solid var(--color-divider); margin: 0 0 20px; }
+.usu-abas button { padding: 10px 2px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--color-neutral-300); font: inherit; cursor: pointer; }
+.usu-abas button[aria-selected="true"] { border-color: var(--color-accent-300); color: var(--color-text); font-weight: 600; }
+.usu-abas button:focus-visible { outline: 2px solid var(--color-accent-300); outline-offset: 2px; }
+.usu-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+.usu-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; margin-bottom: 16px; }
+.usu-barra .campo-busca { flex: 1 1 260px; max-width: 430px; }
+.usu-botoes, .usu-acoes { display: flex; align-items: center; gap: 8px; }
+.usu-pessoa { display: flex; align-items: center; gap: 10px; }
+.usu-avatar { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--color-accent-700); color: #fff; font-size: 12px; font-weight: 700; }
+.usu-emails { padding: 16px; }
+.usu-email-topo, .usu-email { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.usu-email-topo { padding-bottom: 14px; }
+.usu-email { padding: 11px 0; border-top: 1px solid var(--color-divider); font-size: 13px; }
+.usu-email span { overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .usu-kpis { grid-template-columns: 1fr; }
+  .usu-barra { align-items: stretch; flex-direction: column; }
+  .usu-barra .campo-busca { max-width: none; }
+  .usu-botoes { flex-wrap: wrap; }
+}

@@ -12,7 +12,7 @@ const { mirrorCloudUser, retire } = require('../services/cloudUserMirror');
 const router = express.Router();
 router.use(autenticar, exigirPapel('admin'));
 
-const PUBLIC_COLUMNS = row => row && ({ id:row.id, nome:row.name, email:row.email, role:row.role, ativo:row.active, created_at:row.created_at });
+const PUBLIC_COLUMNS = row => row && ({ id:row.id, nome:row.name, email:row.email, role:row.role, ativo:row.active, cloud_managed:row.cloud_managed === true, created_at:row.created_at });
 
 async function upsertRemoteUser(remote) {
   return PUBLIC_COLUMNS(await mirrorCloudUser(getDb(), remote));
@@ -102,7 +102,7 @@ async function upsertRemoteUsers(remoteList) {
     for (const row of rows) resultByEmail.set(row.email.toLowerCase(), row);
   }
 
-  return order.map(email => resultByEmail.get(email)).filter(Boolean);
+  return order.map(email => resultByEmail.get(email)).filter(Boolean).map(user => ({ ...user, cloud_managed:true }));
 }
 
 router.get('/', asyncRoute(async (req, res) => {
@@ -117,7 +117,7 @@ router.get('/', asyncRoute(async (req, res) => {
     }
   }
 
-  const usersSelect = 'SELECT id, name AS nome, email, role, active AS ativo, created_at FROM users WHERE deleted_at IS NULL';
+  const usersSelect = 'SELECT id, name AS nome, email, role, active AS ativo, cloud_managed, created_at FROM users WHERE deleted_at IS NULL';
   const orderBy = 'active DESC, name';
   if (!wantsPagination(req.query)) {
     const { rows } = await getDb().query(`${usersSelect} ORDER BY ${orderBy} LIMIT 500`);
