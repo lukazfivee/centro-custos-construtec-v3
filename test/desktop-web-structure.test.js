@@ -125,3 +125,17 @@ test('D3a Obras: carteira, detalhe com abas, orçamento no formulário e revisã
   assert.match(src('telas/obras.js'), /portfolio-summary/);
   assert.match(src('telas/obra-nf.js'), /notas-fiscais\/\$\{n\.id\}\/arquivo/);
 });
+
+test('D3b Obras: medições, Curva S, relatório, importar e vincular', () => {
+  const med = src('telas/obra-medicoes.js');
+  assert.match(med, /type: 'labor'/);
+  assert.match(med, /type: 'contract'/);
+  assert.match(med, /centavos\(contrato\) - centavos\(medido\)/);
+  assert.match(src('telas/obra-curva.js'), /\/curva-s/);
+  assert.match(src('telas/obra-impressao.js'), /window\.print\(\)/);
+  const imp = src('telas/obra-importar.js');
+  assert.match(imp, /\/integracao\/orcamentos\/previas/);
+  assert.match(imp, /hash: previa\.hash/);
+  assert.match(imp, /allocationId: card\.dataset\.gasto/);
+  assert.match(src('css/obras-ferramentas.css'), /@media print/);
+});

@@ -1,10 +1,10 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
-Fase atual: D3a pronta, aguardando revisão do Lucas · Branch: `feat/desktop-obras` (worktree `../wt-cc-desktop`)
+Fase atual: D3b pronta, aguardando revisão do Lucas · Branch: `feat/desktop-obras-2` (worktree `../wt-cc-desktop`), a partir da D3a (PR #61)
 
 ## Última atualização
 
-- Data e hora (BRT): 28/09/2026
+- Data e hora (BRT): 29/09/2026
 - Commit base: `d3463b3` (`origin/main`, com D0, D1 e D2 mergeadas pelos PRs #57, #59 e #60)
 
 ## Decisões do Lucas
@@ -22,6 +22,31 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 7. **Lançamento rápido (D1, 28/09/2026):** segue o protótipo. Sem o campo de fornecedor, que volta pelo Editar na D2. Com competência e vencimento escolhidos pela pessoa.
 
 ## Feito
+
+### D3b · Obras (medições, Curva S e ferramentas)
+
+- **Servidor (sem migração):**
+  - **regra de papel:** importar orçamento (`/integracao/orcamentos/previas`, `/previas/:id/confirmar`, `/confirmar-direto` e `/sync-direto`) passa a ser só para admin e gestor. Antes, qualquer pessoa logada importava. A chave de integração continua entrando como admin;
+  - as medições devolvem o período como `AAAA-MM-DD`, sem hora (problema 4). O sistema atual também passa a mostrar a data sem hora. Cada medição traz também `created_by_name`, com quem registrou.
+- **Telas (`public/d/telas/`):**
+  - `obra-medicoes.js`: os prints 32 e 33.
+    - Mão de obra: horas planejadas, medidas e saldo, com o formulário (semana atual, mínimo de 0,5 h e vírgula aceita) e o histórico com quem registrou.
+    - Contrato: o número sugerido, o valor e o histórico.
+    - Boletim de medição com o acumulado em centavos e o saldo a medir;
+  - `obra-curva.js`: o print 34, com BAC, AC, EV, CPI, EAC e VAC, o gráfico (previsto tracejado, realizado e medido, com um ponto quando só há um mês), o "Como ler", a tabela mês a mês e as premissas;
+  - `obra-relatorio.js`: o relatório executivo, com a identificação, os 6 números, a curva ABC, os gastos sem vínculo e a planilha, além de CSV e Imprimir/PDF;
+  - `obra-impressao.js`: a folha de impressão do relatório e do boletim. Na impressão só a folha aparece;
+  - `obra-importar.js`:
+    - importar orçamento, com o arquivo .json, a prévia (já importada, conflito ou pronta, e o aviso de substituição da baseline) e a confirmação;
+    - "Atualizar revisão" pelo detalhe da obra;
+    - mensagens do servidor em português claro;
+    - vincular os gastos sem vínculo a insumos.
+- **Botões:** "Importar orçamento" na carteira; "Relatório executivo" no detalhe; "Atualizar revisão" e "Vincular a insumos" na aba Orçado × realizado.
+- **Sincronizar:** o botão "Sincronizar" da tela de obras atual abre a sincronização por arquivo, que saiu do menu (decisão 6). Por isso ele não entrou na carteira nova.
+- **CSS:** `css/obras-ferramentas.css`.
+- **Testes:**
+  - `test/obras-d3b.test.js`: supervisor recebe 403 na prévia, na importação direta e na confirmação; admin importa; datas puras e autor nas medições; supervisor continua sem registrar medição;
+  - mais um teste de estrutura da D3b.
 
 ### D3a · Obras (carteira e detalhe)
 
@@ -134,6 +159,22 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 
 ## Como validei
 
+### D3b
+
+- `npm run check`: 155 arquivos. `npm test`: **291 testes, 291 passando**.
+- **Critério de pronto da D3**: uma obra importada do Orçamentos, a proposta de exemplo do repositório, mostra os mesmos valores nas duas telas.
+  - **Curva S:** AC R$ 630,00, EV R$ 960,00, CPI 1,52, VAC R$ 948,75, e a mesma linha de 09/2026 na tabela.
+  - **Medições:** 88 h planejadas, 44 h medidas e saldo de 44 h.
+  - **Planilha:** vem da mesma rota do sistema atual.
+- **No navegador:**
+  - registrar horas (a validação recusa menos de 0,5 h; "8,5" é aceito);
+  - registrar medição ao cliente (o número sugerido é o seguinte);
+  - boletim com o acumulado de R$ 2.000,00 e o saldo de R$ 1.450,00;
+  - relatório executivo e CSV;
+  - vincular o gasto sem vínculo: o realizado do insumo vai de R$ 450 para R$ 630 e o cartão some;
+  - importar: arquivo inválido é recusado, o arquivo já importado mostra "já foi importada", e o arquivo alterado mostra a mensagem de assinatura que não confere.
+- **Prints:** 32 em `validacao/D3b/`: medições (mão de obra e contrato), boletim, Curva S, relatório, importar e vincular.
+
 ### D3a
 
 - `npm run check`: 150 arquivos. `npm test`: **289 testes, 289 passando**.
@@ -212,6 +253,9 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 - **Editar e anexar sem internet:** não entram na fila, por decisão de escopo. O painel avisa e mantém o que foi digitado.
 
 ## Achados fora do escopo
+
+- **D3b · AC da Curva S:** a Curva S conta só os gastos já vinculados a insumos. O realizado do orçado × realizado soma também os sem vínculo. Por isso os dois números diferem enquanto houver gastos sem vínculo. É a regra atual do servidor e ficou igual.
+- **D3b · limite de login no teste:** capturar os prints fazendo muitos logins seguidos esbarrou no limite de tentativas do servidor de teste. É proteção esperada, não um erro do app.
 
 - **D3a · realizado da carteira:** o `portfolio-summary` soma o realizado de **todas** as obras, mas divide pelo orçado só das obras com orçamento importado. Com obras sem orçamento, o "% do orçado total" e o "Saldo da carteira" ficam distorcidos (no teste deu 45.174%). O cockpit atual mostra a mesma conta. Vale decidir se o realizado deve contar só as obras importadas.
 - **D3a · número da NF:** as notas fiscais da obra não têm campo de número. A coluna "Número" mostra a observação, e o formulário chama o campo de "Número / observação". Um campo próprio seria uma migração aditiva.

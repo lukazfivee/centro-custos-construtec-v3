@@ -19,6 +19,7 @@
       <div class="cab cab-obra"><div class="tit">${olho ? `<span class="eyebrow">${esc(olho)}</span>` : ''}<h1>${esc(c.nome)}</h1>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</div>
         <div class="acoes">${O.chipSituacao(c.situacao)}
           ${D.pode('cadastrar') ? `<button type="button" class="btn btn-s" data-editar-obra>${D.ic('pencil-simple')}Editar obra</button>` : ''}
+          <button type="button" class="btn btn-s" data-relatorio>${D.ic('printer')}Relatório executivo</button>
           <button type="button" class="btn btn-p" data-lancar>${D.ic('plus')}Lançar despesa</button></div></div>`;
   }
 
@@ -46,10 +47,11 @@
     const editar = CC.$('[data-editar-obra]', el);
     if (editar) editar.addEventListener('click', () => O.formulario(obra, () => D.ir(location.hash.replace(/^#\/?/, ''))));
     CC.$('[data-lancar]', el).addEventListener('click', () => D.lanc.formulario(null, null, c.id));
+    CC.$('[data-relatorio]', el).addEventListener('click', () => O.relatorio(obra));
     const corpo = CC.$('[data-aba-corpo]', el);
     const desenhar = O.abas[aba];
     if (desenhar) await desenhar(corpo, obra, vivo);
-    else corpo.innerHTML = `<div class="card">${U.vazio('hammer', 'Esta aba chega na próxima parte da fase de Obras (D3b).', 'Enquanto isso, ela continua no sistema atual.')}</div>`;
+    else corpo.innerHTML = `<div class="card">${U.vazio('compass', 'Esta aba não existe.')}</div>`;
   };
 
   // Aba Lancamentos: a mesma lista da tela de Lancamentos, filtrada pela obra.

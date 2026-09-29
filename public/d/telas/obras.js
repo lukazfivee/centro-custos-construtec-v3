@@ -60,10 +60,12 @@
   async function render(el, rota, vivo) {
     el.innerHTML = `<div class="pagina obras">
       ${U.cabecalho({ grupo: 'Operação', titulo: 'Obras e centros de custo', sub: 'Carteira da Construtec · orçado, realizado e medição por obra',
-        acoes: D.pode('cadastrar') ? `<button type="button" class="btn btn-p" data-nova>${D.ic('plus')}Nova obra</button>` : '' })}
+        acoes: D.pode('cadastrar') ? `<button type="button" class="btn btn-s" data-importar>${D.ic('file-arrow-up')}Importar orçamento</button><button type="button" class="btn btn-p" data-nova>${D.ic('plus')}Nova obra</button>` : '' })}
       <div data-corpo>${U.carregando('Carregando a carteira…')}</div></div>`;
     const nova = CC.$('[data-nova]', el);
     if (nova) nova.addEventListener('click', () => O.formulario(null, () => render(el, rota, vivo)));
+    const importar = CC.$('[data-importar]', el);
+    if (importar) importar.addEventListener('click', () => O.importar(null, (r) => (r && r.costCenterId ? D.ir(`obras/${r.costCenterId}`) : render(el, rota, vivo))));
     const [lista, resumo] = await Promise.all([
       CC.api('/centros-custo').then((r) => (Array.isArray(r.data) ? r.data : [])),
       CC.api('/centros-custo/portfolio-summary').then((r) => r.data).catch(() => ({ portfolio: {}, porObra: [] })),
