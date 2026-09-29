@@ -74,7 +74,8 @@ router.get('/:id/resumo', asyncRoute(async (req,res) => {
   const { start, end } = periodo(req.query);
   const supplier = await getDb().query('SELECT id,name FROM suppliers WHERE id=$1', [id]);
   if (!supplier.rows.length) throw httpError(404,'Fornecedor não encontrado.');
-  const { rows } = await getDb().query(
+  const db = getDb();
+  const [lista, totais] = await Promise.all([db.query(
     `SELECT t.id,t.description AS descricao,t.type AS tipo,t.amount AS valor,t.accounting_sign AS sinal,
        t.transaction_date::text AS data,t.financial_status AS status,cc.code AS obra_codigo,c.name AS categoria
      FROM transactions t JOIN cost_centers cc ON cc.id=t.cost_center_id JOIN categories c ON c.id=t.category_id
@@ -82,9 +83,14 @@ router.get('/:id/resumo', asyncRoute(async (req,res) => {
        AND t.transaction_date >= $2 AND t.transaction_date < $3
      ORDER BY t.transaction_date DESC,t.id DESC LIMIT 50`,
     [supplier.rows[0].name, start, end]
-  );
-  const gasto = rows.filter((row) => row.tipo === 'despesa').reduce((sum, row) => sum + Number(row.valor) * Number(row.sinal), 0);
-  res.json({ lancamentos: rows, gasto_mes: Math.round(gasto * 100) / 100, lancamentos_mes: rows.filter((row) => Number(row.sinal) === 1).length });
+  ), db.query(
+    `SELECT COALESCE(SUM(amount*accounting_sign) FILTER (WHERE type='despesa'),0) AS gasto,
+       COUNT(*) FILTER (WHERE accounting_sign=1) AS qtd
+     FROM transactions WHERE deleted_at IS NULL AND LOWER(TRIM(counterparty))=LOWER(TRIM($1))
+       AND transaction_date >= $2 AND transaction_date < $3`,
+    [supplier.rows[0].name, start, end]
+  )]);
+  res.json({ lancamentos: lista.rows, gasto_mes: Number(totais.rows[0].gasto), lancamentos_mes: Number(totais.rows[0].qtd) });
 }));
 
 router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req,res) => {
@@ -92,11 +98,14 @@ router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req,res) => {
   await assertDocumentoLivre(data.document);
   await assertCategoria(data.categoryId);
   const publicId = crypto.randomUUID();
-  const { rows }=await getDb().query(
-    `INSERT INTO suppliers (public_id,name,document,contact_name,email,phone,notes,default_category_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-    [publicId,data.name,data.document,data.contact,data.email,data.phone,data.notes,data.categoryId]
-  );
+  let rows;
+  try {
+    ({ rows }=await getDb().query(
+      `INSERT INTO suppliers (public_id,name,document,contact_name,email,phone,notes,default_category_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+      [publicId,data.name,data.document,data.contact,data.email,data.phone,data.notes,data.categoryId]
+    ));
+  } catch (error) { await rethrowDocumentConflict(error, data.document); }
   await recordAudit({entityType:'fornecedor',entityId:rows[0].id,action:'criado',summary:`Fornecedor criado: ${data.name}`,data,user:req.usuario});
   res.status(201).json(rows[0]);
 }));
@@ -110,11 +119,14 @@ router.put('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req,res) => 
   const data=validate(req.body, { skipDocument: unchanged });
   await assertDocumentoLivre(data.document, id);
   await assertCategoria(data.categoryId);
-  const result=await getDb().query(
-    `UPDATE suppliers SET name=$1,document=$2,contact_name=$3,email=$4,phone=$5,notes=$6,
-       active=$7,default_category_id=$8,revision=revision+1,updated_at=NOW() WHERE id=$9 RETURNING revision`,
-    [data.name,data.document,data.contact,data.email,data.phone,data.notes,req.body.ativo!==false,data.categoryId,id]
-  );
+  let result;
+  try {
+    result=await getDb().query(
+      `UPDATE suppliers SET name=$1,document=$2,contact_name=$3,email=$4,phone=$5,notes=$6,
+         active=$7,default_category_id=$8,revision=revision+1,updated_at=NOW() WHERE id=$9 RETURNING revision`,
+      [data.name,data.document,data.contact,data.email,data.phone,data.notes,req.body.ativo!==false,data.categoryId,id]
+    );
+  } catch (error) { await rethrowDocumentConflict(error, data.document); }
   await recordAudit({entityType:'fornecedor',entityId:id,action:'atualizado',summary:`Fornecedor atualizado: ${data.name}`,data:{...data,revision:result.rows[0].revision},user:req.usuario});
   res.json({ok:true,revisao:result.rows[0].revision});
 }));
@@ -127,6 +139,12 @@ async function assertDocumentoLivre(document, ignoreId = 0) {
     [ignoreId, numero]
   );
   if (rows.length) throw httpError(409, `Já existe um fornecedor com esse ${numero.length === 11 ? 'CPF' : 'CNPJ'}: ${rows[0].name}.`);
+}
+
+async function rethrowDocumentConflict(error, document) {
+  if (error.code !== '23505' || !String(error.constraint || error.message).includes('suppliers_document_digits_unique')) throw error;
+  await assertDocumentoLivre(document);
+  throw httpError(409, 'Já existe um fornecedor com esse CPF/CNPJ.');
 }
 
 async function assertCategoria(categoryId) {

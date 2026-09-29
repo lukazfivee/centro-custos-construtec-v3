@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 
 const { documentoValido, formatarDocumento } = require('../lib/documento');
 const schedule = require('../services/recurringSchedule');
@@ -140,6 +141,31 @@ test('cadastros: categorias, fornecedores e recorrentes por mês', async (contex
     assert.equal(resumo.gasto_mes, 250.5);
     await request('/fornecedores/99999/resumo', 'GET', undefined, 404, admin);
 
+    for (let n = 0; n < 55; n += 1) {
+      await getDb().query(
+        `INSERT INTO transactions (public_id,type,cost_center_id,category_id,description,counterparty,
+           amount,transaction_date,origin_instance_id,origin_instance_name,last_modified_instance_id,
+           last_modified_instance_name,origin_user_name,created_by)
+         SELECT $1,type,cost_center_id,category_id,$2,counterparty,amount,transaction_date,
+           origin_instance_id,origin_instance_name,last_modified_instance_id,last_modified_instance_name,
+           origin_user_name,created_by FROM transactions WHERE description='Licença' LIMIT 1`,
+        [crypto.randomUUID(), `Licença extra ${n}`]
+      );
+    }
+    const cheio = await request(`/fornecedores/${alfa.id}/resumo?mes=${mes}`, 'GET', undefined, 200, admin);
+    assert.equal(cheio.lancamentos.length, 50, 'a lista continua limitada');
+    assert.equal(cheio.lancamentos_mes, 56, 'o total considera todo o mês');
+    assert.equal(cheio.gasto_mes, 14028, 'o gasto inclui os 56 lançamentos');
+
+    const corpo = (nome, documento) => JSON.stringify({ nome, documento });
+    const concorrentes = await Promise.all(['Fornecedor A', 'Fornecedor B'].map((nome) => fetch(`${base}/fornecedores`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${admin}` },
+      body: corpo(nome, nome === 'Fornecedor A' ? '529.982.247-25' : '52998224725'),
+    })));
+    assert.deepEqual(concorrentes.map((res) => res.status).sort(), [201, 409], 'duas criações concorrentes não repetem o CPF');
+    const documentos = await getDb().query("SELECT COUNT(*)::int AS total FROM suppliers WHERE regexp_replace(COALESCE(document,''),'[^0-9]','','g')='52998224725'");
+    assert.equal(documentos.rows[0].total, 1);
+
     // Documento antigo, mal digitado, nao trava a edicao de outros campos.
     await getDb().query("UPDATE suppliers SET document='99.999.999/9999-99' WHERE id=$1", [alfa.id]);
     await request(`/fornecedores/${alfa.id}`, 'PUT', { nome: 'Loja Alfa', documento: '99.999.999/9999-99', telefone: '1133334444' }, 200, admin);
@@ -155,6 +181,7 @@ test('cadastros: categorias, fornecedores e recorrentes por mês', async (contex
     await request('/recorrentes', 'POST', modelo, 403, sup);
 
     const previa = await request(`/recorrentes/previa?mes=${mes}`, 'GET', undefined, 200, sup);
+    assert.match(previa.planToken, /^[a-f0-9]{64}$/);
     assert.equal(previa.total_itens, 1);
     assert.equal(previa.total_valor, 3800);
     assert.equal(previa.itens[0].data, `${mes}-15`);
@@ -197,5 +224,80 @@ test('cadastros: categorias, fornecedores e recorrentes por mês', async (contex
     await request(`/recorrentes/${criado.id}`, 'PUT', { nome: 'Antigo', tipo: 'despesa', cost_center_id: context.centro, category_id: context.categoria, valor: 500, dia_mes: 3, frequencia: 'mensal', ativo: false }, 200, admin);
     const pausado = await request(`/recorrentes/previa?mes=${mes}`, 'GET', undefined, 200, admin);
     assert.ok(!pausado.itens.some((i) => i.id === criado.id));
+  });
+
+  await context.test('recorrentes: modelos homônimos e lançamento manual não colidem; gerar concorrente é único', async () => {
+    const modelo = { nome: 'Homônimo D5', tipo: 'despesa', cost_center_id: context.centro, category_id: context.categoria,
+      valor: 123, dia_mes: 12, frequencia: 'mensal', inicio: mes };
+    const primeiro = await request('/recorrentes', 'POST', modelo, 201, admin);
+    const segundo = await request('/recorrentes', 'POST', modelo, 201, admin);
+    await request('/lancamentos', 'POST', { tipo: 'despesa', cost_center_id: context.centro, category_id: context.categoria,
+      descricao: modelo.nome, valor: 123, data: `${mes}-12`, status_financeiro: 'pendente' }, 201, admin);
+    const previa = await request(`/recorrentes/previa?mes=${mes}`, 'GET', undefined, 200, admin);
+    assert.ok(previa.itens.some((item) => item.id === primeiro.id));
+    assert.ok(previa.itens.some((item) => item.id === segundo.id));
+
+    const respostas = await Promise.all([request('/recorrentes/gerar', 'POST', {}, 200, admin),
+      request('/recorrentes/gerar', 'POST', {}, 200, admin)]);
+    assert.equal(respostas.reduce((total, item) => total + item.gerados, 0), 2);
+    const vinculados = await getDb().query(
+      'SELECT recurring_template_id,recurring_period::text AS periodo FROM transactions WHERE recurring_template_id=ANY($1::int[]) ORDER BY recurring_template_id',
+      [[primeiro.id, segundo.id]]
+    );
+    assert.deepEqual(vinculados.rows, [primeiro.id, segundo.id].sort((a, b) => a - b).map((id) => ({ recurring_template_id: id, periodo: `${mes}-01` })));
+    const manual = await getDb().query("SELECT COUNT(*)::int AS total FROM transactions WHERE description='Homônimo D5' AND recurring_template_id IS NULL");
+    assert.equal(manual.rows[0].total, 1);
+    const depois = await request(`/recorrentes/previa?mes=${mes}`, 'GET', undefined, 200, admin);
+    assert.ok(depois.gerados.some((item) => item.id === primeiro.id));
+    assert.ok(depois.gerados.some((item) => item.id === segundo.id));
+    await request(`/recorrentes/${primeiro.id}`, 'DELETE', undefined, 200, admin);
+    const historico = await getDb().query(
+      'SELECT recurring_template_id,recurring_period::text AS periodo FROM transactions WHERE recurring_template_id=$1',
+      [primeiro.id]
+    );
+    assert.deepEqual(historico.rows, [{ recurring_template_id: primeiro.id, periodo: `${mes}-01` }],
+      'excluir o modelo preserva a proveniência do lançamento');
+  });
+
+  await context.test('recorrentes: prévia confirmada expira quando os candidatos mudam', async () => {
+    const modelo = { nome: 'Token D5', tipo: 'despesa', cost_center_id: context.centro, category_id: context.categoria,
+      valor: 90, dia_mes: 8, frequencia: 'mensal', inicio: mes };
+    const primeiro = await request('/recorrentes', 'POST', modelo, 201, admin);
+    const antiga = await request(`/recorrentes/previa?mes=${mes}`, 'GET', undefined, 200, admin);
+    assert.ok(antiga.itens.some((item) => item.id === primeiro.id));
+    await request('/recorrentes/gerar', 'POST', { mes, planToken: 'errado' }, 400, admin);
+    const segundo = await request('/recorrentes', 'POST', { ...modelo, nome: 'Token D5 novo' }, 201, admin);
+    const desatualizada = await request('/recorrentes/gerar', 'POST', { mes, planToken: antiga.planToken }, 409, admin);
+    assert.match(desatualizada.erro, /prévia mudou/i);
+    const nenhum = await getDb().query('SELECT COUNT(*)::int AS total FROM transactions WHERE recurring_template_id=ANY($1::int[])', [[primeiro.id, segundo.id]]);
+    assert.equal(nenhum.rows[0].total, 0, 'o plano antigo não gerou parcialmente');
+    const atual = await request(`/recorrentes/previa?mes=${mes}`, 'GET', undefined, 200, admin);
+    assert.notEqual(atual.planToken, antiga.planToken);
+    const gerado = await request('/recorrentes/gerar', 'POST', { mes, planToken: atual.planToken }, 200, admin);
+    assert.equal(gerado.gerados, 2);
+  });
+
+  await context.test('recorrentes legados: contador anterior protege histórico sem fechar meses pulados', async () => {
+    const migration = fs.readFileSync(path.join(__dirname, '..', 'migrations', '107_desktop_cadastros.sql'), 'utf8');
+    assert.match(migration, /legacy_generated_through = GREATEST\(current_installment - 1, 0\)/);
+    const inicio = schedule.somarMeses(mes, -3);
+    const lacuna = schedule.somarMeses(mes, -2);
+    const criado = await request('/recorrentes', 'POST', { nome: 'Legado D5', tipo: 'despesa',
+      cost_center_id: context.centro, category_id: context.categoria, valor: 70,
+      dia_mes: 7, frequencia: 'mensal', inicio }, 201, admin);
+    await getDb().query('UPDATE recurring_templates SET current_installment=2,legacy_generated_through=1 WHERE id=$1', [criado.id]);
+    const anterior = await request(`/recorrentes/previa?mes=${inicio}`, 'GET', undefined, 200, admin);
+    assert.ok(anterior.gerados.some((item) => item.id === criado.id && item.parcela === 1),
+      'a parcela legada não é emitida novamente sem depender da descrição');
+    const faltante = await request(`/recorrentes/previa?mes=${lacuna}`, 'GET', undefined, 200, admin);
+    assert.ok(faltante.itens.some((item) => item.id === criado.id && item.parcela === 2));
+    const atual = await request(`/recorrentes/previa?mes=${mes}`, 'GET', undefined, 200, admin);
+    assert.ok(atual.itens.some((item) => item.id === criado.id && item.parcela === 4));
+    await request('/recorrentes/gerar', 'POST', { mes, planToken: atual.planToken }, 200, admin);
+    const aindaFaltante = await request(`/recorrentes/previa?mes=${lacuna}`, 'GET', undefined, 200, admin);
+    assert.ok(aindaFaltante.itens.some((item) => item.id === criado.id && item.parcela === 2),
+      'gerar um mês posterior não fecha a lacuna anterior');
+    const gerado = await request('/recorrentes/gerar', 'POST', { mes: lacuna, planToken: aindaFaltante.planToken }, 200, admin);
+    assert.equal(gerado.gerados, 1);
   });
 });

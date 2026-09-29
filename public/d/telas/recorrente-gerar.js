@@ -38,7 +38,7 @@
         const botoes = CC.$$('[data-r]', camada);
         botoes.forEach((b) => { b.disabled = true; });
         try {
-          const { data } = await CC.api('/recorrentes/gerar', { method: 'POST', body: { mes: previa.mes } });
+          const { data } = await CC.api('/recorrentes/gerar', { method: 'POST', body: { mes: previa.mes, planToken: previa.planToken } });
           fechar({ gerados: data.gerados });
         } catch (error) {
           const faixa = CC.$('.erro-dlg', camada);

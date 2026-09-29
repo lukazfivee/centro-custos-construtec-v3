@@ -118,7 +118,9 @@ router.delete('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res)
 // Gera os lancamentos do mes escolhido (padrao: o atual) como "A pagar". Repetir nao duplica.
 router.post('/gerar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
   const mes = mesEscolhido(req.body && req.body.mes, { gerar: true });
-  const resultado = await schedule.gerarMes(mes, req.usuario);
+  const planToken = req.body && req.body.planToken;
+  if (planToken !== undefined && !/^[a-f0-9]{64}$/.test(planToken)) throw httpError(400, 'Token da prévia inválido.');
+  const resultado = await schedule.gerarMes(mes, req.usuario, planToken);
   if (resultado.gerados) {
     await recordAudit({entityType:'recorrente',entityId:0,action:'gerados',summary:`${resultado.gerados} lançamento(s) gerado(s) de modelos recorrentes para ${mes}.`,data:{mes,gerados:resultado.gerados},user:req.usuario});
   }
