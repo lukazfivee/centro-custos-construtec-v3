@@ -159,3 +159,15 @@ Estado dos pontos que faltavam para a nuvem completa (PRs desta data):
   no repositório do Orçamentos).
 - **Fora desta rodada**: login offline no desktop do Orçamentos e sincronização
   desktop ↔ nuvem.
+
+## Atualização 2026-09-29 — localização verificada dos dados do Centro
+
+O PostgreSQL do Centro em produção está na base `neondb`, branch `production`,
+do projeto Neon chamado `construtec-orcamentos`. O nome do projeto é enganoso:
+foram confirmadas ali as tabelas `cost_centers`, `suppliers` e `transactions`,
+e o `instance_id` coincide com o retornado pela API de produção do Centro.
+O D1 `centro-custos-producao` atende as rotas `/v1` de contas corporativas e
+Cobranças; não é a base financeira da interface atual. O inventário e os
+procedimentos de recuperação estão em `docs/DADOS-PRODUCAO.md` e
+`docs/BACKUP-NUVEM.md`. Não presumir que o nome do projeto identifique o
+banco do Orçamentos sem conferir a conexão efetiva do Worker correspondente.

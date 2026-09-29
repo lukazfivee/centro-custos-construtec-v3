@@ -10,9 +10,15 @@ desktop (PGlite). Na nuvem, as rotas respondem 501.
 
 | Dado | Onde vive | Proteção |
 | --- | --- | --- |
-| Financeiro do Centro | Neon (PostgreSQL), `DATABASE_URL` do Worker `centro-custos-api` | Restauração do Neon + dump diário |
+| Financeiro e centros de custo da interface atual | PostgreSQL `neondb`, branch `production`, projeto Neon chamado `construtec-orcamentos`; `DATABASE_URL` do Worker `centro-custos-api` | Branch de recuperação do Neon + dump diário criptografado |
 | Dados do Orçamentos | Neon (PostgreSQL), `DATABASE_URL` do Worker `construtec-orcamentos-cloud` | Restauração do Neon + dump diário |
 | Contas corporativas e Cobranças (`/v1`) | D1 `centro-custos-producao` | Time Travel do D1 |
+
+O nome do projeto Neon não indica o conteúdo da base: em 29/09/2026 foi
+confirmado que `neondb` nesse projeto contém `cost_centers`, `suppliers` e
+`transactions`. O `instance_id` dessa base corresponde ao retornado por
+`/api/health/ready` do Centro em produção. O D1 não substitui o backup desse
+PostgreSQL. Veja o [mapa operacional](DADOS-PRODUCAO.md).
 
 ### 1. Restauração do Neon (PITR)
 
@@ -41,7 +47,7 @@ Segredos (*Settings → Secrets and variables → Actions*):
 
 | Repositório | Segredo | Conteúdo |
 | --- | --- | --- |
-| centro-custos-construtec-v3 | `CENTRO_BACKUP_DATABASE_URL` | URL do Neon do Centro, de preferência com usuário somente leitura |
+| centro-custos-construtec-v3 | `CENTRO_BACKUP_DATABASE_URL` | URL direta da base `neondb` no projeto citado acima, com usuário somente leitura |
 | construtec-orcamentos | `ORCAMENTOS_BACKUP_DATABASE_URL` | URL do Neon do Orçamentos, idem |
 | ambos | `BACKUP_PASSPHRASE` | Frase longa e aleatória, guardada também fora do GitHub |
 
