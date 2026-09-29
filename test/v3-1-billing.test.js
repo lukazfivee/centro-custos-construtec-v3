@@ -2,7 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
+// node:sqlite existe no Node 22+; o job Node 20 mantém os testes de contrato.
+const DatabaseSync = Number(process.versions.node.split('.')[0]) >= 22 ? require('node:sqlite').DatabaseSync : null;
 const crypto = require('node:crypto');
 
 const root = path.join(__dirname, '..');
@@ -68,7 +69,7 @@ test('envio de cobrança busca a NF vinculada quando não recebe novo anexo', ()
   assert.match(route, /JOIN cost_centers c ON c\.id=i\.cost_center_id/);
 });
 
-test('envio atualiza apenas a situação elegível e preserva pagamento e valores recentes', async () => {
+test('envio atualiza apenas a situação elegível e preserva pagamento e valores recentes', { skip: !DatabaseSync }, async () => {
   const source = read('cloudflare-sync-worker/src/index.js');
   const worker = await import(`data:text/javascript;base64,${Buffer.from(`${source}\nexport { markFollowupSent };`).toString('base64')}`);
   const db = new DatabaseSync(':memory:');
@@ -99,7 +100,7 @@ test('envio atualiza apenas a situação elegível e preserva pagamento e valore
   } finally { db.close(); }
 });
 
-test('envios concorrentes usam uma autorização só e preservam pagamento recente', async () => {
+test('envios concorrentes usam uma autorização só e preservam pagamento recente', { skip: !DatabaseSync }, async () => {
   const source = read('cloudflare-sync-worker/src/index.js');
   const worker = await import(`data:text/javascript;base64,${Buffer.from(`${source}\nexport { handleSendDraft, handleSaveDraft, handleAuthorizeDraft };`).toString('base64')}`);
   const db = new DatabaseSync(':memory:');
