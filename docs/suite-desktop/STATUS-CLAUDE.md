@@ -1,6 +1,13 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
-Fase atual: D5 implementada e validada localmente; publicação pendente · Branch: `feat/desktop-cadastros` (worktree `../wt-cc-cadastros`)
+Estado atual em 29/09/2026: D4 (PR #63), D5 e exclusão de centro de custo
+(PR #64) mescladas; o Container do Centro foi publicado e as migrações 107 e
+108 foram aplicadas em produção. O PR #65 registrou o mapa dos bancos. As
+seções abaixo preservam o histórico da validação anterior ao deploy.
+
+Os worktrees do Centro agora ficam em `../_worktrees/centro/`, exceto
+`../wt-cc-cadastros`, mantido temporariamente na raiz por um bloqueio de
+movimentação do Windows. Confirme os caminhos com `git worktree list`.
 
 ## Última atualização
 

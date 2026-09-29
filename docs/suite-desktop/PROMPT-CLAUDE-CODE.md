@@ -1,5 +1,9 @@
 # Prompt para o Claude Code: desktop novo do Centro de Custos
 
+> Prompt histórico. Em 29/09/2026, a D5 e a exclusão de centro de custo já
+> estavam publicadas. Os worktrees atuais ficam em `../_worktrees/centro/`;
+> confirme o caminho com `git worktree list` antes de reutilizar instruções.
+
 Abra o Claude Code na raiz do repositório `centro-custos-construtec-v3` e cole o texto abaixo, a partir da linha "COPIAR A PARTIR DAQUI".
 
 ---
@@ -38,7 +42,7 @@ Você vai levar para o código o desktop novo do Centro de Custos, aprovado no c
 ## Atenção antes de começar
 
 - **A pasta de trabalho tem cerca de 420 arquivos marcados como alterados** com o mesmo número de linhas adicionadas e removidas. Isso é quase certamente troca de final de linha (CRLF e LF). Rode `git diff --ignore-all-space --stat` para confirmar. Não inclua esses arquivos nos seus commits. Se for o caso, avise o Lucas e sugira `git config core.autocrlf` ou um `.gitattributes`, sem aplicar por conta própria.
-- A branch atual é `codex/mobile-liquid-glass-nav`. Crie a sua a partir do `origin/main` atualizado, de preferência numa worktree (`../wt-cc-desktop`), como foi feito na Fase 2.
+- Confirme a branch atual com `git status`. Crie a sua a partir do `origin/main` atualizado, de preferência numa worktree em `../_worktrees/centro/`, como foi feito na Fase 2.
 
 ## Decisões para confirmar com o Lucas antes de codar
 
