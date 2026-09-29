@@ -15,6 +15,7 @@ import { listSessions, revokeOtherSessions } from './mobileSessions.js';
 import { issueHandoff, consumeHandoff } from './sessionHandoff.js';
 import { checkSessionHash } from './sessionHash.js';
 import { noteLogin } from './notifications.js';
+import { effectiveSuiteRole, parseApps } from './suiteRoles.js';
 
 const PASSWORD_ITERATIONS = 10000;
 export const ORG_ID = 'rcconstrutec.com.br';
@@ -152,6 +153,8 @@ export function publicUser(row) {
     name: row.name,
     email: row.email,
     role: row.role,
+    suiteRole: effectiveSuiteRole(row),
+    apps: parseApps(row.apps),
     active: Boolean(row.active),
     createdAt: row.created_at,
     updatedAt: row.updated_at,

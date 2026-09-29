@@ -27,7 +27,7 @@ CREATE TABLE cloud_sessions (
 function fakeD1() {
   const db = new sqlite.DatabaseSync(':memory:');
   db.exec(LEGACY_SCHEMA);
-  for (const name of ['006-identidade-compartilhada.sql', '007-mobile-auth.sql', '008-sessao-web-vinculada.sql', '009-handoff-alvo.sql', '010-notificacoes.sql', '011-cadastro.sql']) {
+  for (const name of ['006-identidade-compartilhada.sql', '007-mobile-auth.sql', '008-sessao-web-vinculada.sql', '009-handoff-alvo.sql', '010-notificacoes.sql', '011-cadastro.sql', '012-papeis-suite.sql']) {
     db.exec(fs.readFileSync(path.join(root, 'cloudflare', 'center-container', 'd1-migrations', name), 'utf8'));
   }
   const statement = (sql) => ({
@@ -157,4 +157,64 @@ maybe('excluir com id desatualizado nao atinge conta recriada', async () => {
   const stale = await call('POST', '/v1/users/delete', { token: adminToken, body: { email: payload.email, id: first.data.user.id } });
   assert.equal(stale.status, 404);
   assert.equal((await call('POST', '/v1/auth/login', { body: payload })).status, 200);
+});
+
+maybe('papel novo: conta antiga cai no mapeamento e o admin define o papel e os apps', async () => {
+  const { env, call, adminToken } = await setup();
+  const sup = { name: 'Sup', email: 'sup@rcconstrutec.com.br', password: 'senha-sup-1234', role: 'supervisor' };
+  const created = await call('POST', '/v1/users', { token: adminToken, body: sup });
+  assert.equal(created.data.user.suiteRole, 'tecnico');
+  assert.deepEqual(created.data.user.apps, ['centro', 'orcamentos']);
+  assert.equal((await call('GET', '/v1/users', { token: adminToken })).data.users.find((u) => u.email === sup.email).suiteRole, 'tecnico');
+
+  const set = await call('POST', '/v1/users/access', { token: adminToken, body: { email: sup.email, suiteRole: 'financeiro', apps: ['centro'] } });
+  assert.equal(set.status, 200);
+  assert.equal(set.data.user.suiteRole, 'financeiro');
+  assert.equal(set.data.user.role, 'supervisor');
+  assert.deepEqual(set.data.user.apps, ['centro']);
+  assert.equal((await call('POST', '/v1/users/access', { token: adminToken, body: { email: sup.email, suiteRole: 'gestor' } })).data.user.role, 'gestor');
+  assert.equal((await call('POST', '/v1/users/access', { token: adminToken, body: { email: sup.email, suiteRole: 'inexistente' } })).status, 400);
+  assert.equal((await call('POST', '/v1/users/access', { token: adminToken, body: { email: 'admin@rcconstrutec.com.br', suiteRole: 'tecnico' } })).status, 400);
+
+  const login = await call('POST', '/v1/auth/login', { body: sup });
+  assert.equal(login.data.user.suiteRole, 'gestor');
+  // Só admin do Centro altera papéis, inclusive pela via de serviço.
+  assert.equal((await call('POST', '/v1/users/access', { token: login.data.sessionToken, body: { email: sup.email, suiteRole: 'admin' } })).status, 403);
+  assert.equal((await call('POST', '/v1/users/access', { token: adminToken, service: SERVICE_KEY, body: { email: sup.email, suiteRole: 'admin' } })).status, 403);
+  const direct = await call('POST', '/v1/users', { token: adminToken, body: { name: 'Eng', email: 'eng@rcconstrutec.com.br', password: 'senha-eng-12345', suiteRole: 'engenharia', apps: ['orcamentos'] } });
+  assert.equal(direct.status, 201);
+  assert.equal(direct.data.user.suiteRole, 'engenharia');
+  assert.equal(direct.data.user.role, 'supervisor');
+  assert.equal(env.DB.raw.prepare('SELECT suite_role FROM cloud_users WHERE email=?').get('eng@rcconstrutec.com.br').suite_role, 'engenharia');
+});
+
+maybe('matriz de permissoes: padrao, ajuste, admin travado e restaurar', async () => {
+  const { call, adminToken } = await setup();
+  const gestor = { name: 'G', email: 'g@rcconstrutec.com.br', password: 'senha-g-1234567', role: 'gestor' };
+  await call('POST', '/v1/users', { token: adminToken, body: gestor });
+  const gestorToken = (await call('POST', '/v1/auth/login', { body: gestor })).data.sessionToken;
+
+  assert.equal((await call('GET', '/v1/permissions')).status, 401);
+  const base = await call('GET', '/v1/permissions', { token: gestorToken });
+  assert.equal(base.status, 200);
+  assert.equal(base.data.permissions.length, 12);
+  assert.equal(base.data.matrix.tecnico.p2, true);
+  assert.equal(base.data.matrix.tecnico.p3, false);
+  assert.equal(base.data.matrix.financeiro.p4, true);
+  assert.equal(base.data.matrix.comercial.p11, true);
+
+  assert.equal((await call('POST', '/v1/permissions', { token: gestorToken, body: { role: 'tecnico', permission: 'p3', allowed: true } })).status, 403);
+  const changed = await call('POST', '/v1/permissions', { token: adminToken, body: { role: 'tecnico', permission: 'p3', allowed: true } });
+  assert.equal(changed.data.matrix.tecnico.p3, true);
+  assert.equal(changed.data.defaults.tecnico.p3, false);
+  assert.equal((await call('GET', '/v1/permissions', { token: gestorToken })).data.matrix.tecnico.p3, true);
+  assert.equal((await call('POST', '/v1/permissions', { token: adminToken, body: { role: 'admin', permission: 'p9', allowed: false } })).status, 400);
+  assert.equal((await call('POST', '/v1/permissions', { token: adminToken, body: { role: 'x', permission: 'p9', allowed: false } })).status, 400);
+
+  const back = await call('POST', '/v1/permissions', { token: adminToken, body: { role: 'tecnico', permission: 'p3', allowed: false } });
+  assert.equal(back.data.matrix.tecnico.p3, false);
+  await call('POST', '/v1/permissions', { token: adminToken, body: { role: 'gestor', permission: 'p8', allowed: true } });
+  const reset = await call('POST', '/v1/permissions/reset', { token: adminToken });
+  assert.equal(reset.data.matrix.gestor.p8, false);
+  assert.equal((await call('POST', '/v1/permissions/reset', { token: gestorToken })).status, 403);
 });

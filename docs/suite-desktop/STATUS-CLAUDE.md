@@ -33,6 +33,12 @@ central e os fluxos de login/handoff. Revisar as 53 chamadas de
 `user_cost_centers` na tela. O plano e a matriz estão em
 `03-PLANO-FASES.md` e `01-ESPEC-TELAS.md`, seção 6.
 
+**Passo 1 concluído (29/09/2026):** a tela de Usuários foi conferida no navegador (servidor de demonstração local) em 1440×900 escuro e 1280×800 escuro e claro: lista, gaveta de novo usuário e aba de e-mails externos, sem erros no console. Sem prints salvos.
+
+**Decisões da D6 (29/09/2026, Lucas: "sigo suas recomendações"):** desenho em `D6-DESENHO-PAPEIS.md`. Supervisor vira técnico, mas todo supervisor existente fica com todas as obras; matriz no central; técnico e engenharia sem obra atribuída não veem nada.
+
+**Passo 2, etapa A (Worker) feita, sem commit/deploy:** `cloudflare/center-container/d1-migrations/012-papeis-suite.sql` (colunas `suite_role` e `apps`, tabela `role_permission_overrides`), `suiteRoles.js` (6 papéis, matriz padrão, papel efetivo, apps), `publicUser` devolve `suiteRole` e `apps`, e as rotas `POST /v1/users/access`, `GET/POST /v1/permissions`, `POST /v1/permissions/reset`; criar usuário aceita `suiteRole` e `apps`. Testes: 2 novos em `test/central-identity.test.js`; `npm test` 310/310. Falta no Worker: `suite_role`/`apps` em convites e cadastros (`signup.js`), e `last_seen_at`. A migração 012 ainda **não** foi aplicada no D1 de produção.
+
 Próximos passos: (1) validar a primeira tela em navegador nos dois temas;
 (2) conferir os testes e corrigir regressões; (3) desenhar migração 109
 aditiva, modelo de papéis e matriz no diretório central e no banco local;
