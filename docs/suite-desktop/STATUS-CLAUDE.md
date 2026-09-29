@@ -56,6 +56,13 @@ Branch `feat/desktop-cadastros` (worktree `../wt-cc-cadastros`), rebaseada sobre
 - **Gate de migração:** antes de aplicar em uma base real, verificar CPFs/CNPJs legados duplicados pela consulta comentada em `migrations/107_desktop_cadastros.sql`. O índice único interrompe a migração se houver duplicidade; não há limpeza automática. Nenhuma migração foi aplicada à base real nesta validação.
 - **Prints:** 40 em `docs/suite-desktop/validacao/D5/` (10 estados, 1440×900 e 1280×800, claro e escuro). Em 1280 a coluna "Próximas gerações" passa para baixo da tabela.
 
+### Exclusão de centros de custo (sistema atual e `/d/`)
+
+- Botão **Excluir** visível somente a admin nas duas interfaces. A carteira `/d/` permite listar obras ativas e inativas.
+- O servidor aceita a exclusão apenas de centro sem vínculos; dados financeiros, contratos, medições, notas, propostas e recorrências são preservados. A ação é auditada na mesma transação.
+- A migração `108_cost_center_tombstones.sql` registra o `public_id` excluído. CSV e pacote inteligente antigos não recriam esse centro nesta instalação; a resolução manual de conflito também respeita a exclusão. A confirmação informa que outras instalações não são alteradas.
+- Teste direcionado: `test/cost-center-delete.integration.test.js`; `npm test` na branch isolada: 296/296. Na branch combinada com D5, os testes direcionados passaram 13/13, `npm run check` verificou 171 arquivos e `npm test` passou 308/308.
+
 ### D3b · Obras (medições, Curva S e ferramentas)
 
 - **Servidor (sem migração):**
