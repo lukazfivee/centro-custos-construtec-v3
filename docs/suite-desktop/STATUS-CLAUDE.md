@@ -1,6 +1,6 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
-Fase atual: D4 pronta, aguardando revisão do Lucas · Branch: `feat/desktop-cobrancas` (worktree `../wt-cc-desktop`), a partir do main com a D3 completa
+Fase atual: D4 validada no PR #63 · Branch: `feat/desktop-cobrancas` (worktree `../wt-cc-desktop`), a partir do main com a D3 completa
 
 ## Última atualização
 
@@ -26,7 +26,8 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 
 ### D4 · Cobranças
 
-- **Servidor (sem migração e sem tocar no Worker da nuvem):**
+- **Revisão do PR #63 (29/09):** os dois Workers rejeitam envio direto sem NF em PDF (409). O rascunho não pode ser salvo durante `sending`; autorização e primeira tentativa de envio usam atualização condicional. O Resend recebe uma chave de idempotência por autorização. Uma falha sem confirmação pode ser retomada após um minuto, com a mesma NF e chave, até 23 horas após a primeira tentativa; depois exige conferência manual. Após aceitar o e-mail, o Worker só muda situações elegíveis para `aguardando_pagamento`, sem sobrescrever pagamento ou valores de outra sessão. A tela pública do Worker passou a exigir o PDF. Se o histórico ou a situação não puder ser atualizado, a tela avisa para conferir antes de reenviar. `npm test`: 295/295; `npm run check`: 160 arquivos; teste direcionado: 7/7. Nenhum e-mail real foi enviado.
+- **Servidor (sem migração):**
   - `POST /cloud-sync/cobrancas/:id/enviar` passa a barrar o envio quando não há NF em PDF (nem anexada nem vinculada à obra), com a mensagem "Anexe a nota fiscal em PDF antes de enviar…" (409). Antes, o e-mail saía sem anexo;
   - `scripts/dev/fake-commercial-worker.js`: um Worker comercial de mentira, em memória, que reproduz as regras do real (acompanhamento com padrões, salvar o rascunho zera a autorização, enviar só o autorizado) e **não envia e-mail**. Serve aos testes e ao servidor de teste.
 - **Telas (`public/d/telas/`):**
@@ -35,7 +36,7 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
   - `cobranca-painel.js`: o painel de acompanhamento dos prints 41 e 43, com o andamento, o "Próximo passo" (marcar aprovada, emitir NF, preparar e-mail, registrar pagamento com confirmação) e a troca de aba perguntando antes de descartar;
   - `cobranca-dados.js`: editar os dados do acompanhamento, com os campos e as validações do Worker (até 15 e-mails, valores, datas) e a escolha de cliente cadastrado;
   - `cobranca-email.js`: o print 42. **Enviar salva antes** (problema 7): como salvar o rascunho zera a autorização no Worker, o botão faz salvar, autorizar (com a caixa "Autorizo o envio…" marcada) e enviar. A cópia obrigatória de faturamento aparece travada. O anexo é a NF do cliente da obra (aba Notas fiscais da D3), a NF vinculada da obra (cadastro antigo) ou um PDF do computador, com até 5 MB. A data crua do rascunho padrão vira dd/mm/aaaa. Supervisor vê tudo em leitura, sem botões. Erros no topo do painel.
-- **Depois de enviar**, a situação financeira vai para "Aguardando pagamento" se estava em a faturar, NF emitida ou enviada.
+- **Depois de enviar**, o Worker muda a situação financeira para "Aguardando pagamento" se estava em a faturar, NF emitida ou enviada.
 - **CSS:** `css/cobrancas.css`.
 - **Testes:** `test/cobrancas-desktop.test.js`, contra o Worker de mentira: fluxo rascunho, autorização e envio; sem autorização dá 409, sem NF dá 409, arquivo que não é PDF dá 400; editar o rascunho depois de enviar exige autorizar de novo; a NF vinculada à obra vale como anexo; supervisor recebe 403 ao salvar, autorizar e enviar; e-mail fora da empresa recebe 403. Mais um teste de estrutura da D4.
 
@@ -284,7 +285,7 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 
 ## Achados fora do escopo
 
-- **D4 · situação ao enviar:** o Worker nunca muda a situação financeira ao enviar. Quem faz isso agora é a tela nova (vai para Aguardando pagamento). A tela atual segue como antes.
+- **D4 · situação ao enviar:** o Worker agora muda apenas situações elegíveis para Aguardando pagamento após aceitar o e-mail; uma cobrança já paga permanece paga. A tela atual e a nova usam a mesma regra.
 - **D4 · rascunho no envelope:** o desenho marca com um ponto o envelope de quem tem rascunho salvo. O Worker só informa o rascunho obra por obra, e isso custaria uma chamada por linha. Ficou de fora da lista; o rascunho aparece ao abrir o e-mail.
 - **D4 · datas dos passos:** o desenho mostra "Em 24/09/2026" em cada passo. O Worker só guarda a data de conclusão e o vencimento. Cada passo mostra o que existe.
 - **D4 · a coluna "Medição":** virou "Conclusão" porque a cobrança é por obra (decisão 3).

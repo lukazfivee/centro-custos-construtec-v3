@@ -1,5 +1,5 @@
-// Aba E-mail ao cliente (print 42): rascunho, autorizacao e envio. "Enviar" salva antes (problema 7):
-// salvar -> autorizar (com a caixa marcada) -> enviar, porque salvar o rascunho zera a autorizacao no Worker.
+// Aba E-mail ao cliente (print 42): rascunho, autorizacao e envio. Um envio pendente
+// reutiliza a autorizacao e a NF, sem salvar o rascunho novamente.
 // Anexo: uma NF em PDF (ate 5 MB). Sem escolha, o servidor usa o PDF da NF vinculada a obra; sem NF, barra o envio.
 (function (CC) {
   const D = CC.d;
@@ -64,9 +64,11 @@
     const fixos = ((r.copyPolicy && r.copyPolicy.emails) || []).map((e) => e.toLowerCase());
     const extras = (d.cc || []).filter((e) => !fixos.includes(String(e).toLowerCase()));
     const enviado = d.status === 'sent';
+    const pendente = d.status === 'sending';
     const banner = enviado ? U.faixa('ok', 'check-circle', `Enviado em ${dataHora(d.sentAt)}${pode ? ' · reenviar manda uma nova cópia' : ''}`)
-      : (d.status === 'failed' ? U.faixa('err', 'warning-circle', `O último envio falhou: ${d.lastError || 'erro desconhecido'}`)
-        : (d.status === 'authorized' ? U.faixa('info', 'seal-check', `Autorizado por ${d.authorizedByEmail || 'gestor'} em ${dataHora(d.authorizedAt)}`) : ''));
+      : (pendente ? U.faixa('warn', 'clock', 'Envio sem confirmação. Após um minuto, escolha a mesma NF e tente confirmar novamente; confira o histórico antes de reenviar.')
+        : (d.status === 'failed' ? U.faixa('err', 'warning-circle', `O último envio falhou: ${d.lastError || 'erro desconhecido'}`)
+        : (d.status === 'authorized' ? U.faixa('info', 'seal-check', `Autorizado por ${d.authorizedByEmail || 'gestor'} em ${dataHora(d.authorizedAt)}`) : '')));
     const somenteLer = pode ? '' : ' disabled';
     const opcoesAnexo = [...nfs.map((n) => `<option value="nf:${esc(n.id)}">${esc(`${n.nomeArquivo || 'nota.pdf'} · ${n.observacao || 'NF'} · ${CC.money(n.valor)}`)}</option>`), '<option value="vinculada">Usar a NF vinculada à obra (cadastro antigo)</option>', '<option value="arquivo">Outro PDF do computador…</option>'].join('');
     ctl.desenhar(`${banner}<form class="form-lanc" novalidate>
@@ -87,8 +89,8 @@
     sel.addEventListener('change', trocar);
     trocar();
     const marca = CC.$('[name="autorizo"]', corpo);
-    ctl.botoes(`<button type="button" class="btn btn-s" data-fechar>Fechar</button><button type="button" class="btn btn-s" data-rascunho>Salvar rascunho</button>
-      <button type="button" class="btn btn-p" data-enviar disabled>${D.ic('paper-plane-tilt')}${enviado ? 'Reenviar e-mail' : 'Enviar e-mail'}</button>`);
+    ctl.botoes(`<button type="button" class="btn btn-s" data-fechar>Fechar</button><button type="button" class="btn btn-s" data-rascunho${pendente ? ' disabled' : ''}>Salvar rascunho</button>
+      <button type="button" class="btn btn-p" data-enviar disabled>${D.ic('paper-plane-tilt')}${pendente ? 'Confirmar envio pendente' : (enviado ? 'Reenviar e-mail' : 'Enviar e-mail')}</button>`);
     const bEnviar = CC.$('[data-enviar]', ctl.rodape);
     const bRascunho = CC.$('[data-rascunho]', ctl.rodape);
     marca.addEventListener('change', () => { bEnviar.disabled = !marca.checked; });
@@ -116,7 +118,7 @@
       ctl.erro(''); ocupado = true; bRascunho.disabled = true;
       try { await salvar(v); ctl.marcarSalvo(); CC.toast('Rascunho salvo · confirme a autorização para enviar'); ir('email'); } catch (error) {
         ctl.erro(error.status === 0 ? 'Sem internet. Salvar precisa da conexão.' : error.message);
-      } finally { ocupado = false; bRascunho.disabled = false; }
+      } finally { ocupado = false; bRascunho.disabled = pendente; }
     });
 
     bEnviar.addEventListener('click', async () => {
@@ -128,18 +130,25 @@
       ctl.erro(''); ocupado = true; bEnviar.disabled = true; bRascunho.disabled = true;
       try {
         const anexos = await anexoEscolhido(corpo, nfs);
-        await salvar(v); // 1. salva o que esta na tela (problema 7)
-        await CC.api(`${base}/autorizar`, { method: 'POST', body: { confirmar: true } }); // 2. salvar zera a autorizacao
-        await CC.api(`${base}/enviar`, { method: 'POST', body: { attachments: anexos } }); // 3. envia (o servidor exige a NF)
-        if (['a_faturar', 'nf_emitida', 'enviada'].includes(item.financialStatus)) {
-          await B.salvarAcompanhamento(item, { financialStatus: 'aguardando_pagamento' }).catch(() => {});
+        if (!pendente) {
+          await salvar(v); // 1. salva o que esta na tela (problema 7)
+          await CC.api(`${base}/autorizar`, { method: 'POST', body: { confirmar: true } }); // 2. salvar zera a autorizacao
         }
+        const envio = await CC.api(`${base}/enviar`, { method: 'POST', body: { attachments: anexos } }); // 3. envia; o Worker atualiza a situacao sem sobrescrever outros dados
         B.mudou = true; ctl.marcarSalvo();
         CC.toast('E-mail enviado ao cliente');
+        if (envio.data.postSendWarning) {
+          ctl.erro('E-mail enviado, mas o histórico ou a situação da cobrança não pôde ser atualizado. Confira o acompanhamento; não reenvie.');
+          return;
+        }
         ir('email');
       } catch (error) {
-        ctl.erro(error.status === 0 ? 'Sem internet. O e-mail não foi enviado; tente de novo quando a conexão voltar.' : error.message);
-        ocupado = false; bEnviar.disabled = !marca.checked; bRascunho.disabled = false;
+        try {
+          const atual = (await CC.api(`${base}/rascunho`)).data;
+          if (atual.draft?.status === 'sending') { ir('email'); return; }
+        } catch { /* Pode continuar sem conexão; a consulta será refeita ao abrir a aba. */ }
+        ctl.erro(error.status === 0 ? 'Sem internet. Não foi possível confirmar o envio; confira o rascunho antes de tentar novamente.' : error.message);
+        ocupado = false; bEnviar.disabled = !marca.checked; bRascunho.disabled = pendente;
       }
     });
   };
