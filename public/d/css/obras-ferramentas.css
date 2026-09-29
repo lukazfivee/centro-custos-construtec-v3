@@ -1,0 +1,66 @@
+/* Obras (D3b): medicoes, Curva S, importar e vincular, e a folha de impressao. */
+.kpis.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.obra [data-aba-corpo] { display: flex; flex-direction: column; gap: 14px; }
+.obra [data-aba-corpo] > .seg { align-self: flex-start; }
+.grade-med { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 14px; align-items: start; }
+.grade-med .bt { font-size: 15px; font-weight: 600; }
+.grade-med form .btn-p { width: 100%; }
+.valor-medido { color: var(--color-accent-300); }
+.centro { display: flex; justify-content: center; padding: 0 0 24px; }
+
+.grafico.curva { height: 250px; }
+.grafico.curva .grade { stroke: var(--color-divider); stroke-width: 1; }
+.grafico.curva .previsto { stroke: #8fa6b0; stroke-width: 2; stroke-dasharray: 6 5; }
+.grafico.curva .realizado { stroke: #e0803a; stroke-width: 2.5; }
+.grafico.curva .medido { stroke: #3ccf8e; stroke-width: 2.5; }
+.grafico.curva .ponto { fill: #e0803a; }
+.legenda .q.l-prev { background: #8fa6b0; height: 3px; }
+.legenda .q.l-real { background: #e0803a; height: 3px; }
+.legenda .q.l-med { background: #3ccf8e; height: 3px; }
+.como-ler { font-size: 13px; color: var(--color-neutral-300); }
+.como-ler b { color: var(--color-text); }
+.premissas { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--color-neutral-300); }
+
+.vinc { flex-wrap: wrap; }
+.vinc .tx { flex: 1 1 100%; }
+.vinc select { flex: 1; min-width: 0; }
+
+/* Folha de impressao (relatorio executivo e boletim). */
+.impressao { position: fixed; inset: 0; z-index: 80; background: var(--color-bg); overflow: auto; display: flex; flex-direction: column; }
+.imp-barra { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 12px 24px; background: var(--color-surface); box-shadow: 0 1px 0 var(--color-divider); }
+.imp-barra .espaco { flex: 1; }
+.folha { width: min(960px, calc(100% - 32px)); margin: 24px auto 48px; padding: 36px 40px; background: #fefefe; color: #0b2530; border-radius: 12px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 18px; font-size: 13px; }
+.folha .muted, .folha .lbl { color: #5d7480; }
+.folha .eyebrow { color: #0a7896; }
+.folha-cab { display: flex; align-items: center; gap: 16px; padding-bottom: 14px; border-bottom: 2px solid #031f29; }
+.folha-cab img { width: 44px; height: 44px; }
+.folha-cab h2 { font-size: 20px; text-transform: uppercase; letter-spacing: .02em; }
+.folha-id { display: grid; grid-template-columns: 140px minmax(0, 1fr) 140px minmax(0, 1fr); gap: 6px 14px; margin: 0; }
+.folha-id dt { font-weight: 600; color: #5d7480; }
+.folha-id dd { margin: 0; }
+.folha-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.folha-nums > span { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid #d6e4e9; border-radius: 8px; }
+.folha-nums b { font-size: 15px; }
+.folha-nums b.err { color: #b8452c; }
+.folha h3 { font-size: 14px; margin-top: 6px; }
+.folha .tbl th, .folha .tbl td { color: #0b2530; border-color: #d6e4e9; height: auto; padding: 6px 8px; }
+.folha .tbl.pequena { font-size: 11.5px; }
+.folha-obs { margin: 0; }
+.assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
+.assinaturas span { padding-top: 8px; border-top: 1px solid #0b2530; text-align: center; font-weight: 600; }
+
+@media print {
+  body.imprimindo > *:not(.impressao) { display: none !important; }
+  body.imprimindo { background: #fff; }
+  .impressao { position: static; background: #fff; overflow: visible; }
+  .imp-barra { display: none; }
+  .folha { width: auto; margin: 0; padding: 0; box-shadow: none; border-radius: 0; }
+}
+
+@media (max-width: 1379px) {
+  .grade-med { grid-template-columns: minmax(0, 1fr); }
+  .folha-id { grid-template-columns: 120px minmax(0, 1fr); }
+}
+.grafico.curva .ponto-medido { fill: #3ccf8e; }
+.grafico.curva .ponto-realizado { fill: #e0803a; }
+.grafico.curva .ponto-previsto { fill: #8fa6b0; }

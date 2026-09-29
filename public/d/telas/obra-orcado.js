@@ -66,10 +66,12 @@
         ${linha('Contrato', [ct.number, ct.baselineVersion != null ? `REV ${String(ct.baselineVersion).padStart(2, '0')}` : ''].filter(Boolean).join(' '))}
         ${linha('Cliente', obra.cliente)}${linha('Responsável', obra.responsavel)}${linha('Início', D.data(obra.data_inicio))}${linha('Término previsto', D.data(obra.data_fim))}
         ${linha('Baseline', ct.approvedAt ? 'Aprovada e selada' : '')}</div>
-        ${proposta ? `<button type="button" class="btn btn-s" data-proposta>${D.ic('file-pdf')}Proposta aprovada (PDF)</button>` : ''}</section>
+        ${proposta ? `<button type="button" class="btn btn-s" data-proposta>${D.ic('file-pdf')}Proposta aprovada (PDF)</button>` : ''}
+        ${D.pode('cadastrar') ? `<button type="button" class="btn btn-g" data-revisao>${D.ic('arrows-clockwise')}Atualizar revisão</button>` : ''}</section>
       <section class="card bloco"><b class="bt">Orçado × realizado por tipo</b>${porTipo('Material', soma('material'), ct.materialsCost || 0)}${porTipo('Mão de obra', soma('labor'), ct.laborCost || 0)}</section>
       ${semVinculo.count ? `<section class="card bloco sem-vinculo"><b class="bt">${D.ic('link-break')}${semVinculo.count} gasto${semVinculo.count === 1 ? '' : 's'} sem vínculo · ${esc(CC.money(semVinculo.totalCost))}</b>
-        <span class="muted">Lançamentos da obra que ainda não estão ligados a um insumo da planilha. Vincular a insumos chega na D3b; por enquanto, use o sistema atual.</span></section>` : ''}
+        <span class="muted">Lançamentos da obra que ainda não estão ligados a um insumo da planilha. Vincule para o consumo ficar certo.</span>
+        ${D.pode('cadastrar') ? '<button type="button" class="btn btn-s" data-vincular>Vincular a insumos</button>' : ''}</section>` : ''}
     </aside>`;
   }
 
@@ -81,9 +83,12 @@
       CC.api(`/centros-custo/${obra.id}/proposta`).then((r) => r.data.proposta).catch(() => null),
     ]);
     if (!vivo()) return;
+    const recarregar = () => { if (vivo()) O.abas.orcado(corpo, obra, vivo); };
     if (!cmp.hasBudget) {
-      corpo.innerHTML = `<div class="card">${U.vazio('file-text', 'Esta obra ainda não tem orçamento importado.', 'Importe a proposta aprovada do Orçamentos para ver a planilha, o consumo e a Curva S. A importação chega na D3b; por enquanto, use o sistema atual.')}</div>
+      corpo.innerHTML = `<div class="card">${U.vazio('file-text', 'Esta obra ainda não tem orçamento importado.', 'Importe a proposta aprovada do Orçamentos para ver a planilha, o consumo e a Curva S.')}${D.pode('cadastrar') ? '<div class="centro"><button type="button" class="btn btn-p" data-importar-obra>Importar orçamento</button></div>' : ''}</div>
         <div class="kpis">${U.kpi({ rotulo: 'Realizado', valor: CC.money(obra.total_despesas || 0), icone: 'arrow-up-right', tom: 'saida' })}${U.kpi({ rotulo: 'Contrato', valor: CC.money(obra.valor_contrato || 0), icone: 'handshake' })}${U.kpi({ rotulo: 'Orçamento mensal', valor: CC.money(obra.orcamento || 0), icone: 'calendar-blank' })}</div>`;
+      const bi = CC.$('[data-importar-obra]', corpo);
+      if (bi) bi.addEventListener('click', () => O.importar(obra.id, recarregar));
       return;
     }
     const s = cmp.summary;
@@ -112,5 +117,9 @@
     CC.$('[data-csv]', corpo).addEventListener('click', () => baixar(`/centros-custo/${obra.id}/orcado-realizado/csv`, `orcado-vs-realizado-${obra.codigo || obra.id}.csv`));
     const bp = CC.$('[data-proposta]', corpo);
     if (bp) bp.addEventListener('click', () => baixar(`/centros-custo/${obra.id}/proposta/arquivo`, (prop && prop.nome) || 'proposta.pdf'));
+    const br = CC.$('[data-revisao]', corpo);
+    if (br) br.addEventListener('click', () => O.importar(obra.id, recarregar));
+    const bv = CC.$('[data-vincular]', corpo);
+    if (bv) bv.addEventListener('click', () => O.vincular(obra, cmp, recarregar));
   };
 })(window.CC);
