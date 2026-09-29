@@ -14,7 +14,17 @@ function padrao(o) {
 async function iniciar({ obras = [], clientes = [] } = {}) {
   const estado = { followups: new Map(), drafts: new Map(), enviados: [], clientes: clientes.slice() };
   const linha = (o) => ({ publicId: o.publicId, code: o.code, name: o.name, client: o.client, ...padrao(o), ...(estado.followups.get(o.publicId) || {}), updatedByEmail: null, updatedAt: null });
-  const draftPadrao = (o) => { const f = linha(o); return { to: f.clientEmails, cc: [], subject: `Acompanhamento financeiro — ${o.code} ${o.name}`, bodyText: `Prezados,\n\nAcompanhamento financeiro da obra ${o.code} — ${o.name}.\n\nAtenciosamente,\nConstrutec Engenharia`, status: 'draft' }; };
+  const draftPadrao = (o) => { const f = linha(o); return { to: f.clientEmails, cc: [], subject: `Acompanhamento financeiro — ${o.code} ${o.name}`.trim(), bodyText: `Prezados,
+
+Entramos em contato para acompanhamento financeiro da obra/serviço ${o.code} — ${o.name}.
+
+Valor em aberto: ${Number(f.receivableAmount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}${f.dueDate ? `
+Vencimento: ${f.dueDate}` : ''}.
+
+Permanecemos à disposição para qualquer esclarecimento.
+
+Atenciosamente,
+Construtec Engenharia`, status: 'draft' }; };
 
   const server = http.createServer((req, res) => {
     let corpo = '';

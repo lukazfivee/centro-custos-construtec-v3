@@ -14,7 +14,7 @@
 .tabela .tbl td { font-size: 13px; }
 .tabela .data { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .tabela .data .ph { color: var(--color-neutral-300); }
-.tabela .vencido { color: var(--c-err); }
+.tabela .vencido, .resumo-cob .vencido { color: var(--c-err); }
 .duas-l { display: flex; flex-direction: column; min-width: 0; }
 .duas-l b { font-size: 13px; font-weight: 600; }
 .duas-l span { font-size: 11.5px; color: var(--color-neutral-300); }

@@ -139,3 +139,18 @@ test('D3b Obras: medições, Curva S, relatório, importar e vincular', () => {
   assert.match(imp, /allocationId: card\.dataset\.gasto/);
   assert.match(src('css/obras-ferramentas.css'), /@media print/);
 });
+
+test('D4 Cobranças: regras, "Enviar" salva antes e a autorização é refeita', () => {
+  const regras = src('telas/cobrancas-regras.js');
+  assert.match(regras, /timeZone: 'America\/Sao_Paulo'/, 'vencida usa a data de Brasília');
+  assert.match(regras, /Math\.round\(CC\.cents\(x\) \* 100\)/, 'somas em centavos');
+  assert.match(regras, /pendente = \(i\) => \['a_faturar', 'nf_emitida'\]\.includes\(i\.financialStatus\)/);
+  const email = src('telas/cobranca-email.js');
+  const ordem = ['await salvar(v)', '/autorizar', '/enviar'].map((t) => email.indexOf(t));
+  assert.ok(ordem.every((n) => n > 0) && ordem[0] < ordem[1] && ordem[1] < ordem[2], 'salvar, autorizar e só então enviar');
+  assert.match(email, /confirmar: true/);
+  assert.match(email, /disabled>/, 'sem permissão os campos ficam só para leitura');
+  assert.ok(email.includes("'$3/$2/$1'"), 'data ISO do rascunho padrão vira dd/mm/aaaa');
+  assert.match(src('telas/cobranca-painel.js'), /const pode = D\.pode\('cadastrar'\)/);
+  assert.match(src('app.js'), /D\.cobr\.atualizarContador/);
+});

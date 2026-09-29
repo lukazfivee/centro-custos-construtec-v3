@@ -1,6 +1,6 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
-Fase atual: D3b pronta, aguardando revisão do Lucas · Branch: `feat/desktop-obras-2` (worktree `../wt-cc-desktop`), a partir da D3a (PR #61)
+Fase atual: D4 pronta, aguardando revisão do Lucas · Branch: `feat/desktop-cobrancas` (worktree `../wt-cc-desktop`), a partir do main com a D3 completa
 
 ## Última atualização
 
@@ -17,11 +17,27 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 4. **Recorrentes quinzenais:** saem do protótipo. Só voltam, na D5, se aparecerem custos quinzenais de verdade.
 5. **Visibilidade por obra:** entra na D6, junto com os papéis e os testes de 403 por URL.
 6. **Aba Sincronização:** sai do menu. As rotas `/api/sincronizacao*` continuam no servidor até a troca do `/` pelo novo.
+10. **Cobranças (D4, 29/09/2026):** e-mail sem NF é barrado no servidor (vale para a tela atual também); "Pedir autorização" (print 44) fica para a D6; só a NF vai anexada, sem o boletim.
 9. **Obras (D3, 28/09/2026):** a fase foi dividida em D3a (carteira, detalhe, orçado × realizado, lançamentos e NF) e D3b (medições, Curva S, relatório, importar e vincular). Importar orçamento passa a ser só para admin e gestor (na D3b). A edição da obra confere a revisão quando a tela a envia.
 8. **Sem internet (D2, 28/09/2026):** opção 1. O novo lançamento entra na fila do celular (`public/m/queue.js`), guardada neste navegador, e sai quando a conexão volta.
 7. **Lançamento rápido (D1, 28/09/2026):** segue o protótipo. Sem o campo de fornecedor, que volta pelo Editar na D2. Com competência e vencimento escolhidos pela pessoa.
 
 ## Feito
+
+### D4 · Cobranças
+
+- **Servidor (sem migração e sem tocar no Worker da nuvem):**
+  - `POST /cloud-sync/cobrancas/:id/enviar` passa a barrar o envio quando não há NF em PDF (nem anexada nem vinculada à obra), com a mensagem "Anexe a nota fiscal em PDF antes de enviar…" (409). Antes, o e-mail saía sem anexo;
+  - `scripts/dev/fake-commercial-worker.js`: um Worker comercial de mentira, em memória, que reproduz as regras do real (acompanhamento com padrões, salvar o rascunho zera a autorização, enviar só o autorizado) e **não envia e-mail**. Serve aos testes e ao servidor de teste.
+- **Telas (`public/d/telas/`):**
+  - `cobrancas-regras.js`: as regras. Situações operacional e financeira; "vencida" usa a data de Brasília; os 4 passos (medição aprovada, NF emitida, e-mail enviado e pagamento); os indicadores em centavos com HALF_UP; os filtros e o CSV;
+  - `cobrancas.js`: a lista do print 40, com 4 indicadores, busca, filtros, tabela, rodapé "Em aberto", Exportar CSV, e o contador de pendências no menu (pendentes mais vencidas, como no desenho);
+  - `cobranca-painel.js`: o painel de acompanhamento dos prints 41 e 43, com o andamento, o "Próximo passo" (marcar aprovada, emitir NF, preparar e-mail, registrar pagamento com confirmação) e a troca de aba perguntando antes de descartar;
+  - `cobranca-dados.js`: editar os dados do acompanhamento, com os campos e as validações do Worker (até 15 e-mails, valores, datas) e a escolha de cliente cadastrado;
+  - `cobranca-email.js`: o print 42. **Enviar salva antes** (problema 7): como salvar o rascunho zera a autorização no Worker, o botão faz salvar, autorizar (com a caixa "Autorizo o envio…" marcada) e enviar. A cópia obrigatória de faturamento aparece travada. O anexo é a NF do cliente da obra (aba Notas fiscais da D3), a NF vinculada da obra (cadastro antigo) ou um PDF do computador, com até 5 MB. A data crua do rascunho padrão vira dd/mm/aaaa. Supervisor vê tudo em leitura, sem botões. Erros no topo do painel.
+- **Depois de enviar**, a situação financeira vai para "Aguardando pagamento" se estava em a faturar, NF emitida ou enviada.
+- **CSS:** `css/cobrancas.css`.
+- **Testes:** `test/cobrancas-desktop.test.js`, contra o Worker de mentira: fluxo rascunho, autorização e envio; sem autorização dá 409, sem NF dá 409, arquivo que não é PDF dá 400; editar o rascunho depois de enviar exige autorizar de novo; a NF vinculada à obra vale como anexo; supervisor recebe 403 ao salvar, autorizar e enviar; e-mail fora da empresa recebe 403. Mais um teste de estrutura da D4.
 
 ### D3b · Obras (medições, Curva S e ferramentas)
 
@@ -159,6 +175,20 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 
 ## Como validei
 
+### D4
+
+- `npm run check`: 160 arquivos. `npm test`: **293 testes, 293 passando**.
+- **Nada foi enviado de verdade.** Tudo rodou contra o Worker de mentira. O envio real (Resend) só pode ser conferido com a nuvem e as chaves reais.
+- No navegador, com 4 cobranças de exemplo e uma gestora da empresa:
+  - **Indicadores** batem com a conta à mão: finalizadas R$ 84.000, aguardando R$ 64.200 (1 vencida), 2 pendentes, a receber R$ 186.500. O contador do menu mostra 3 (2 pendentes e 1 vencida).
+  - **Filtros e busca:** pendentes 2, aguardando 0, vencidas 1, pagas 1, e "paulista" acha 1.
+  - **Fluxo:** "Emitir NF" sem número leva ao formulário com o foco no campo; ao salvar a NF o andamento avança; o e-mail abre já com o destinatário e a cópia fixa; o botão Enviar começa desligado; o e-mail inválido é recusado; a mensagem editada e não salva foi salva e enviada (problema 7); a situação foi para Aguardando pagamento; o rascunho passa a mostrar "Enviado em …" e o botão "Reenviar".
+  - **Sem NF:** a obra sem PDF de NF mostra o aviso do servidor no topo do painel.
+  - **Vencida:** o último passo fica em vermelho, com "cobrar de novo". Registrar pagamento confirma no diálogo, e a lista, os indicadores e o contador atualizam.
+  - **Supervisor:** só lê. Vê o menu, o painel e o e-mail sem botões e com os campos desligados.
+- **Prints:** 36 em `validacao/D4/`: lista, filtro de vencidas, acompanhar, vencida, editar dados, e-mail, sem NF, validação e supervisor.
+- Uma falha isolada em `test/jobs-queue.test.js` apareceu durante as rodadas: ele usa uma pasta temporária de nome fixo e colide quando outra execução de testes roda ao mesmo tempo (a outra sessão também roda `npm test`). Passou 5 de 5 na tentativa seguinte e na suíte completa.
+
 ### D3b
 
 - `npm run check`: 155 arquivos. `npm test`: **291 testes, 291 passando**.
@@ -253,6 +283,13 @@ Respostas às 6 perguntas do `PROMPT-CLAUDE-CODE.md` (27/09/2026, "ok para tudo 
 - **Editar e anexar sem internet:** não entram na fila, por decisão de escopo. O painel avisa e mantém o que foi digitado.
 
 ## Achados fora do escopo
+
+- **D4 · situação ao enviar:** o Worker nunca muda a situação financeira ao enviar. Quem faz isso agora é a tela nova (vai para Aguardando pagamento). A tela atual segue como antes.
+- **D4 · rascunho no envelope:** o desenho marca com um ponto o envelope de quem tem rascunho salvo. O Worker só informa o rascunho obra por obra, e isso custaria uma chamada por linha. Ficou de fora da lista; o rascunho aparece ao abrir o e-mail.
+- **D4 · datas dos passos:** o desenho mostra "Em 24/09/2026" em cada passo. O Worker só guarda a data de conclusão e o vencimento. Cada passo mostra o que existe.
+- **D4 · a coluna "Medição":** virou "Conclusão" porque a cobrança é por obra (decisão 3).
+- **D4 · a autorização fica gravada quando o envio falha** (por exemplo, sem NF). Ao corrigir e tentar de novo, o sistema salva e autoriza outra vez.
+- **D4 · teste de trava:** `test/jobs-queue.test.js` usa uma pasta temporária de nome fixo e falha se duas execuções de testes rodarem juntas. Vale trocar por uma pasta única por execução.
 
 - **D3b · AC da Curva S:** a Curva S conta só os gastos já vinculados a insumos. O realizado do orçado × realizado soma também os sem vínculo. Por isso os dois números diferem enquanto houver gastos sem vínculo. É a regra atual do servidor e ficou igual.
 - **D3b · limite de login no teste:** capturar os prints fazendo muitos logins seguidos esbarrou no limite de tentativas do servidor de teste. É proteção esperada, não um erro do app.
