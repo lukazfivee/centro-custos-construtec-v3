@@ -134,6 +134,8 @@ router.post('/cobrancas/:publicId/autorizar', exigirPapel('admin','gestor'), asy
 router.post('/cobrancas/:publicId/enviar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
   let attachments = validateInvoicePdfAttachments(req.body?.attachments);
   if (!attachments.length) attachments = await linkedInvoiceAttachments(req.params.publicId);
+  // Cobranca sem nota fiscal nao sai: anexe o PDF da NF ou vincule o PDF a obra.
+  if (!attachments.length) throw httpError(409,'Anexe a nota fiscal em PDF antes de enviar (ou vincule o PDF da nota à obra).');
   res.json(await cloud.sendClientDraft(req.usuario, req.params.publicId, attachments));
 }));
 
