@@ -165,14 +165,36 @@ router.put('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) =>
 
 router.delete('/:id', exigirPapel('admin'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
-  const check = await getDb().query('SELECT id, name FROM cost_centers WHERE id = $1', [id]);
-  if (!check.rows[0]) throw httpError(404, 'Centro de custo não encontrado.');
-  const hasTransactions = await getDb().query('SELECT 1 FROM transactions WHERE cost_center_id = $1 LIMIT 1', [id]);
-  if (hasTransactions.rows.length) throw httpError(409, 'Centro de custo possui lançamentos vinculados. Exclua-os primeiro ou inative o centro.');
-  const hasBaselines = await getDb().query('SELECT 1 FROM project_contracts WHERE cost_center_id = $1 LIMIT 1', [id]);
-  if (hasBaselines.rows.length) throw httpError(409, 'Centro de custo possui contratos/baselines vinculados. Remova-os primeiro.');
-  await getDb().query('DELETE FROM cost_centers WHERE id = $1', [id]);
-  await recordAudit({entityType:'obra',entityId:id,action:'excluida',summary:'Obra / centro excluído: '+check.rows[0].name,data:null,user:req.usuario});
+  const vinculados = [
+    ['transactions', 'lançamentos'],
+    ['transaction_allocations', 'rateios de lançamentos'],
+    ['recurring_templates', 'recorrências'],
+    ['project_contracts', 'contratos ou orçamentos'],
+    ['expense_allocations', 'apropriações de despesas'],
+    ['cost_recognitions', 'reconhecimentos de custos'],
+    ['labor_measurements', 'medições de mão de obra'],
+    ['contract_measurements', 'medições contratuais'],
+    ['cost_center_invoices', 'notas fiscais vinculadas'],
+    ['cost_center_invoices_ledger', 'notas fiscais'],
+    ['cost_center_proposals', 'propostas'],
+  ];
+  try {
+    await getDb().transaction(async (db) => {
+      // O lock impede que outro pedido vincule dados enquanto verificamos a exclusão.
+      const check = await db.query('SELECT id, public_id, name FROM cost_centers WHERE id = $1 FOR UPDATE', [id]);
+      if (!check.rows[0]) throw httpError(404, 'Centro de custo não encontrado.');
+      for (const [table, label] of vinculados) {
+        const found = await db.query(`SELECT 1 FROM ${table} WHERE cost_center_id = $1 LIMIT 1`, [id]);
+        if (found.rows.length) throw httpError(409, `Centro de custo possui ${label} vinculados. Inative o centro para preservar os dados.`);
+      }
+      await db.query('INSERT INTO cost_center_tombstones (public_id) VALUES ($1) ON CONFLICT (public_id) DO NOTHING', [check.rows[0].public_id]);
+      await db.query('DELETE FROM cost_centers WHERE id = $1', [id]);
+      await recordAudit({entityType:'obra',entityId:id,action:'excluida',summary:'Obra / centro excluído: '+check.rows[0].name,data:null,user:req.usuario,client:db});
+    });
+  } catch (error) {
+    if (error.code === '23503') throw httpError(409, 'Centro de custo possui dados vinculados. Inative o centro para preservá-los.');
+    throw error;
+  }
   res.json({ ok: true });
 }));
 
