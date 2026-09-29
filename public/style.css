@@ -64,6 +64,8 @@ html.dark :focus-visible { border-width: 1px !important; box-shadow: none !impor
 .btn.secondary:hover, html.dark .btn.secondary:hover { background: var(--surface-muted); border-color: var(--blue); }
 .text-btn, .row-actions button, .password-toggle { color: var(--blue); }
 .row-actions button.danger { color: var(--red); }
+.center-card-footer .text-btn.danger { color: var(--red); }
+.center-card-footer .text-btn.danger:hover { text-decoration: underline; }
 .row-actions button { min-height: 32px; padding: 4px 8px; font-size: 12px; }
 .panel, .kpi, .center-card, .filter-bar, .table-card {
   background: var(--white);

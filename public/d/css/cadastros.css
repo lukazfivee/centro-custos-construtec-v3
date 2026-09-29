@@ -1,0 +1,68 @@
+/* D5 · Cadastros: Categorias, Fornecedores e Recorrentes (prints 50 a 59). */
+.cad-barra { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cad-barra .campo-busca { flex: 1 1 280px; max-width: 420px; }
+.cad-rodape { padding: 12px 16px; display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--color-neutral-300); border-top: 1px solid var(--color-divider); }
+.cad-rodape b { color: var(--color-text); font-weight: 600; }
+.cad-tabela { overflow: hidden; padding: 0; }
+.cad-tabela .tbl th:first-child, .cad-tabela .tbl td:first-child { padding-left: 16px; }
+.cad-tabela .tbl td.acoes { width: 84px; text-align: right; white-space: nowrap; }
+.tbl tr.inativa td { opacity: .6; }
+.tbl .link { color: var(--color-accent-300); text-decoration: none; font-weight: 500; }
+.tbl .link:hover { text-decoration: underline; }
+.dois-tx { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.dois-tx b { font-size: 13.5px; font-weight: 600; }
+.dois-tx span { font-size: 12px; color: var(--color-neutral-300); overflow: hidden; text-overflow: ellipsis; }
+
+/* Categorias: bolinha de cor e paleta do painel. */
+.cat-nome { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.cat-nome .cor { flex: none; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--color-neutral-500); }
+.paleta { display: flex; gap: 8px; flex-wrap: wrap; }
+.paleta button { width: 32px; height: 32px; border: 0; border-radius: 9px; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
+.paleta button:hover { transform: scale(1.06); }
+.paleta button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--cor-atual, #12a9d1); }
+.paleta button:focus-visible { outline: 2px solid #12a9d1; outline-offset: 3px; }
+
+/* Interruptor "ativa" dos paineis. */
+.troca { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--color-bg); box-shadow: inset 0 0 0 1px var(--color-divider); color: var(--color-text); text-align: left; cursor: pointer; font-family: var(--font-body); }
+.troca > span:first-child { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.troca b { font-size: 13.5px; font-weight: 600; }
+.troca small { font-size: 12px; color: var(--color-neutral-300); }
+.troca .chave { flex: none; width: 40px; height: 22px; border-radius: 11px; background: var(--color-neutral-600); position: relative; transition: background-color .15s ease; }
+.troca .chave::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fefefe; transition: transform .15s ease; }
+.troca[aria-checked="true"] .chave { background: #12a9d1; }
+.troca[aria-checked="true"] .chave::after { transform: translateX(18px); }
+
+/* Fornecedores: dica e lancamentos do mes no painel. */
+.dica { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--color-accent-300); }
+.dica .ph { font-size: 15px; margin-top: 1px; }
+.mes-lista { display: flex; flex-direction: column; gap: 4px; }
+.mes-lista .topo { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 6px; }
+.mes-lista .topo b { font-size: 15px; }
+.mes-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--color-divider); }
+.mes-item .dois-tx { flex: 1; }
+.mes-item .valor { font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+/* Recorrentes: tabela com barra de parcelas e coluna "Proximas geracoes". */
+.rec-grade { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.parcelas { display: flex; flex-direction: column; gap: 6px; min-width: 110px; font-size: 12.5px; }
+.parcelas .bar > span { background: #12a9d1; }
+.prox { padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+.prox .topo { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 8px; }
+.prox .topo b { font-size: 15px; }
+.prox-item { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--color-divider); }
+.prox-item .dia { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.prox-item .dia b { font-size: 17px; font-weight: 600; }
+.prox-item .dia span { font-size: 10.5px; letter-spacing: .06em; color: var(--color-neutral-300); text-transform: uppercase; }
+.prox-item .val { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.prox-total { display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--color-divider); font-size: 13px; }
+.prox-nota { font-size: 12px; color: var(--color-neutral-300); padding-top: 4px; }
+.rec-acoes { display: flex; gap: 2px; justify-content: flex-end; }
+
+/* Dialogo "Gerar lancamentos do mes" com a lista do que sera criado. */
+.dialogo.lista { width: 480px; align-items: stretch; text-align: left; }
+.dialogo.lista .itens { max-height: 260px; overflow: auto; border-top: 1px solid var(--color-divider); }
+.dialogo.lista .item { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--color-divider); }
+.dialogo.lista .item .dois-tx { flex: 1; }
+.dialogo.lista .item b.val { font-size: 13.5px; white-space: nowrap; }
+.dialogo.lista .bts { justify-content: flex-end; }
+@media (max-width: 1360px) { .rec-grade { grid-template-columns: 1fr; } }

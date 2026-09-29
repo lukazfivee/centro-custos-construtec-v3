@@ -142,6 +142,12 @@ async function importCategory(tx, row, instance, result) {
 }
 
 async function importCostCenter(tx, row, instance, result) {
+  const deleted = await tx.query('SELECT 1 FROM cost_center_tombstones WHERE public_id = $1', [row.public_id]);
+  if (deleted.rows.length) {
+    result.obras.ignorados++;
+    addDetail(result, row.line, 'ignorado', `Obra "${row.nome}" foi excluída nesta instalação e não será recriada pelo CSV.`);
+    return;
+  }
   const existing = (await tx.query('SELECT * FROM cost_centers WHERE public_id = $1', [row.public_id])).rows[0];
   const name = row.nome.slice(0,140);
   const code = row.codigo.slice(0,40);

@@ -2,7 +2,7 @@
 .alerta-carteira { padding: 12px 16px; }
 .alerta-carteira .btn { height: 34px; }
 .alerta-carteira b { font-weight: 700; }
-.barra-filtro { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.barra-filtro { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
 .grade-obras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .cartao-obra { padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cartao-obra .topo { display: flex; justify-content: space-between; gap: 8px; }
@@ -16,7 +16,7 @@
 .cartao-obra .valores { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 10px; border-top: 1px solid var(--color-divider); }
 .cartao-obra .valores > span { display: flex; flex-direction: column; gap: 2px; }
 .cartao-obra .valores b { font-size: 14px; font-weight: 600; }
-.cartao-obra .bts { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.cartao-obra .bts { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
 
 .voltar { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--color-accent-300); text-decoration: none; align-self: flex-start; }
 .cab-obra { align-items: center; }

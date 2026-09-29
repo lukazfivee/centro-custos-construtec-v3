@@ -123,6 +123,14 @@ function validRevision(item) {
 async function importSimpleEntity(tx, options) {
   const { type, table, item, packageImportId, result, selectFields, insertSql, insertValues, updateSql, updateValues, businessFields } = options;
   if (!UUID.test(String(item.publicId || ''))) throw httpError(400, `${type}: publicId inválido.`);
+  if (type === 'obra') {
+    const deleted = await tx.query('SELECT 1 FROM cost_center_tombstones WHERE public_id=$1', [item.publicId]);
+    if (deleted.rows.length) {
+      await addConflict(tx, packageImportId, type, item.publicId,
+        'Esta obra foi excluída nesta instalação. Mantenha a versão local; o pacote não pode recriá-la.', null, item, result);
+      return;
+    }
+  }
   const domainError = financialStatusError(item, `${type} ${item.publicId}`);
   if (domainError) {
     await addConflict(tx, packageImportId, type, item.publicId, domainError, null, item, result);
@@ -351,6 +359,8 @@ async function applyIncomingConflict(tx, conflict, user) {
   }
 
   if (conflict.entity_type === 'obra') {
+    const deleted = await tx.query('SELECT 1 FROM cost_center_tombstones WHERE public_id=$1', [publicId]);
+    if (deleted.rows.length) throw httpError(409, 'Esta obra foi excluída nesta instalação e não pode ser recriada. Mantenha a versão local.');
     const values = [publicId,String(item.code||'').slice(0,40),String(item.name||'').slice(0,140),item.responsible||null,Number(item.monthlyBudget||0),item.active !== false,item.client||null,item.contractNumber||null,item.startDate||null,item.endDate||null,Number(item.contractAmount||0),['planejamento','execucao','pausado','concluido'].includes(item.projectStatus)?item.projectStatus:'planejamento',item.description||null,validRevision(item),item.createdAt||new Date(),item.updatedAt||new Date()];
     const existing = (await tx.query('SELECT id FROM cost_centers WHERE public_id=$1',[publicId])).rows[0];
     if (existing) {

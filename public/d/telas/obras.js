@@ -14,6 +14,7 @@
   const pct = (x) => `${Math.round(x * 100)}%`;
   const FILTROS = [['', 'Todas'], ['execucao', 'Em execução'], ['planejamento', 'Planejamento'], ['pausado', 'Pausadas'], ['concluido', 'Concluídas']];
   let filtro = '';
+  let atividade = 'ativas';
 
   function kpis(p, obras) {
     const k = U.kpi;
@@ -47,14 +48,15 @@
       <span class="bar"><span class="${cls}" style="width:${p == null ? 0 : Math.min(100, p * 100).toFixed(1)}%"></span></span></span>`;
     const real = n.realizedCost != null ? n.realizedCost : Number(o.total_despesas || 0);
     return `<article class="card cartao-obra">
-      <div class="topo">${U.chip(o.codigo || '—', 'info')}${O.chipSituacao(o.situacao)}</div>
+      <div class="topo">${U.chip(o.codigo || '—', 'info')}${o.ativo === false ? U.chip('Inativa', 'neutro') : O.chipSituacao(o.situacao)}</div>
       <div class="tx"><b>${esc(o.nome)}</b><span class="muted">${esc(o.cliente || 'Sem cliente')}</span></div>
       ${barra('Consumo do orçado', uso, uso == null ? '' : O.faixaUso(uso))}
       ${barra('Medido ao cliente', medido, 'medido')}
       <div class="valores"><span><span class="lbl">Realizado</span><b>${esc(CC.moneyShort(real))}</b></span>
         <span><span class="lbl">Contratado</span><b>${esc(CC.moneyShort(Number(o.valor_contrato || n.contractValue || 0)))}</b></span></div>
       <div class="bts"><a class="btn btn-p" href="#/obras/${esc(o.id)}">Abrir obra</a>
-        ${D.pode('cadastrar') ? `<button type="button" class="btn btn-s" data-editar="${esc(o.id)}">Editar</button>` : ''}</div></article>`;
+        ${D.pode('cadastrar') ? `<button type="button" class="btn btn-s" data-editar="${esc(o.id)}">Editar</button>` : ''}
+        ${D.papel() === 'admin' ? `<button type="button" class="btn btn-d" data-excluir="${esc(o.id)}">Excluir</button>` : ''}</div></article>`;
   }
 
   async function render(el, rota, vivo) {
@@ -75,15 +77,31 @@
     const numeros = new Map((resumo.porObra || []).map((x) => [x.id, x]));
     const ativas = lista.filter((o) => o.ativo !== false);
     const pintar = () => {
-      const vis = ativas.filter((o) => !filtro || o.situacao === filtro);
+      const base = atividade === 'inativas' ? lista.filter((o) => o.ativo === false) : atividade === 'todas' ? lista : ativas;
+      const vis = base.filter((o) => !filtro || o.situacao === filtro);
       CC.$('[data-cartoes]', el).innerHTML = vis.length ? vis.map((o) => cartao(o, numeros)).join('') : U.vazio('buildings', 'Nenhuma obra nesta situação.');
-      CC.$('[data-conta]', el).textContent = `${vis.length} de ${ativas.length} obras`;
+      CC.$('[data-conta]', el).textContent = `${vis.length} de ${base.length} obras`;
       CC.$$('[data-editar]', el).forEach((b) => b.addEventListener('click', () => O.formulario(lista.find((o) => String(o.id) === b.dataset.editar), () => render(el, rota, vivo))));
+      CC.$$('[data-excluir]', el).forEach((b) => b.addEventListener('click', async () => {
+        const obra = lista.find((o) => String(o.id) === b.dataset.excluir);
+        if (!obra) return;
+        const sim = await D.confirmar({ titulo: 'Excluir centro de custo?', texto: `Excluir ${obra.codigo} — ${obra.nome} nesta instalação? A exclusão não apaga o centro em outros computadores. Só é possível excluir um centro sem dados vinculados; para manter o histórico, inative o centro.`, ok: 'Excluir centro', tom: 'perigo' });
+        if (!sim) return;
+        try {
+          await CC.api(`/centros-custo/${obra.id}`, { method: 'DELETE' });
+          CC.toast('Centro de custo excluído');
+          await render(el, rota, vivo);
+        } catch (error) {
+          await D.avisar('Não foi possível excluir', error.status === 0 ? 'Sem internet. Excluir precisa da conexão.' : error.message);
+        }
+      }));
     };
     CC.$('[data-corpo]', el).innerHTML = `<div class="kpis seis">${kpis(p, ativas)}</div>${alerta(p)}
-      <div class="barra-filtro">${U.seg('situacao', FILTROS.map(([valor, rotulo]) => ({ valor, rotulo })), filtro, 'Situação da obra')}<span class="muted" data-conta></span></div>
+      <div class="barra-filtro">${U.seg('situacao', FILTROS.map(([valor, rotulo]) => ({ valor, rotulo })), filtro, 'Situação da obra')}
+        ${U.seg('atividade', [{valor:'ativas',rotulo:'Ativas'},{valor:'inativas',rotulo:'Inativas'},{valor:'todas',rotulo:'Todas'}], atividade, 'Atividade da obra')}<span class="muted" data-conta></span></div>
       <div class="grade-obras" data-cartoes></div>`;
     CC.$$('[data-seg="situacao"]', el).forEach((b) => b.addEventListener('click', () => { filtro = b.dataset.valor; U.segEscolher(b.parentElement, b); pintar(); }));
+    CC.$$('[data-seg="atividade"]', el).forEach((b) => b.addEventListener('click', () => { atividade = b.dataset.valor; U.segEscolher(b.parentElement, b); pintar(); }));
     pintar();
   }
 

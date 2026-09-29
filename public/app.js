@@ -367,12 +367,19 @@ async function loadCenters() {
       <div class="center-card-footer">
         <button type="button" data-open-center="${item.id}" aria-label="Ver detalhes do centro ${esc(item.codigo)}: ${esc(item.nome)}" title="Abrir dados financeiros e orçamento desta obra">Ver detalhes</button>
         ${['admin','gestor'].includes(usuario.role)?`<button class="text-btn" data-edit-center="${item.id}" aria-label="Editar centro: ${esc(item.nome)}" title="Editar centro: ${esc(item.nome)}">Editar</button>`:''}
+        ${usuario.role==='admin'?`<button class="text-btn danger" data-delete-center="${item.id}" aria-label="Excluir centro: ${esc(item.nome)}" title="Excluir centro de custo">Excluir</button>`:''}
       </div>
     </article>`;
   }).join('') : `<div class="empty">Nenhum centro cadastrado.</div>`;
-  $$('.center-card').forEach((card)=>{card.addEventListener('click',(e)=>{if(e.target.closest('[data-edit-center]'))return;const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);});card.addEventListener('keydown',(e)=>{if(e.target.closest('button'))return;if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);});});
+  $$('.center-card').forEach((card)=>{card.addEventListener('click',(e)=>{if(e.target.closest('[data-edit-center],[data-delete-center]'))return;const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);});card.addEventListener('keydown',(e)=>{if(e.target.closest('button'))return;if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();const id=Number(card.dataset.centerId);if(id)openCenterDetail(id);});});
   $$('[data-edit-center]').forEach((button)=>button.addEventListener('click',(e)=>{e.stopPropagation();openCenter(centros.find((item)=>item.id===Number(button.dataset.editCenter)));}));
+  $$('[data-delete-center]').forEach((button)=>button.addEventListener('click',async(e)=>{e.stopPropagation();const item=centros.find((center)=>center.id===Number(button.dataset.deleteCenter));if(item)await deleteCenter(item);}));
   await loadReferences(); loadFirstUse();
+}
+async function deleteCenter(item){
+  if (!(await confirmDialog(`Excluir o centro ${item.codigo} — ${item.nome} nesta instalação? A exclusão não apaga o centro em outros computadores. Só é possível excluir centros sem dados vinculados; para manter o histórico, inative o centro.`,{title:'Excluir centro de custo',confirmLabel:'Excluir centro'}))) return;
+  try { await api(`/centros-custo/${item.id}`,{method:'DELETE'});toast('Centro de custo excluído.');await Promise.all([loadCenters(),loadDashboard()]); }
+  catch(error){toast(error.message,true);}
 }
 $('#btn-exportar-centros')?.addEventListener('click',()=>download('/centros-custo/exportar.csv','centros-de-custo.csv'));
 $('#btn-novo-centro').addEventListener('click',()=>openCenter(null));
