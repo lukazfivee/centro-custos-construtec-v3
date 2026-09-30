@@ -1,0 +1,55 @@
+/* Menu lateral: recolher/expandir (Ctrl B), sombra sobre a pagina e animacao ao passar o mouse. */
+.side { box-shadow: 4px 0 24px rgba(3, 31, 41, .18), 1px 0 0 rgba(3, 31, 41, .06); }
+[data-theme="escuro"] .side { box-shadow: 4px 0 28px rgba(0, 0, 0, .55), 1px 0 0 rgba(255, 255, 255, .04); }
+.app.anima .side { transition: width .28s cubic-bezier(.2, .8, .2, 1), padding .28s cubic-bezier(.2, .8, .2, 1); }
+
+/* Botao de recolher, metade para fora da borda. */
+.recolher { position: absolute; top: 30px; right: -13px; z-index: 2; width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--color-surface); color: var(--color-text); box-shadow: 0 0 0 1px var(--color-divider), 0 4px 12px rgba(3, 31, 41, .22); display: grid; place-items: center; cursor: pointer; opacity: .9; transition: transform .2s ease, opacity .2s ease, background-color .2s ease, color .2s ease; }
+.recolher:hover { opacity: 1; transform: scale(1.12); background: #12a9d1; color: #fefefe; }
+.recolher:focus-visible { outline: 2px solid #5fd0ee; outline-offset: 2px; }
+.recolher .ph { transition: transform .28s cubic-bezier(.2, .8, .2, 1); }
+.app.recolhido .recolher .ph { transform: rotate(180deg); }
+
+/* Marca: logo inteiro aberto, simbolo recolhido (troca com fade). */
+.side .marca { position: relative; }
+.side .marca .simb { position: absolute; left: 50%; top: 4px; height: 26px; width: auto; transform: translateX(-50%) scale(.6); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .28s cubic-bezier(.2, .8, .2, 1); }
+.side .marca .logo, .side .marca span { transition: opacity .18s ease; }
+
+/* Itens: fundo desliza da esquerda, icone cresce, barra de destaque no atual. */
+.nav { position: relative; overflow: visible; isolation: isolate; transition: background-color .15s ease, color .15s ease, padding .28s cubic-bezier(.2, .8, .2, 1), gap .28s ease; }
+.nav::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(90deg, rgba(18, 169, 209, .22), rgba(18, 169, 209, .04)); transform: scaleX(0); transform-origin: left; opacity: 0; transition: transform .25s cubic-bezier(.2, .8, .2, 1), opacity .25s ease; }
+.nav:hover { background: transparent; color: #fefefe; }
+.nav:hover::before { transform: scaleX(1); opacity: 1; }
+.nav .ph { transition: transform .22s cubic-bezier(.3, 1.6, .5, 1), color .15s ease; }
+.nav:hover .ph { transform: scale(1.18) translateX(1px); color: #5fd0ee; }
+.nav:active .ph { transform: scale(.94); }
+.nav[aria-current="page"]::after { content: ''; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: #12a9d1; box-shadow: 0 0 10px rgba(18, 169, 209, .7); animation: menuBarra .3s cubic-bezier(.2, .8, .2, 1) both; }
+.nav .rot { transition: opacity .18s ease; }
+.nav:focus-visible { outline: 2px solid #5fd0ee; outline-offset: -2px; }
+.side .grupo > span { transition: opacity .18s ease, max-height .28s ease, padding .28s ease; max-height: 20px; overflow: hidden; white-space: nowrap; }
+
+/* Recolhido */
+.app.recolhido { --side-w: 72px; }
+.app.recolhido .side { padding: 18px 10px 14px; }
+.app.recolhido .side .marca .logo, .app.recolhido .side .marca span, .app.recolhido .nav .rot { opacity: 0; pointer-events: none; }
+.app.recolhido .side .marca .simb { opacity: 1; transform: translateX(-50%) scale(1); }
+.app.recolhido .side .grupo > span { opacity: 0; max-height: 0; padding-bottom: 0; }
+.app.recolhido .side .grupo { gap: 4px; }
+.app.recolhido .nav { padding: 0 15px; gap: 0; }
+.app.recolhido .nav .rot { width: 0; flex: 0 0 0; }
+.app.recolhido .nav .badge { position: absolute; top: 2px; right: 4px; min-width: 16px; height: 16px; font-size: 10px; padding: 0 4px; }
+.app.recolhido .nav[aria-current="page"]::after { left: -10px; }
+.app.recolhido .side .quem { flex-direction: column; padding: 10px 0 0; }
+.app.recolhido .side .quem .nome { display: none; }
+
+/* Dica com o nome do item quando recolhido. */
+.app.recolhido .nav:hover .rot, .app.recolhido .nav:focus-visible .rot { position: absolute; left: calc(100% + 14px); top: 50%; width: auto; flex: none; padding: 7px 11px; border-radius: 8px; background: #0b3544; color: #fefefe; font-size: 12.5px; box-shadow: 0 8px 20px rgba(0, 0, 0, .3); opacity: 1; overflow: visible; transform: translateY(-50%); animation: menuDica .18s cubic-bezier(.2, .8, .2, 1) both; }
+.app.recolhido .side nav { overflow: visible; }
+
+@keyframes menuBarra { from { transform: scaleY(0); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes menuDica { from { opacity: 0; transform: translate(-6px, -50%) } to { opacity: 1; transform: translate(0, -50%) } }
+
+@media (prefers-reduced-motion: reduce) {
+  .app.anima .side, .nav, .nav::before, .nav .ph, .nav .rot, .recolher, .recolher .ph, .side .marca .simb { transition: none; }
+  .nav[aria-current="page"]::after, .app.recolhido .nav:hover .rot { animation: none; }
+}
