@@ -62,10 +62,12 @@
   async function render(el, rota, vivo) {
     el.innerHTML = `<div class="pagina obras">
       ${U.cabecalho({ grupo: 'Operação', titulo: 'Obras e centros de custo', sub: 'Carteira da Construtec · orçado, realizado e medição por obra',
-        acoes: D.pode('cadastrar') ? `<button type="button" class="btn btn-s" data-importar>${D.ic('file-arrow-up')}Importar orçamento</button><button type="button" class="btn btn-p" data-nova>${D.ic('plus')}Nova obra</button>` : '' })}
+        acoes: `${D.papel() === 'admin' ? `<button type="button" class="btn btn-s" data-descartadas>${D.ic('arrow-counter-clockwise')}Obras descartadas</button>` : ''}${D.pode('cadastrar') ? `<button type="button" class="btn btn-s" data-importar>${D.ic('file-arrow-up')}Importar orçamento</button><button type="button" class="btn btn-p" data-nova>${D.ic('plus')}Nova obra</button>` : ''}` })}
       <div data-corpo>${U.carregando('Carregando a carteira…')}</div></div>`;
     const nova = CC.$('[data-nova]', el);
     if (nova) nova.addEventListener('click', () => O.formulario(null, () => render(el, rota, vivo)));
+    const descartadas = CC.$('[data-descartadas]', el);
+    if (descartadas) descartadas.addEventListener('click', () => O.descartadas(() => render(el, rota, vivo)));
     const importar = CC.$('[data-importar]', el);
     if (importar) importar.addEventListener('click', () => O.importar(null, (r) => (r && r.costCenterId ? D.ir(`obras/${r.costCenterId}`) : render(el, rota, vivo))));
     const [lista, resumo] = await Promise.all([
@@ -92,6 +94,12 @@
           CC.toast('Centro de custo excluído');
           await render(el, rota, vivo);
         } catch (error) {
+          if (error.status === 409 && D.papel() === 'admin') {
+            // Com dados vinculados o servidor recusa. Sem movimento financeiro, o administrador pode descartar (recuperavel).
+            const descartar = await D.confirmar({ titulo: 'Não dá para excluir', texto: `${error.message} Se a obra não tem lançamento, nota fiscal nem medição (por exemplo, uma obra de teste), você pode descartá-la: ela sai da carteira e pode ser recuperada depois.`, ok: 'Descartar obra…', icone: 'trash', tom: 'aviso' });
+            if (descartar) O.descartar(obra, () => render(el, rota, vivo));
+            return;
+          }
           await D.avisar('Não foi possível excluir', error.status === 0 ? 'Sem internet. Excluir precisa da conexão.' : error.message);
         }
       }));

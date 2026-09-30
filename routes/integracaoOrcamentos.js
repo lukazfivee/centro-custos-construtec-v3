@@ -155,7 +155,9 @@ router.get('/contratos/:id/resumo', asyncRoute(async (req, res) => {
   const { getContractSummary } = require('../services/budgets/budgetContractSummary');
   const summary = await getContractSummary(getDb(), String(req.params.id));
   if (!summary) throw httpError(404, 'Contrato não encontrado');
-  res.json(summary);
+  // Movimento da obra: o Orcamentos so descarta a proposta aprovada se nao houver nenhum.
+  const { movementCount } = require('../services/costCenterArchive');
+  res.json({ ...summary, movementCount: summary.costCenterId ? await movementCount(getDb(), summary.costCenterId) : 0 });
 }));
 
 router.get('/portfolio-summary', asyncRoute(async (req, res) => {
