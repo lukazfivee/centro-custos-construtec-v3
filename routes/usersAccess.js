@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(autenticar, exigirPermissao('p9'));
 
 function cloudToken(req) {
-  if (!req.usuario.cloud_managed || !req.usuario.cloud_session_token || String(req.usuario.cloud_session_token).startsWith('hash:')) {
+  if (!req.usuario.cloud_managed || !req.usuario.cloud_session_token) {
     throw httpError(400, 'Papéis e permissões compartilhados são gerenciados por um administrador com login corporativo.');
   }
   return req.usuario.cloud_session_token;

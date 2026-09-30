@@ -59,11 +59,11 @@ test('desktop novo: reaproveita o núcleo do celular (sessão cc_token e centavo
   assert.match(read('public/m/core.js'), /Math\.round\(Math\.abs\(n\) \* 100 \+ 1e-7\)/);
 });
 
-test('desktop novo: menu esconde o que o papel não pode usar (regras de hoje)', () => {
+test('desktop novo: menu esconde o que a permissão do papel não libera', () => {
   const core = src('d-core.js');
   assert.match(core, /cobrancas: \(\) => D\.corporativo\(\)/);
-  assert.match(core, /recorrentes: \(\) => D\.papel\(\) === 'admin'/);
-  assert.match(core, /usuarios: \(\) => D\.papel\(\) === 'admin'/);
+  assert.match(core, /recorrentes: \(\) => D\.tem\('p5'\)/);
+  assert.match(core, /usuarios: \(\) => D\.tem\('p9'\)/);
   const shell = src('shell.js');
   assert.match(shell, /filter\(\(i\) => !i\[3\] \|\| D\.pode\(i\[3\]\)\)/);
   assert.match(src('telas/em-construcao.js'), /if \(!D\.podeTela\(rota\.nome\)\) return semAcesso\(el\)/);

@@ -29,11 +29,40 @@
     return { texto: CC.signed(sinal * Math.abs(Number(l.valor) || 0)), entrada: sinal > 0 };
   };
 
-  // Pessoa logada e papel. Hoje o banco aceita admin, gestor e supervisor (seis papeis entram na D6).
-  const PAPEIS = { admin: 'Administrador', gestor: 'Gestor', supervisor: 'Supervisor' };
+  // Pessoa logada e papel. Os seis papeis da Suite vem do servidor (suiteRole); `role` e o papel antigo.
+  const PAPEIS = { admin: 'Administrador', gestor: 'Gestor', financeiro: 'Financeiro', engenharia: 'Engenharia', tecnico: 'Técnico de campo', comercial: 'Comercial', supervisor: 'Supervisor' };
   D.usuario = () => CC.session.user() || {};
   D.papel = () => String(D.usuario().role || '');
-  D.papelNome = (role) => PAPEIS[role || D.papel()] || 'Usuário';
+  D.papelSuite = () => D.simulando() || D.usuario().suiteRole || ({ admin: 'admin', gestor: 'gestor' })[D.papel()] || 'tecnico';
+  D.papelNome = (role) => PAPEIS[role || D.papelSuite()] || 'Usuário';
+
+  // "Ver o sistema como": so visual, no navegador do admin. O servidor segue com o papel real.
+  const CHAVE_COMO = 'cc_d_como';
+  const lerComo = () => { try { return JSON.parse(sessionStorage.getItem(CHAVE_COMO) || 'null'); } catch { return null; } };
+  const permissoesReais = () => (Array.isArray(D.usuario().permissoes) ? D.usuario().permissoes : null);
+  D.simulando = () => {
+    const como = lerComo();
+    const reais = permissoesReais();
+    // So quem administra usuarios (p9) simula; de outro modo a simulacao guardada e ignorada.
+    if (!como || !(D.papel() === 'admin' || (reais && reais.includes('p9')))) return '';
+    return como.papel || '';
+  };
+  D.simular = (papel, permissoes) => {
+    try {
+      if (papel) sessionStorage.setItem(CHAVE_COMO, JSON.stringify({ papel, permissoes }));
+      else sessionStorage.removeItem(CHAVE_COMO);
+    } catch { /* sem armazenamento: nao simula */ }
+  };
+  // Permissao (p1 a p12) da pessoa logada, ou do papel simulado. Sem a lista do servidor (sessao
+  // antiga), cai nas regras do papel antigo.
+  const LEGADO = { gestor: ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p10', 'p11', 'p12'] };
+  D.tem = (permissao) => {
+    if (D.simulando()) return (lerComo().permissoes || []).includes(permissao);
+    const reais = permissoesReais();
+    if (reais) return reais.includes(permissao);
+    if (D.papel() === 'admin') return true;
+    return (LEGADO[D.papel()] || ['p2', 'p12']).includes(permissao);
+  };
   D.corporativo = () => /@rcconstrutec\.com\.br$/i.test(String(D.usuario().email || ''));
   D.iniciais = (nome) => String(nome || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
 
@@ -41,12 +70,12 @@
   // Recorrentes e Usuarios so para admin. Fechamento, Historico e Usuarios seguem o desenho (admin).
   // Na D6 isto passa a ler a matriz de permissoes do servidor.
   const REGRAS = {
-    cobrancas: () => D.corporativo() && ['admin', 'gestor', 'supervisor'].includes(D.papel()),
-    recorrentes: () => D.papel() === 'admin',
-    fechamento: () => D.papel() === 'admin',
-    usuarios: () => D.papel() === 'admin',
-    historico: () => D.papel() === 'admin',
-    cadastrar: () => ['admin', 'gestor'].includes(D.papel()),
+    cobrancas: () => D.corporativo() && D.tem('p6'),
+    recorrentes: () => D.tem('p5'),
+    fechamento: () => D.tem('p8'),
+    usuarios: () => D.tem('p9'),
+    historico: () => D.tem('p9'),
+    cadastrar: () => D.tem('p5'),
   };
   D.pode = (chave) => (REGRAS[chave] ? REGRAS[chave]() : true);
 

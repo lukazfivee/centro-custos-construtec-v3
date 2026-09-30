@@ -5,6 +5,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { getDb, getInstanceIdentity } = require('../db');
 const { autenticar } = require('../middleware/auth');
+const { accessInfo } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const cloudAuth = require('../services/cloudAuth');
 const { mirrorCloudUser } = require('../services/cloudUserMirror');
@@ -199,13 +200,15 @@ router.post('/login', asyncRoute(async (req, res) => {
   }
 }));
 
-router.get('/me', autenticar, (req, res) => res.json({
+router.get('/me', autenticar, asyncRoute(async (req, res) => res.json({
   id: req.usuario.id,
   nome: req.usuario.name,
   email: req.usuario.email,
   role: req.usuario.role,
+  ...(await accessInfo(req.usuario)),
+  todasObras: req.usuario.all_cost_centers !== false,
   instancia: getInstanceIdentity(),
-}));
+})));
 
 router.get('/foto-perfil', autenticar, asyncRoute(async (req, res) => {
   let synchronized = true;

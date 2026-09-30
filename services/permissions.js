@@ -50,7 +50,7 @@ async function matrixFor(user) {
   if (!process.env.DATABASE_URL || !user?.cloud_managed) return defaultMatrix();
   if (cached && cached.until > Date.now()) return cached.matrix;
   const token = user.cloud_session_token;
-  if (!token || String(token).startsWith('hash:')) return cached?.matrix || defaultMatrix();
+  if (!token) return cached?.matrix || defaultMatrix();
   try {
     const data = await cloudAuth.permissions(token);
     if (data?.matrix && data.matrix.admin) {
@@ -62,6 +62,13 @@ async function matrixFor(user) {
   }
   // Worker antigo (sem a rota) ou fora do ar: usa a ultima matriz boa ou o padrao.
   return cached?.matrix || defaultMatrix();
+}
+
+// O que a pessoa pode (lista de p1 a p12) e o papel, para o desktop montar menu e botoes.
+async function accessInfo(user) {
+  const role = suiteRoleOf(user);
+  const matrix = role === 'admin' ? null : await matrixFor(user);
+  return { suiteRole: role, permissoes: PERMISSIONS.filter((p) => role === 'admin' || matrix[role]?.[p]) };
 }
 
 async function can(user, permission) {
@@ -81,5 +88,5 @@ function exigirPermissao(...permissions) {
 }
 
 module.exports = {
-  SUITE_ROLES, PERMISSIONS, SCOPED_ROLES, defaultMatrix, suiteRoleOf, matrixFor, can, exigirPermissao, resetPermissionsCache,
+  SUITE_ROLES, PERMISSIONS, SCOPED_ROLES, defaultMatrix, suiteRoleOf, matrixFor, accessInfo, can, exigirPermissao, resetPermissionsCache,
 };
