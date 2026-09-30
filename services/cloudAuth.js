@@ -102,6 +102,10 @@ async function setUserStatus(sessionToken, email, active, id) {
   });
 }
 
+async function permissions(sessionToken) {
+  return request('/v1/permissions', { method:'GET', headers:{ Authorization:`Bearer ${sessionToken}` } });
+}
+
 async function session(sessionToken) {
   return request('/v1/auth/session', { method:'GET', headers:{ Authorization:`Bearer ${sessionToken}` } });
 }
@@ -188,6 +192,7 @@ async function removeProfilePhoto(sessionToken) {
 
 module.exports = {
   session,
+  permissions,
   handoff,
   sessionHash,
   deleteUser,
