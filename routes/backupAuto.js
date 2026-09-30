@@ -2,12 +2,13 @@ const fs=require('fs');
 const path=require('path');
 const express=require('express');
 const {getDb}=require('../db');
-const {autenticar,exigirPapel}=require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const {asyncRoute,httpError}=require('../lib/http');
 const {autoBackupDir}=require('../services/autoBackup');
 const jobs=require('../lib/jobs');
 const router=express.Router();
-router.use(autenticar,exigirPapel('admin'));
+router.use(autenticar,exigirPermissao('p9'));
 
 router.get('/',asyncRoute(async(req,res)=>{
   const settings=(await getDb().query('SELECT * FROM backup_settings WHERE id=1')).rows[0];

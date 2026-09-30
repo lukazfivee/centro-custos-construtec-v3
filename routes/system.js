@@ -4,12 +4,13 @@ const os = require('os');
 const path = require('path');
 const express = require('express');
 const { getDb, getDatabaseInfo, getInstanceIdentity } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute } = require('../lib/http');
 const { snapshot } = require('../lib/metrics');
 
 const router = express.Router();
-router.use(autenticar, exigirPapel('admin'));
+router.use(autenticar, exigirPermissao('p9'));
 
 router.get('/status', asyncRoute(async (req, res) => {
   const pkg = require('../package.json');

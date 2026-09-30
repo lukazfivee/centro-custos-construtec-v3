@@ -17,6 +17,9 @@ import {
   makePasswordRecord, publicUser, timingSafeEqual, sessionTokenHash,
 } from './centralAuth.js';
 import { forgetSessionDevice } from './notifications.js';
+import {
+  PERMISSIONS, SUITE_ROLES, validSuiteRole, legacyRoleFor, suiteFromLegacy, normalizeApps, defaultMatrix, loadMatrix,
+} from './suiteRoles.js';
 
 const MIN_SERVICE_KEY_LENGTH = 32;
 const SERVICE_CREATED_ROLE = 'supervisor';
@@ -27,6 +30,9 @@ const ROUTES = new Set([
   '/v1/users',
   '/v1/users/status',
   '/v1/users/delete',
+  '/v1/users/access',
+  '/v1/permissions',
+  '/v1/permissions/reset',
   '/v1/authorized-emails',
   '/v1/authorized-emails/revoke',
 ]);
@@ -90,7 +96,7 @@ async function handleLogout(request, env) {
 
 async function handleListUsers(env, auth) {
   const rows = (await env.DB.prepare(`
-    SELECT id,name,email,role,active,created_at,updated_at,last_login_at
+    SELECT id,name,email,role,suite_role,apps,active,created_at,updated_at,last_login_at
     FROM cloud_users WHERE org_id=? AND deleted_at IS NULL ORDER BY active DESC,name,email
   `).bind(auth.user.org_id).all()).results || [];
   return json({ ok: true, users: rows.map(publicUser) });
@@ -103,7 +109,12 @@ async function handleCreateUser(request, env, auth) {
   const name = text(body.name).slice(0, 120);
   const email = text(body.email).toLowerCase();
   const password = String(body.password || '');
-  const role = auth.centroAdmin ? text(body.role) : SERVICE_CREATED_ROLE;
+  const wantedSuite = auth.centroAdmin && body.suiteRole !== undefined ? text(body.suiteRole) : null;
+  if (wantedSuite !== null && !validSuiteRole(wantedSuite)) return json({ ok: false, error: 'Papel invalido.' }, 400);
+  const role = wantedSuite ? legacyRoleFor(wantedSuite) : auth.centroAdmin ? text(body.role) : SERVICE_CREATED_ROLE;
+  // Conta nova sempre nasce com papel novo explicito (sem ele, o tecnico entraria vendo todas as obras).
+  const suiteRole = wantedSuite || suiteFromLegacy(role);
+  const apps = auth.centroAdmin ? normalizeApps(body.apps) : null;
   if (!name || !validEmail(email) || password.length < 10 || !validRole(role)) {
     return json({ ok: false, error: 'Preencha nome, e-mail, senha de 10+ caracteres e perfil valido.' }, 400);
   }
@@ -115,10 +126,11 @@ async function handleCreateUser(request, env, auth) {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   await env.DB.prepare(`
-    INSERT INTO cloud_users(id,org_id,name,email,password_salt,password_hash,password_iterations,role,active,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?,1,?,?)
-  `).bind(id, orgId, name, email, record.salt, record.hash, record.iterations, role, now, now).run();
-  return json({ ok: true, user: { id, name, email, role, active: true, createdAt: now, updatedAt: now, lastLoginAt: null } }, 201);
+    INSERT INTO cloud_users(id,org_id,name,email,password_salt,password_hash,password_iterations,role,suite_role,apps,active,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,1,?,?)
+  `).bind(id, orgId, name, email, record.salt, record.hash, record.iterations, role, suiteRole, apps ? JSON.stringify(apps) : null, now, now).run();
+  const created = await env.DB.prepare('SELECT * FROM cloud_users WHERE id=?').bind(id).first();
+  return json({ ok: true, user: publicUser(created) }, 201);
 }
 
 // Valida o alvo de desativar/excluir: existe, nao e o proprio usuario e, pela
@@ -159,6 +171,61 @@ async function handleDeleteUser(request, env, auth) {
   return json({ ok: true, deletedId: target.id, deletedAt: now });
 }
 
+// Papel novo e apps de um usuário. Só admin do Centro; não altera a própria conta
+// (evita o último admin se rebaixar) e mantém o papel legado derivado do novo.
+async function handleUserAccess(request, env, auth) {
+  if (!auth.centroAdmin) return json({ ok: false, error: 'Somente um admin do Centro de Custos pode alterar papéis.' }, 403);
+  const { response, body, target } = await targetFor(request, env, auth, 'alterar');
+  if (response) return response;
+  const suiteRole = text(body.suiteRole);
+  if (!validSuiteRole(suiteRole)) return json({ ok: false, error: 'Papel invalido.' }, 400);
+  const apps = body.apps === undefined ? undefined : normalizeApps(body.apps);
+  if (apps === null) return json({ ok: false, error: 'Escolha ao menos um app.' }, 400);
+  const now = new Date().toISOString();
+  await env.DB.prepare('UPDATE cloud_users SET suite_role=?,role=?,apps=COALESCE(?,apps),updated_at=? WHERE id=?')
+    .bind(suiteRole, legacyRoleFor(suiteRole), apps ? JSON.stringify(apps) : null, now, target.id).run();
+  const updated = await env.DB.prepare('SELECT * FROM cloud_users WHERE id=?').bind(target.id).first();
+  return json({ ok: true, user: publicUser(updated) });
+}
+
+async function permissionsPayload(env) {
+  return { ok: true, roles: SUITE_ROLES, permissions: PERMISSIONS, matrix: await loadMatrix(env), defaults: defaultMatrix() };
+}
+
+// Leitura: qualquer sessão (o Centro e o celular guardam em cache). Escrita: admin.
+async function handlePermissions(request, env) {
+  if (request.method === 'GET') {
+    const auth = await requireSession(request, env);
+    if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
+    return json(await permissionsPayload(env));
+  }
+  const auth = await requireSession(request, env, ['admin']);
+  if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
+  const body = await readJson(request);
+  const { role, permission } = body || {};
+  if (!SUITE_ROLES.includes(role) || !PERMISSIONS.includes(permission) || typeof body.allowed !== 'boolean') {
+    return json({ ok: false, error: 'Papel, permissao e valor sao obrigatorios.' }, 400);
+  }
+  if (role === 'admin') return json({ ok: false, error: 'O administrador fica sempre com todas as permissoes.' }, 400);
+  const standard = defaultMatrix()[role][permission];
+  if (body.allowed === standard) {
+    await env.DB.prepare('DELETE FROM role_permission_overrides WHERE role=? AND permission=?').bind(role, permission).run();
+  } else {
+    await env.DB.prepare(`
+      INSERT INTO role_permission_overrides(role,permission,allowed,updated_by,updated_at) VALUES(?,?,?,?,?)
+      ON CONFLICT(role,permission) DO UPDATE SET allowed=excluded.allowed,updated_by=excluded.updated_by,updated_at=excluded.updated_at
+    `).bind(role, permission, body.allowed ? 1 : 0, auth.user.id, new Date().toISOString()).run();
+  }
+  return json(await permissionsPayload(env));
+}
+
+async function handlePermissionsReset(request, env) {
+  const auth = await requireSession(request, env, ['admin']);
+  if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
+  await env.DB.prepare('DELETE FROM role_permission_overrides').run();
+  return json(await permissionsPayload(env));
+}
+
 async function handleAuthorizedEmails(request, env, auth, revoke) {
   if (request.method === 'GET') {
     const rows = (await env.DB.prepare(`
@@ -192,12 +259,16 @@ export async function handleIdentityAdmin(request, env, url, service) {
   if (path === '/v1/auth/session' && method === 'GET') return handleSession(request, env);
   if (path === '/v1/auth/logout' && method === 'POST') return handleLogout(request, env);
 
+  if (path === '/v1/permissions' && (method === 'GET' || method === 'POST')) return handlePermissions(request, env);
+  if (path === '/v1/permissions/reset' && method === 'POST') return handlePermissionsReset(request, env);
+
   const auth = await requireAccountAdmin(request, env, service);
   if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
   if (path === '/v1/users' && method === 'GET') return handleListUsers(env, auth);
   if (path === '/v1/users' && method === 'POST') return handleCreateUser(request, env, auth);
   if (path === '/v1/users/status' && method === 'POST') return handleUserStatus(request, env, auth);
   if (path === '/v1/users/delete' && method === 'POST') return handleDeleteUser(request, env, auth);
+  if (path === '/v1/users/access' && method === 'POST') return handleUserAccess(request, env, auth);
   if (path === '/v1/authorized-emails' && ['GET', 'POST'].includes(method)) return handleAuthorizedEmails(request, env, auth, false);
   if (path === '/v1/authorized-emails/revoke' && method === 'POST') return handleAuthorizedEmails(request, env, auth, true);
   return json({ ok: false, error: 'Rota nao encontrada.' }, 404);

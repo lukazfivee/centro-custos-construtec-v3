@@ -3,6 +3,8 @@ const express = require('express');
 const crypto = require('crypto');
 const { getDb } = require('../db');
 const { autenticar, exigirPapel } = require('../middleware/auth');
+const { obrasPermitidas, assertObra, bloquearEscopado } = require('../services/obraScope');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { csvLine, decimalBr } = require('../lib/csv');
@@ -15,11 +17,12 @@ const { getProposalOrigin } = require('../services/budgets/proposalOrigin');
 const router = express.Router();
 router.use(autenticar);
 
-router.get('/portfolio-summary', asyncRoute(async (req, res) => {
+router.get('/portfolio-summary', bloquearEscopado, asyncRoute(async (req, res) => {
   res.json(await getPortfolioSummary(getDb()));
 }));
 
 router.get('/:id/curva-s', asyncRoute(async (req, res) => {
+  await assertObra(req, positiveId(req.params.id));
   res.json(await getCostCenterCurveS(getDb(), positiveId(req.params.id)));
 }));
 
@@ -39,10 +42,13 @@ const COST_CENTERS_SELECT = `
 router.get('/', asyncRoute(async (req, res) => {
   const { month, range } = reportMonth(req.query);
   const orderBy = 'cc.active DESC, cc.name';
+  const ids = await obrasPermitidas(req);
+  // Escopado: so as obras atribuidas ($1 e $2 sao o mes; a lista entra depois).
+  const scope = ids ? 'WHERE cc.id = ANY($3::int[])' : '';
 
   if (!wantsPagination(req.query)) {
     const { rows } = await getDb().query(
-      `${COST_CENTERS_SELECT} GROUP BY cc.id ORDER BY ${orderBy} LIMIT 500`, [range.start, range.end]);
+      `${COST_CENTERS_SELECT} ${scope} GROUP BY cc.id ORDER BY ${orderBy} LIMIT 500`, ids ? [range.start, range.end, ids] : [range.start, range.end]);
     res.setHeader('X-Result-Limit', '500');
     return res.json(rows.map(row => ({...row,mes_orcamento:month})));
   }
@@ -50,9 +56,10 @@ router.get('/', asyncRoute(async (req, res) => {
   const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
   const [dataResult, countResult] = await Promise.all([
     getDb().query(
-      `${COST_CENTERS_SELECT} GROUP BY cc.id ORDER BY ${orderBy} LIMIT $3 OFFSET $4`,
-      [range.start, range.end, limit, offset]),
-    getDb().query('SELECT COUNT(*)::int AS total FROM cost_centers'),
+      `${COST_CENTERS_SELECT} ${ids ? 'WHERE cc.id = ANY($5::int[])' : ''} GROUP BY cc.id ORDER BY ${orderBy} LIMIT $3 OFFSET $4`,
+      ids ? [range.start, range.end, limit, offset, ids] : [range.start, range.end, limit, offset]),
+    ids ? getDb().query('SELECT COUNT(*)::int AS total FROM cost_centers WHERE id = ANY($1::int[])', [ids])
+      : getDb().query('SELECT COUNT(*)::int AS total FROM cost_centers'),
   ]);
   const total = Number(countResult.rows[0]?.total || 0);
   res.setHeader('X-Total-Count', String(total));
@@ -64,6 +71,7 @@ router.get('/', asyncRoute(async (req, res) => {
 
 router.get('/:id/detalhes', asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
+  await assertObra(req, id);
   const { month, range } = reportMonth(req.query);
   const db = getDb();
   const centerResult = await db.query(`
@@ -102,7 +110,7 @@ router.get('/:id/detalhes', asyncRoute(async (req, res) => {
   res.json({ centro: center, lancamentos: transactions });
 }));
 
-router.get('/exportar.csv', asyncRoute(async (req, res) => {
+router.get('/exportar.csv', bloquearEscopado, asyncRoute(async (req, res) => {
   const { rows } = await getDb().query(`
     SELECT cc.code, cc.name, cc.client, cc.contract_number, cc.responsible,
       cc.start_date, cc.end_date, cc.contract_amount, cc.monthly_budget, cc.project_status, cc.active,
@@ -125,7 +133,7 @@ router.get('/exportar.csv', asyncRoute(async (req, res) => {
   res.send(`\uFEFF${lines.join('\r\n')}`);
 }));
 
-router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const data = validate(req.body);
   const publicId = crypto.randomUUID();
   const { rows } = await getDb().query(
@@ -139,7 +147,7 @@ router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
   res.status(201).json(rows[0]);
 }));
 
-router.put('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.put('/:id', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const data = validate(req.body);
   const id = positiveId(req.params.id);
   // Quem envia a revisao (desktop novo) nao sobrescreve a alteracao de outra pessoa.

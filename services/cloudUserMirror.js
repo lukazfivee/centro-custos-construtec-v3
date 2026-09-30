@@ -6,7 +6,15 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
-const RETURNING = 'id,name,email,role,active,cloud_managed,cloud_session_token,cloud_user_id';
+const RETURNING = 'id,name,email,role,suite_role,all_cost_centers,active,cloud_managed,cloud_session_token,cloud_user_id';
+
+// Papel novo e apps vindos do diretorio; Worker antigo nao os envia (fica NULL).
+function suiteFields(remote) {
+  const roles = ['admin', 'gestor', 'financeiro', 'engenharia', 'tecnico', 'comercial'];
+  const suiteRole = roles.includes(remote.suiteRole) ? remote.suiteRole : null;
+  const apps = Array.isArray(remote.apps) ? JSON.stringify(remote.apps) : null;
+  return { suiteRole, apps };
+}
 
 async function findLive(db, remote, email) {
   if (remote.id) {
@@ -43,20 +51,24 @@ async function mirrorOnce(db, remote, { sessionToken } = {}) {
     await retire(db, [existing.id]);
     existing = null;
   }
+  const { suiteRole, apps } = suiteFields(remote);
   if (existing) {
     const updated = await db.query(`
       UPDATE users SET name=$1,email=$2,role=$3,active=$4,cloud_managed=TRUE,
         cloud_user_id=COALESCE($5,cloud_user_id),
-        cloud_session_token=COALESCE($6,cloud_session_token),updated_at=NOW()
+        cloud_session_token=COALESCE($6,cloud_session_token),
+        suite_role=COALESCE($8,suite_role),apps=COALESCE($9,apps),updated_at=NOW()
       WHERE id=$7 AND deleted_at IS NULL RETURNING ${RETURNING}
-    `, [name, email, remote.role, active, cloudId, sessionToken || null, existing.id]);
+    `, [name, email, remote.role, active, cloudId, sessionToken || null, existing.id, suiteRole, apps]);
     if (updated.rows[0]) return updated.rows[0];
   }
   const unusablePassword = await bcrypt.hash(crypto.randomBytes(48).toString('hex'), 4);
   const inserted = await db.query(`
-    INSERT INTO users (name,email,password_hash,role,active,cloud_managed,cloud_user_id,cloud_session_token)
-    VALUES ($1,$2,$3,$4,$5,TRUE,$6,$7) RETURNING ${RETURNING}
-  `, [name, email, unusablePassword, remote.role, active, cloudId, sessionToken || null]);
+    INSERT INTO users (name,email,password_hash,role,active,cloud_managed,cloud_user_id,cloud_session_token,suite_role,apps,all_cost_centers)
+    VALUES ($1,$2,$3,$4,$5,TRUE,$6,$7,$8,$9,$10) RETURNING ${RETURNING}
+  `, [name, email, unusablePassword, remote.role, active, cloudId, sessionToken || null, suiteRole, apps,
+    // Engenharia e tecnico novos comecam sem obras ate o admin atribuir.
+    !['engenharia', 'tecnico'].includes(suiteRole)]);
   return inserted.rows[0];
 }
 

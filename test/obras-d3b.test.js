@@ -15,7 +15,7 @@ test('medições com data pura e autor; importação só para admin e gestor', a
   process.env.ADMIN_INITIAL_EMAIL = 'admin@teste.local';
   delete process.env.DATABASE_URL;
 
-  const { initializeDatabase, closeDatabase } = require('../db');
+  const { initializeDatabase, closeDatabase, getDb } = require('../db');
   const { createApp } = require('../server');
   await initializeDatabase();
   const server = createApp().listen(0, '127.0.0.1');
@@ -60,6 +60,8 @@ test('medições com data pura e autor; importação só para admin e gestor', a
   assert.equal(med.contracts[0].period_end, '2026-09-15');
   assert.equal(med.labor[0].created_by_name, 'Administrador');
   assert.equal(med.contracts[0].created_by_name, 'Administrador');
-  // Supervisor continua sem registrar medicao (regra de hoje).
-  await request(`/centros-custo/${obra}/medicoes`, 'POST', { type: 'labor', periodStart: '2026-09-08', periodEnd: '2026-09-14', teamHours: 5 }, 403, sup);
+  // O supervisor legado vira tecnico, que registra horas e medicoes (p12). Financeiro nao.
+  await request(`/centros-custo/${obra}/medicoes`, 'POST', { type: 'labor', periodStart: '2026-09-08', periodEnd: '2026-09-14', teamHours: 5 }, 201, sup);
+  await getDb().query("UPDATE users SET suite_role='financeiro' WHERE email=$1", ['sup@teste.local']);
+  await request(`/centros-custo/${obra}/medicoes`, 'POST', { type: 'labor', periodStart: '2026-09-15', periodEnd: '2026-09-21', teamHours: 5 }, 403, sup);
 });

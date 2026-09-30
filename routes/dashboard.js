@@ -2,20 +2,31 @@ const { financialTransactionsSql, allocatedTransactionsSql } = require('../servi
 const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
+const { obrasDaConsulta } = require('../services/obraScope');
+const { can, suiteRoleOf, SCOPED_ROLES } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { currentMonth, validMonth, monthRange, monthsEndingAt, todaySql } = require('../lib/dates');
 
 const router = express.Router();
 router.use(autenticar);
 
+// p1 (painel financeiro). Engenharia e tecnico sempre abrem o painel, limitado as suas obras.
+router.use(asyncRoute(async (req, res, next) => {
+  if (SCOPED_ROLES.includes(suiteRoleOf(req.usuario)) || await can(req.usuario, 'p1')) return next();
+  return res.status(403).json({ erro: 'Você não tem permissão para esta ação.' });
+}));
+
 router.get('/resumo', asyncRoute(async (req, res) => {
   const started = process.hrtime.bigint();
   const month = req.query.mes || currentMonth();
   if (!validMonth(month)) throw httpError(400, 'Mês inválido. Use AAAA-MM.');
   const centerId = req.query.centroId ? positiveId(req.query.centroId, 'Centro de custo') : null;
+  // Lista de obras do filtro: a obra pedida, ou so as do usuario escopado; null = todas.
+  const obras = await obrasDaConsulta(req);
+  const scopeIds = centerId ? [centerId] : obras;
   const range = monthRange(month);
-  const sourceSql = centerId ? allocatedTransactionsSql : financialTransactionsSql;
-  const params = [range.start, range.end, centerId];
+  const sourceSql = scopeIds ? allocatedTransactionsSql : financialTransactionsSql;
+  const params = [range.start, range.end, scopeIds];
   const db = getDb();
   // Quantos meses na evolucao: 6 por padrao (painel atual); o desktop novo pede 12.
   const trendCount = req.query.meses == null ? 6 : Number(req.query.meses);
@@ -38,13 +49,13 @@ router.get('/resumo', asyncRoute(async (req, res) => {
           AND transaction_date >= $1 AND transaction_date < $2) AS qtd_recebidos,
         COUNT(DISTINCT id) FILTER (WHERE type='despesa' AND financial_status='liquidado' AND accounting_sign=1
           AND transaction_date >= $1 AND transaction_date < $2) AS qtd_pagos
-      FROM ${sourceSql} t WHERE deleted_at IS NULL AND ($3::integer IS NULL OR cost_center_id=$3)
+      FROM ${sourceSql} t WHERE deleted_at IS NULL AND ($3::int[] IS NULL OR cost_center_id = ANY($3::int[]))
     `, params),
     db.query(`
       SELECT COALESCE(SUM(amount * accounting_sign),0) AS total,COUNT(*) AS quantidade
       FROM ${sourceSql} t WHERE deleted_at IS NULL AND financial_status='pendente'
-        AND due_date<${todaySql()} AND accounting_sign=1 AND ($1::integer IS NULL OR cost_center_id=$1)
-    `, [centerId]),
+        AND due_date<${todaySql()} AND accounting_sign=1 AND ($1::int[] IS NULL OR cost_center_id = ANY($1::int[]))
+    `, [scopeIds]),
     db.query(`
       SELECT cc.id,cc.code AS codigo,cc.name AS nome,cc.client AS cliente,
         cc.monthly_budget AS orcamento,cc.project_status AS situacao,
@@ -54,14 +65,14 @@ router.get('/resumo', asyncRoute(async (req, res) => {
         COUNT(t.id) AS qtd_lancamentos
       FROM cost_centers cc LEFT JOIN ${allocatedTransactionsSql} t ON t.cost_center_id=cc.id AND t.deleted_at IS NULL
         AND t.transaction_date >= $1 AND t.transaction_date < $2
-      WHERE cc.active=TRUE AND ($3::integer IS NULL OR cc.id=$3)
+      WHERE cc.active=TRUE AND ($3::int[] IS NULL OR cc.id = ANY($3::int[]))
       GROUP BY cc.id ORDER BY despesas DESC,cc.name
     `, params),
     db.query(`
       SELECT c.id,c.name AS categoria,t.type AS tipo,SUM(t.amount * t.accounting_sign) AS total,COUNT(*) AS quantidade
       FROM ${sourceSql} t JOIN categories c ON c.id=t.category_id
       WHERE t.deleted_at IS NULL AND t.transaction_date >= $1 AND t.transaction_date < $2
-        AND ($3::integer IS NULL OR t.cost_center_id=$3)
+        AND ($3::int[] IS NULL OR t.cost_center_id = ANY($3::int[]))
       GROUP BY c.id,t.type ORDER BY t.type,total DESC
     `, params),
     db.query(`
@@ -76,7 +87,7 @@ router.get('/resumo', asyncRoute(async (req, res) => {
       FROM ${sourceSql} t JOIN cost_centers cc ON cc.id=t.cost_center_id
       JOIN categories c ON c.id=t.category_id
       WHERE t.deleted_at IS NULL AND t.transaction_date >= $1 AND t.transaction_date < $2
-        AND ($3::integer IS NULL OR t.cost_center_id=$3)
+        AND ($3::int[] IS NULL OR t.cost_center_id = ANY($3::int[]))
       ORDER BY t.created_at DESC LIMIT 8
     `, params),
     db.query(`
@@ -85,9 +96,9 @@ router.get('/resumo', asyncRoute(async (req, res) => {
         COALESCE(SUM(amount * accounting_sign) FILTER (WHERE type='despesa'),0) AS despesas
       FROM ${sourceSql} t WHERE deleted_at IS NULL AND financial_status='liquidado'
         AND transaction_date >= $1 AND transaction_date < $2
-        AND ($3::integer IS NULL OR cost_center_id=$3)
+        AND ($3::int[] IS NULL OR cost_center_id = ANY($3::int[]))
       GROUP BY DATE_TRUNC('month',transaction_date) ORDER BY mes
-    `, [`${months[0]}-01`, range.end, centerId]),
+    `, [`${months[0]}-01`, range.end, scopeIds]),
   ]);
 
   const trendMap = new Map(trend.rows.map((row) => [row.mes, row]));

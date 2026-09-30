@@ -9,7 +9,7 @@ async function autenticar(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const { rows } = await getDb().query(
-      'SELECT id, name, email, role, cloud_managed, cloud_session_token, cloud_user_id FROM users WHERE id = $1 AND active = TRUE',
+      'SELECT id, name, email, role, suite_role, all_cost_centers, cloud_managed, cloud_session_token, cloud_user_id FROM users WHERE id = $1 AND active = TRUE',
       [payload.sub]
     );
     if (!rows[0]) return res.status(401).json({ erro: 'Usuário inativo ou inexistente.' });

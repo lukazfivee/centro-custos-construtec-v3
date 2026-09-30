@@ -1,0 +1,65 @@
+/* D6: usuarios e e-mails externos, usando os componentes do desktop. */
+.usu-abas { display: flex; gap: 20px; border-bottom: 1px solid var(--color-divider); margin: 0 0 20px; }
+.usu-abas button { padding: 10px 2px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--color-neutral-300); font: inherit; cursor: pointer; }
+.usu-abas button[aria-selected="true"] { border-color: var(--color-accent-300); color: var(--color-text); font-weight: 600; }
+.usu-abas button:focus-visible { outline: 2px solid var(--color-accent-300); outline-offset: 2px; }
+.usu-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+.usu-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; margin-bottom: 16px; }
+.usu-barra .campo-busca { flex: 1 1 260px; max-width: 430px; }
+.usu-botoes, .usu-acoes { display: flex; align-items: center; gap: 8px; }
+.usu-pessoa { display: flex; align-items: center; gap: 10px; }
+.usu-avatar { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--color-accent-700); color: #fff; font-size: 12px; font-weight: 700; }
+.usu-emails { padding: 16px; }
+.usu-email-topo, .usu-email { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.usu-email-topo { padding-bottom: 14px; }
+.usu-email { padding: 11px 0; border-top: 1px solid var(--color-divider); font-size: 13px; }
+.usu-email span { overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .usu-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .usu-barra { align-items: stretch; flex-direction: column; }
+  .usu-barra .campo-busca { max-width: none; }
+  .usu-botoes { flex-wrap: wrap; }
+}
+
+/* Lista: apps e obras */
+.usu-apps-lista { display: flex; flex-wrap: wrap; gap: 4px; }
+.dois-tx { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.usu-barra .seg { flex: none; }
+
+/* Papeis e permissoes */
+.usu-papeis { padding: 0; overflow: hidden; }
+.usu-papeis-topo { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; }
+.usu-papeis-topo .muted { display: block; font-size: 13px; }
+.usu-scroll { overflow-x: auto; }
+.usu-matriz th[scope="row"] { text-align: left; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--color-text); min-width: 250px; height: 56px; }
+.usu-matriz th[scope="row"] span { display: block; font-size: 12px; font-weight: 400; color: var(--color-neutral-300); }
+.usu-matriz th.usu-mx, .usu-matriz td.usu-mx { text-align: center; min-width: 118px; }
+.usu-matriz th.usu-mx b { display: block; font-size: 11px; }
+.usu-matriz th.usu-mx span { display: block; font-size: 10px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.usu-grp th { height: 36px; background: var(--color-bg); font-size: 11px; color: var(--color-accent-300); }
+.usu-tk { display: inline-grid; place-items: center; width: 36px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--color-neutral-300); font: inherit; cursor: pointer; }
+.usu-tk.on { background: var(--color-accent-300); color: #fff; }
+.usu-tk.trava { background: var(--color-bg); cursor: not-allowed; }
+.usu-tk:disabled { cursor: not-allowed; opacity: .6; }
+.usu-tk:focus-visible { outline: 2px solid var(--color-accent-300); outline-offset: 2px; }
+
+/* Convidar e editar acesso */
+.usu-apps { display: flex; gap: 8px; flex-wrap: wrap; }
+.usu-app, .usu-obra { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-radius: 10px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-divider); color: var(--color-text); font: 13px var(--font-body); cursor: pointer; }
+.usu-app .ph-check { display: none; }
+.usu-app[aria-pressed="true"], .usu-obra[aria-pressed="true"] { background: var(--color-accent-300); color: #fff; box-shadow: none; }
+.usu-app[aria-pressed="true"] .ph-check { display: inline; }
+.usu-obras { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.usu-pode { padding: 14px; border-radius: 12px; background: var(--color-bg); }
+.usu-pode ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.usu-pode li { display: flex; align-items: center; gap: 8px; color: var(--color-neutral-300); }
+.usu-pode li.sim { color: var(--color-text); }
+.usu-pode li.sim .ph { color: var(--c-ok); }
+.usu-senha { display: grid; gap: 8px; margin-top: 16px; padding: 14px; border-radius: 12px; background: var(--color-bg); }
+.usu-senha code { font: 600 16px ui-monospace, monospace; overflow-wrap: anywhere; }
+
+/* Ver o sistema como */
+.usu-como { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-neutral-300); }
+.usu-como .inp { width: 190px; height: 38px; }
+.como-faixa { display: flex; align-items: center; gap: 12px; margin: 16px 28px 0; padding: 12px 16px; border-radius: 12px; background: var(--c-warn-soft); color: var(--c-warn); font-size: 13px; }
+.como-faixa span { flex: 1; }

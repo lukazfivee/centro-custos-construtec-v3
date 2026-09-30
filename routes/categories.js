@@ -1,7 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const { getDb } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { currentMonth, monthRange, validMonth } = require('../lib/dates');
@@ -49,7 +50,7 @@ function buildSearchFilter(query, base) {
   return { where: 'WHERE c.name ILIKE $3', values: [...base, search] };
 }
 
-router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const data = validate(req.body);
   await assertNomeLivre(data.name);
   const publicId = crypto.randomUUID();
@@ -61,7 +62,7 @@ router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
   res.status(201).json(rows[0]);
 }));
 
-router.put('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.put('/:id', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const data = validate(req.body);
   await assertNomeLivre(data.name, id);

@@ -1,12 +1,15 @@
 const crypto = require('crypto');
 const express = require('express');
 const { getDb } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { bloquearEscopado } = require('../services/obraScope');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(autenticar);
+router.use(bloquearEscopado);
 
 const MAX_SIZE = 5 * 1024 * 1024;
 
@@ -98,7 +101,7 @@ router.get('/:id/arquivo', asyncRoute(async (req, res) => {
   res.send(Buffer.from(invoice.content));
 }));
 
-router.post('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/:id', exigirPermissao('p6'), asyncRoute(async (req, res) => {
   const center = await centerById(positiveId(req.params.id));
   const file = decodePdf(req.body);
   const now = new Date();
@@ -121,7 +124,7 @@ router.post('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) =
   res.status(201).json({ notaFiscal:publicInvoice(rows[0]) });
 }));
 
-router.delete('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.delete('/:id', exigirPermissao('p6'), asyncRoute(async (req, res) => {
   const center = await centerById(positiveId(req.params.id));
   const invoice = await invoiceRow(center.id);
   if (!invoice) throw httpError(404, 'Nenhuma nota fiscal vinculada a este centro de custo.');

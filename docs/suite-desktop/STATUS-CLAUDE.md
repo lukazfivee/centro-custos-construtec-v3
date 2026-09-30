@@ -1,5 +1,63 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
+## D6 em andamento — 29/09/2026
+
+O Lucas autorizou o CODEX a iniciar a D6 sem Maestri e pediu um gancho para o
+Claude continuar caso o contexto termine. Branch local
+`feat/desktop-usuarios` em
+`C:\Users\Suporte\Documents\PROJETOS LUCAS\_worktrees\centro\wt-cc-desktop`,
+criada de `origin/main` no commit `a492a63`. Não houve push nem deploy.
+
+Primeira entrega em andamento: `public/d/telas/usuarios.js` e
+`public/d/css/usuarios.css` implementam a lista de usuários, cadastro com
+senha provisória, convite pelo endpoint da Fase 5, ativação/desativação e
+e-mails externos. `public/d/index.html` os carrega. `routes/users.js`
+informa `cloud_managed` na lista para impedir edição local de perfil
+corporativo. A interface usa apenas os três papéis atuais; ainda não há
+migração, matriz, restrição por obra ou seis papéis.
+
+Validação desta entrega parcial: `npm run check` passou (172 arquivos),
+`node --test test/desktop-web-structure.test.js
+test/users-n1-regression.test.js` passou (14/14) e `npm test` passou
+(308/308). A tela ainda precisa de conferência visual em 1440 × 900 e
+1280 × 800, nos temas claro e escuro. Os fluxos de convite exigem a conta
+central real para validação de ponta a ponta.
+
+**Atenção para continuar:** o diretório central D1 ainda usa
+`admin/gestor/supervisor`. `services/cloudUserMirror.js` e o upsert em
+`routes/users.js` regravam `users.role` com o papel remoto a cada
+login/listagem. Migrar a coluna local isoladamente para seis papéis causaria
+reversão de acesso. Implementar D6 em conjunto com o contrato do Worker
+central e os fluxos de login/handoff. Revisar as 53 chamadas de
+`exigirPapel` e proteger leitura por obra no servidor antes de expor
+`user_cost_centers` na tela. O plano e a matriz estão em
+`03-PLANO-FASES.md` e `01-ESPEC-TELAS.md`, seção 6.
+
+**Passo 1 concluído (29/09/2026):** a tela de Usuários foi conferida no navegador (servidor de demonstração local) em 1440×900 escuro e 1280×800 escuro e claro: lista, gaveta de novo usuário e aba de e-mails externos, sem erros no console. Sem prints salvos.
+
+**Decisões da D6 (29/09/2026, Lucas: "sigo suas recomendações"):** desenho em `D6-DESENHO-PAPEIS.md`. Supervisor vira técnico, mas todo supervisor existente fica com todas as obras; matriz no central; técnico e engenharia sem obra atribuída não veem nada.
+
+**Passo 2, etapa A (Worker) feita, sem commit/deploy:** `cloudflare/center-container/d1-migrations/012-papeis-suite.sql` (colunas `suite_role` e `apps`, tabela `role_permission_overrides`), `suiteRoles.js` (6 papéis, matriz padrão, papel efetivo, apps), `publicUser` devolve `suiteRole` e `apps`, e as rotas `POST /v1/users/access`, `GET/POST /v1/permissions`, `POST /v1/permissions/reset`; criar usuário aceita `suiteRole` e `apps`. Testes: 2 novos em `test/central-identity.test.js`; `npm test` 310/310. Falta no Worker: `suite_role`/`apps` em convites e cadastros (`signup.js`),. A migração 012 ainda **não** foi aplicada no D1 de produção.
+
+**Passo 2, etapa B (Centro) feita, sem deploy (30/09/2026):** migração `109_users_suite_roles.sql` (`users.suite_role`, `apps`, `all_cost_centers` DEFAULT TRUE, `last_seen_at`, tabela `user_cost_centers`), espelho grava o papel novo sem tocar em `users.role` (técnico/engenharia novos nascem sem obras; contas antigas ficam com todas), `services/permissions.js` (matriz padrão idêntica à do Worker, cache de 60 s da matriz central, `exigirPermissao`) e `cloudAuth.permissions`. As rotas saíram de `exigirPapel` para `exigirPermissao`: lançar p2; editar e excluir lançamento p3 (antes o PUT estava aberto a todos); estornar p4; cadastros, recorrentes, proposta, apropriações e importações p5; cobranças e NF p6; autorizar e enviar cobrança p7; fechamento p8; usuários, backup e sistema p9; medições p12. Ficam com `exigirPapel`: excluir obra (admin), bug reports. Testes: `test/permissions.test.js`, `test/permissions-routes.test.js` (cada papel x 11 rotas) e três testes antigos ajustados; `npm test` 315/315, `npm run check` ok.
+
+**Mudanças de comportamento para o Lucas conferir antes de publicar:** (a) gestor perde estornar (a matriz padrão dá p4 só a admin e financeiro; o admin pode religar na matriz); (b) supervisor legado vira técnico: não edita lançamento, não vê cobranças, mas registra medições; (c) financeiro ganha banco/produtividade (p3). Falta: filtro por obra (`escopoObras`) e 403 por URL, leitura de `p1` no painel, telas.
+
+**Passo 3 (obras por usuário) feito, sem deploy (30/09/2026):** `services/obraScope.js`. Engenharia e técnico com `all_cost_centers=FALSE` só veem as obras de `user_cost_centers`; sem obra atribuída não veem nada; contas antigas (TRUE) e os outros papéis veem tudo. Filtrados: lista de obras (com paginação), painel (`/dashboard/resumo`, soma só as obras do usuário), lançamentos (lista, CSV, leitura, criar, editar, excluir, estornar) e anexos. 403 por URL: detalhes, curva S, orçado x realizado, medições, propostas, notas fiscais por obra, `centroId` de outra obra. Fechados para escopados (somam tudo sem filtro): portfólio e CSV de obras, insights, histórico, bancos, produtividade, sincronização, recorrentes e NFs avulsas. Decisão do Lucas: gestor mantém "estornar" (p4) na matriz padrão (Worker, Centro e espec). Teste: `test/obra-scope.test.js` (tecnico e engenharia); `npm test` 316/316.
+
+**Falta da D6:** atribuir obras e apps pela API (`PUT /api/usuarios/:id` com papel, apps e obras, chamando `/v1/users/access` do Worker), papel novo no convite (`signup.js`), p1 no painel, telas (papéis e permissões, obras, apps, Ver o sistema como), migração 012 no D1 e 109 no Centro em produção (Worker antes do Container).
+
+**Passo 4 (API de acesso) feito, sem deploy (30/09/2026):** `routes/usersAccess.js` (`PUT /api/usuarios/:id/acesso`, `GET/POST /api/usuarios/permissoes`, `POST /api/usuarios/permissoes/restaurar`), `services/userAccess.js`; `POST /api/usuarios` e a lista trazem `suiteRole`, `apps`, `obras`, `todasObras` e `ultimoAcesso`. Worker: convite e aprovação aceitam `suiteRole` e `apps`; toda conta nova nasce com papel explícito (padrão técnico, sem obras) e a migração 012 também cobre `signup_invites`. p1 no painel (engenharia e técnico sempre abrem o painel limitado às suas obras). Decisões do Lucas em 30/09: publicar até produção (parar a cada passo de produção para confirmar), incluir o Orçamentos, padrão técnico sem obras, "Ver como" só visual. Testes: `test/users-access.test.js` (Centro + Worker real ponta a ponta) e 2 novos no Worker; `npm test` 318/318. Falta: telas, Orçamentos (p10 a p12), publicação.
+
+**Passo 5 (telas da D6) feito, sem deploy (30/09/2026):** Usuários e permissões com as três abas (Usuários, Papéis e permissões, E-mails externos), convidar ou criar com papel, apps e obras, editar acesso, matriz clicável com "Restaurar padrão" e "Ver o sistema como" (só visual, guardado em sessionStorage; o servidor usa o papel real). Arquivos: `public/d/telas/usuarios*.js` (dados, papeis, emails, form, como), `d-core.js` (`D.tem`, `D.simulando`, papéis novos), `shell.js` (faixa de simulação), `/api/auth/me` devolve `suiteRole` e `permissoes`. Conferido no navegador local (servidor de demonstração): criar técnico com obra, lista com papel e obras, matriz (somente leitura sem conta corporativa) e simulação como técnico (menu reduzido). Não conferidos: fluxo de convite por e-mail e matriz editável (exigem a conta corporativa), e os prints nos dois temas e resoluções. `npm test` 318/318.
+
+Próximos passos: (1) validar a primeira tela em navegador nos dois temas;
+(2) conferir os testes e corrigir regressões; (3) desenhar migração 109
+aditiva, modelo de papéis e matriz no diretório central e no banco local;
+(4) aplicar filtros de obra em dashboard, obras, lançamentos e cobranças com
+testes de 403 por URL; (5) completar telas de papéis, permissões, apps,
+obras e simulação; (6) só então avaliar PR, migração e publicação.
+
 Estado atual em 29/09/2026: D4 (PR #63), D5 e exclusão de centro de custo
 (PR #64) mescladas; o Container do Centro foi publicado e as migrações 107 e
 108 foram aplicadas em produção. O PR #65 registrou o mapa dos bancos. As

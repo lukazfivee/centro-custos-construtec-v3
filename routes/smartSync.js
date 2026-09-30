@@ -1,5 +1,6 @@
 const express = require('express');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute } = require('../lib/http');
 const { todayIso } = require('../lib/dates');
 const { buildPackage, importPackage, listImports, listConflicts, resolveConflict } = require('../services/smartSync');
@@ -15,7 +16,7 @@ router.get('/exportar', asyncRoute(async (req, res) => {
   res.send(JSON.stringify(pack, null, 2));
 }));
 
-router.post('/importar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/importar', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const result = await importPackage({
     content:req.body.conteudo,
     filename:req.body.nomeArquivo,
@@ -27,7 +28,7 @@ router.post('/importar', exigirPapel('admin','gestor'), asyncRoute(async (req, r
 router.get('/historico', asyncRoute(async (req, res) => res.json(await listImports())));
 router.get('/conflitos', asyncRoute(async (req, res) => res.json(await listConflicts())));
 
-router.post('/conflitos/:id/resolver', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/conflitos/:id/resolver', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const result = await resolveConflict({
     id:Number(req.params.id),
     choice:String(req.body.escolha || ''),

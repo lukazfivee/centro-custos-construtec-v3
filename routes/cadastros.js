@@ -7,6 +7,8 @@ const { asyncRoute, httpError } = require('../lib/http');
 const { workerCall, notificationsConfigured } = require('../services/notify');
 
 const PERFIS = ['admin', 'gestor', 'supervisor'];
+const PAPEIS = ['admin', 'gestor', 'financeiro', 'engenharia', 'tecnico', 'comercial'];
+const APPS = ['centro', 'orcamentos'];
 
 const router = express.Router();
 router.use(autenticar);
@@ -29,6 +31,11 @@ async function forward(req, res, action, extra = {}) {
 }
 
 const perfil = (value) => (PERFIS.includes(value) ? value : 'supervisor');
+// Papel novo e apps opcionais (D6); sem eles o Worker usa o perfil antigo.
+const acesso = (body) => ({
+  suiteRole: PAPEIS.includes(body.papel) ? body.papel : undefined,
+  apps: Array.isArray(body.apps) ? APPS.filter((app) => body.apps.includes(app)) : undefined,
+});
 const pedidoId = (req) => String(req.params.id || '').slice(0, 64);
 
 // Sem conta central ou sem Worker (instalação local): a lista responde "não se aplica" em vez de erro.
@@ -38,11 +45,11 @@ router.get('/', asyncRoute(async (req, res) => {
   }
   return forward(req, res, 'list');
 }));
-router.post('/:id/aprovar', asyncRoute(async (req, res) => forward(req, res, 'approve', { id: pedidoId(req), role: perfil((req.body || {}).perfil) })));
+router.post('/:id/aprovar', asyncRoute(async (req, res) => forward(req, res, 'approve', { id: pedidoId(req), role: perfil((req.body || {}).perfil), ...acesso(req.body || {}) })));
 router.post('/:id/recusar', asyncRoute(async (req, res) => forward(req, res, 'reject', { id: pedidoId(req) })));
 router.post('/convites', asyncRoute(async (req, res) => {
   const body = req.body || {};
-  return forward(req, res, 'invite', { email: String(body.email || '').trim().slice(0, 200), role: perfil(body.perfil) });
+  return forward(req, res, 'invite', { email: String(body.email || '').trim().slice(0, 200), role: perfil(body.perfil), ...acesso(body) });
 }));
 router.post('/codigo/trocar', asyncRoute(async (req, res) => forward(req, res, 'rotate')));
 

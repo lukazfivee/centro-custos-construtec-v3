@@ -2,7 +2,9 @@
 // Separado de routes/costCenters.js (limite de 350 linhas); montado no mesmo /api/centros-custo.
 const express = require('express');
 const { getDb } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { paramObra, bloquearEscopado } = require('../services/obraScope');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { csvLine, decimalBr } = require('../lib/csv');
 const { getCostCenterBudgetComparison } = require('../services/budgets/budgetComparison');
@@ -21,6 +23,7 @@ const {
 
 const router = express.Router();
 router.use(autenticar);
+router.param('id', paramObra);
 
 // Um gasto (apropriacao) so pode ser vinculado ou desvinculado pela obra a que pertence.
 async function ensureAllocationOfCenter(allocationId, costCenterId) {
@@ -130,7 +133,7 @@ router.get('/:id/apropriacoes', asyncRoute(async (req, res) => {
   res.json(allocations);
 }));
 
-router.post('/:id/apropriacoes', exigirPapel('admin', 'gestor'), asyncRoute(async (req, res) => {
+router.post('/:id/apropriacoes', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   if (req.body.allocationId) {
     await ensureAllocationOfCenter(req.body.allocationId, id);
@@ -154,7 +157,7 @@ router.post('/:id/apropriacoes', exigirPapel('admin', 'gestor'), asyncRoute(asyn
   res.status(201).json(result);
 }));
 
-router.post('/:id/apropriacoes/:allocId/desmapear', exigirPapel('admin', 'gestor'), asyncRoute(async (req, res) => {
+router.post('/:id/apropriacoes/:allocId/desmapear', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const allocationId = await ensureAllocationOfCenter(req.params.allocId, positiveId(req.params.id));
   const result = await unmapAllocation(getDb(), allocationId);
   res.json(result);
@@ -172,7 +175,7 @@ router.get('/:id/medicoes', asyncRoute(async (req, res) => {
   res.json({ contractId, labor, contracts });
 }));
 
-router.post('/:id/medicoes', exigirPapel('admin', 'gestor'), asyncRoute(async (req, res) => {
+router.post('/:id/medicoes', exigirPermissao('p12'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const { type = 'labor', ...params } = req.body;
   let contractId = params.contractId;

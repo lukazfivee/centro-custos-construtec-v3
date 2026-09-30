@@ -20,7 +20,7 @@
     try {
       const { data } = await CC.api('/auth/me');
       const atual = CC.session.user() || {};
-      localStorage.setItem('cc_usuario', JSON.stringify({ ...atual, id: data.id, nome: data.nome, email: data.email, role: data.role }));
+      localStorage.setItem('cc_usuario', JSON.stringify({ ...atual, id: data.id, nome: data.nome, email: data.email, role: data.role, suiteRole: data.suiteRole, permissoes: data.permissoes, todasObras: data.todasObras }));
       return true;
     } catch (error) {
       if (error.status === 401) return false;

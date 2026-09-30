@@ -7,7 +7,7 @@ const { iniciar } = require('../scripts/dev/fake-commercial-worker');
 
 // Desktop novo (D4): fluxo rascunho -> autorizar -> enviar contra um Worker de mentira (nada e enviado de verdade),
 // e o envio sem nota fiscal e barrado pelo servidor.
-test('cobranças: rascunho, autorização e envio; sem NF o envio é barrado; supervisor só lê', async (context) => {
+test('cobranças: rascunho, autorização e envio; sem NF o envio é barrado; tecnico não acessa; financeiro lê e edita, mas não autoriza', async (context) => {
   const obraId = '11111111-1111-4111-8111-111111111111';
   const obras = [{ publicId: obraId, code: 'CC-031', name: 'Residencial Aurora', client: 'Aurora', responsible: 'Carla', contractAmount: 1000, projectStatus: 'execucao', endDate: '2026-12-20' }];
   const worker = await iniciar({ obras });
@@ -65,13 +65,15 @@ test('cobranças: rascunho, autorização e envio; sem NF o envio é barrado; su
   assert.equal(lista.items[0].receivableAmount, 1000);
   await request(`/cloud-sync/cobrancas/${obraId}`, 'PUT', { ...lista.items[0], financialStatus: 'nf_emitida', invoiceNumber: 'NF 2199', dueDate: '2026-10-10', clientEmails: ['sindico@exemplo.com.br'] }, 200, gestor);
   await request(`/cloud-sync/cobrancas/${obraId}`, 'PUT', { ...lista.items[0], financialStatus: 'pago' }, 403, sup);
-  assert.equal((await request('/cloud-sync/cobrancas', 'GET', undefined, 200, sup)).items[0].financialStatus, 'nf_emitida');
+  // O supervisor legado vira tecnico, sem a permissao de cobrancas (p6): nem a lista abre.
+  await request('/cloud-sync/cobrancas', 'GET', undefined, 403, sup);
 
-  // Rascunho: o supervisor le, so admin e gestor salvam. A copia de faturamento e obrigatoria.
+  // Rascunho: so quem tem cobrancas (p6) le e salva. A copia de faturamento e obrigatoria.
   const salvo = await request(`/cloud-sync/cobrancas/${obraId}/rascunho`, 'PUT', { to: ['sindico@exemplo.com.br'], cc: [], subject: 'Medição 4', bodyText: 'Segue a medição.' }, 200, gestor);
   assert.equal(salvo.status, 'draft');
   await request(`/cloud-sync/cobrancas/${obraId}/rascunho`, 'PUT', { to: ['a@b.com'], subject: 'x', bodyText: 'xxxxxx' }, 403, sup);
-  const rascunho = await request(`/cloud-sync/cobrancas/${obraId}/rascunho`, 'GET', undefined, 200, sup);
+  await request(`/cloud-sync/cobrancas/${obraId}/rascunho`, 'GET', undefined, 403, sup);
+  const rascunho = await request(`/cloud-sync/cobrancas/${obraId}/rascunho`, 'GET', undefined, 200, gestor);
   assert.equal(rascunho.draft.status, 'draft');
   assert.ok(rascunho.draft.cc.includes('pcm@rcconstrutec.com.br'));
   assert.equal(rascunho.copyPolicy.mandatory, true);
@@ -87,6 +89,13 @@ test('cobranças: rascunho, autorização e envio; sem NF o envio é barrado; su
   await request(`/cloud-sync/cobrancas/${obraId}/enviar`, 'POST', { attachments: [{ filename: 'nf.txt', contentType: 'text/plain', contentBase64: pdf }] }, 400, gestor);
   await request(`/cloud-sync/cobrancas/${obraId}/enviar`, 'POST', {}, 403, sup);
   await request(`/cloud-sync/cobrancas/${obraId}/autorizar`, 'POST', { confirmar: true }, 403, sup);
+
+  // Financeiro (p6, sem p7): le e edita a cobranca, mas nao autoriza nem envia.
+  await getDb().query("UPDATE users SET suite_role='financeiro' WHERE email=$1", ['sup@rcconstrutec.com.br']);
+  await request('/cloud-sync/cobrancas', 'GET', undefined, 200, sup);
+  await request(`/cloud-sync/cobrancas/${obraId}/rascunho`, 'GET', undefined, 200, sup);
+  await request(`/cloud-sync/cobrancas/${obraId}/autorizar`, 'POST', { confirmar: true }, 403, sup);
+  await request(`/cloud-sync/cobrancas/${obraId}/enviar`, 'POST', {}, 403, sup);
 
   // Com a NF anexada, envia (o Worker de mentira so registra).
   const ok = await request(`/cloud-sync/cobrancas/${obraId}/enviar`, 'POST', { attachments: [{ filename: 'nf-2199.pdf', contentType: 'application/pdf', contentBase64: pdf }] }, 200, gestor);

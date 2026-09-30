@@ -55,10 +55,11 @@
       <aside class="side" aria-label="Menu">
         <a class="marca" href="#/inicio"><img src="logo-fundo-escuro.png" alt="Construtec"><span>Centro de Custos</span></a>
         <nav aria-label="Navegação principal">${menu()}</nav>
-        <div class="quem">${avatar(u)}<span class="nome"><b>${esc(u.nome || u.name || '')}</b><span>${esc(D.papelNome())}</span></span>
+        <div class="quem">${avatar(u)}<span class="nome"><b>${esc(u.nome || u.name || '')}</b><span>${esc(D.papelNome())}${D.simulando() ? ' · simulação' : ''}</span></span>
           <button type="button" class="ibtn" data-sair aria-label="Sair" title="Sair">${D.ic('sign-out', 18)}</button></div>
       </aside>
       <div class="area">
+        ${D.simulando() ? `<div class="como-faixa" role="status">${D.ic('eye')}<span>Você está vendo o sistema como <b>${esc(D.papelNome())}</b>. Menus e botões sem permissão somem. O servidor continua usando o seu papel real.</span><button type="button" class="btn btn-s" data-sair-como>Voltar para ${esc(D.papelNome(D.usuario().suiteRole || 'admin'))}</button></div>` : ''}
         <header class="top">
           <div class="busca" role="search"></div>
           <span class="espaco"></span>
@@ -71,6 +72,8 @@
     pintarTema();
     CC.$('[data-tema]').addEventListener('click', () => D.tema.alternar());
     CC.$('[data-sair]').addEventListener('click', sair);
+    const voltar = CC.$('[data-sair-como]');
+    if (voltar) voltar.addEventListener('click', () => { D.simular(''); location.hash = '#/usuarios'; location.reload(); });
     document.addEventListener('d:tema', pintarTema);
     carregarFoto();
   };

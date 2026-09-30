@@ -3,10 +3,12 @@ const { currentMonth, validMonth, monthRange, todaySql } = require('../lib/dates
 const express=require('express');
 const {getDb}=require('../db');
 const {autenticar}=require('../middleware/auth');
+const { bloquearEscopado } = require('../services/obraScope');
 const {asyncRoute,httpError}=require('../lib/http');
 
 const router=express.Router();
 router.use(autenticar);
+router.use(bloquearEscopado);
 
 router.get('/atencao',asyncRoute(async(req,res)=>{
   const db=getDb();

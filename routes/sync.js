@@ -1,5 +1,6 @@
 const express = require('express');
 const { autenticar } = require('../middleware/auth');
+const { bloquearEscopado } = require('../services/obraScope');
 const { asyncRoute, httpError } = require('../lib/http');
 const { todayIso } = require('../lib/dates');
 const { buildTransactionFilters } = require('../lib/transactionFilters');
@@ -8,6 +9,7 @@ const { getDb } = require('../db');
 
 const router = express.Router();
 router.use(autenticar);
+router.use(bloquearEscopado);
 
 router.get('/exportar.csv', asyncRoute(async (req, res) => {
   const reversalResult = await getDb().query(`

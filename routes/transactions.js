@@ -2,7 +2,9 @@ const { isMonthClosed } = require('../services/financialPolicy');
 const crypto = require('crypto');
 const express = require('express');
 const { getDb, getInstanceIdentity } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { assertObra, obrasDaConsulta, restringir } = require('../services/obraScope');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { buildTransactionFilters } = require('../lib/transactionFilters');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
@@ -37,7 +39,8 @@ const selectSql = `
   JOIN categories c ON c.id=t.category_id`;
 
 router.get('/', asyncRoute(async (req, res) => {
-  const { where, values } = buildTransactionFilters(req.query);
+  const built = buildTransactionFilters(req.query);
+  const { where, values } = restringir(built.where, built.values, await obrasDaConsulta(req));
   const orderBy = transactionOrder(req.query);
   if (!wantsPagination(req.query)) {
     const { rows } = await getDb().query(
@@ -66,7 +69,8 @@ router.get('/', asyncRoute(async (req, res) => {
 }));
 
 router.get('/exportar.csv', asyncRoute(async (req, res) => {
-  const { where, values } = buildTransactionFilters(req.query);
+  const built = buildTransactionFilters(req.query);
+  const { where, values } = restringir(built.where, built.values, await obrasDaConsulta(req));
   const { rows } = await getDb().query(
     `${selectSql} ${where} ORDER BY t.transaction_date DESC,t.id DESC LIMIT 10000`, values
   );
@@ -85,11 +89,13 @@ router.get('/:id', asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id, 'Lançamento');
   const { rows } = await getDb().query(`${selectSql} WHERE t.id=$1 AND t.deleted_at IS NULL`, [id]);
   if (!rows[0]) throw httpError(404, 'Lançamento não encontrado.');
+  await assertObra(req, rows[0].cost_center_id);
   res.json(rows[0]);
 }));
 
-router.post('/', asyncRoute(async (req, res) => {
+router.post('/', exigirPermissao('p2'), asyncRoute(async (req, res) => {
   const data = validatePayload(req.body);
+  await assertObra(req, data.costCenterId);
   const clientId = readClientId(req.body), replay = await findReplay(getDb(), req.usuario.id, clientId, data);
   if (replay && !replay.excluido) { await ensureCreatedAudit(replay.public_id, data, req.usuario); await maybeAutoAllocateExpense(data, replay.id); }
   if (replay) return res.status(200).json(replay);
@@ -119,7 +125,7 @@ router.post('/', asyncRoute(async (req, res) => {
   res.status(201).json(rows[0]);
 }));
 
-router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/:id/estornar', exigirPermissao('p4'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const reason = String(req.body.motivo || '').trim();
   const reversalDate = String(req.body.data_estorno || todayIso());
@@ -134,6 +140,7 @@ router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (re
     );
     const original = originalResult.rows[0];
     if (!original) throw httpError(404, 'Lançamento não encontrado.');
+    await assertObra(req, original.cost_center_id);
     const originalDateStr = original.transaction_date instanceof Date
       ? original.transaction_date.toISOString().slice(0,10) : String(original.transaction_date).slice(0,10);
     if (reversalDate < originalDateStr) {
@@ -189,7 +196,7 @@ router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (re
   });
 }));
 
-router.put('/:id', asyncRoute(async (req, res) => {
+router.put('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const data = validatePayload(req.body);
   const id = positiveId(req.params.id);
   const expectedRevision = Number(req.body.revisao);
@@ -197,11 +204,13 @@ router.put('/:id', asyncRoute(async (req, res) => {
     throw httpError(400, 'Revisão do lançamento inválida. Atualize a lista e tente novamente.');
   }
   const existingResult = await getDb().query(
-    `SELECT public_id,description,transaction_date::text AS data,revision,deleted_at,reversal_of,reversed_at,accounting_sign
+    `SELECT public_id,cost_center_id,description,transaction_date::text AS data,revision,deleted_at,reversal_of,reversed_at,accounting_sign
      FROM transactions WHERE id=$1`, [id]
   );
   const existing = existingResult.rows[0];
   if (!existing) throw httpError(404, 'Lançamento não encontrado.');
+  await assertObra(req, existing.cost_center_id);
+  await assertObra(req, data.costCenterId);
   if (existing.deleted_at) {
     throw httpError(409, 'Este lançamento foi excluído. Atualize a lista antes de tentar editá-lo.');
   }
@@ -243,15 +252,16 @@ router.put('/:id', asyncRoute(async (req, res) => {
   res.json({ ok:true, revisao:result.rows[0].revision });
 }));
 
-router.delete('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.delete('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const instance = getInstanceIdentity();
   const id = positiveId(req.params.id);
   const existingResult = await getDb().query(
-    `SELECT public_id,description,transaction_date::text AS data,reversal_of,reversed_at,accounting_sign
+    `SELECT public_id,cost_center_id,description,transaction_date::text AS data,reversal_of,reversed_at,accounting_sign
      FROM transactions WHERE id=$1 AND deleted_at IS NULL`, [id]
   );
   const existing = existingResult.rows[0];
   if (!existing) throw httpError(404, 'Lançamento não encontrado.');
+  await assertObra(req, existing.cost_center_id);
   if (existing.reversal_of || Number(existing.accounting_sign || 1) === -1) {
     throw httpError(409, 'Movimentos de estorno não podem ser excluídos.');
   }
