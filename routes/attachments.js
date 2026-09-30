@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
+const { assertObra } = require('../services/obraScope');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
@@ -15,7 +16,7 @@ const CATEGORIES = new Set(['comprovante','nota_fiscal','boleto','recibo','contr
 
 router.get('/lancamento/:transactionId', asyncRoute(async (req, res) => {
   const transactionId = positiveId(req.params.transactionId);
-  await ensureTransaction(transactionId);
+  await ensureTransaction(transactionId, req);
   const { rows } = await getDb().query(`
     SELECT id,public_id,original_name AS nome,mime_type AS tipo,size_bytes AS tamanho,
       sha256,category AS categoria,notes AS observacao,created_by_name AS enviado_por,created_at
@@ -27,7 +28,7 @@ router.get('/lancamento/:transactionId', asyncRoute(async (req, res) => {
 
 router.post('/lancamento/:transactionId', asyncRoute(async (req, res) => {
   const transactionId = positiveId(req.params.transactionId);
-  const transaction = await ensureTransaction(transactionId);
+  const transaction = await ensureTransaction(transactionId, req);
   const name = safeName(req.body.nome);
   const mimeType = String(req.body.tipo || '').trim().toLowerCase();
   const category = CATEGORIES.has(String(req.body.categoria || '')) ? String(req.body.categoria) : 'comprovante';
@@ -65,10 +66,12 @@ router.post('/lancamento/:transactionId', asyncRoute(async (req, res) => {
 router.get('/:id/arquivo', asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const { rows } = await getDb().query(`
-    SELECT original_name,mime_type,size_bytes,content
+    SELECT original_name,mime_type,size_bytes,content,
+      (SELECT t.cost_center_id FROM transactions t WHERE t.id=transaction_attachments.transaction_id) AS cost_center_id
     FROM transaction_attachments WHERE id=$1`, [id]);
   const file = rows[0];
   if (!file) throw httpError(404, 'Documento não encontrado.');
+  await assertObra(req, file.cost_center_id);
   res.setHeader('Content-Type', file.mime_type);
   res.setHeader('Content-Length', String(file.size_bytes));
   res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(file.original_name)}`);
@@ -79,11 +82,12 @@ router.get('/:id/arquivo', asyncRoute(async (req, res) => {
 router.delete('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const { rows } = await getDb().query(`
-    SELECT a.id,a.public_id,a.original_name,a.sha256,t.public_id AS transaction_public_id
+    SELECT a.id,a.public_id,a.original_name,a.sha256,t.public_id AS transaction_public_id,t.cost_center_id
     FROM transaction_attachments a JOIN transactions t ON t.id=a.transaction_id
     WHERE a.id=$1`, [id]);
   const item = rows[0];
   if (!item) throw httpError(404, 'Documento não encontrado.');
+  await assertObra(req, item.cost_center_id);
   await getDb().query('DELETE FROM transaction_attachments WHERE id=$1', [id]);
   await recordAudit({
     entityType:'lancamento',entityId:item.transaction_public_id,action:'anexo_removido',
@@ -93,12 +97,13 @@ router.delete('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   res.json({ ok:true });
 }));
 
-async function ensureTransaction(id) {
+async function ensureTransaction(id, req) {
   const { rows } = await getDb().query(
-    'SELECT id,public_id,description,deleted_at FROM transactions WHERE id=$1', [id]
+    'SELECT id,public_id,description,deleted_at,cost_center_id FROM transactions WHERE id=$1', [id]
   );
   const transaction = rows[0];
   if (!transaction || transaction.deleted_at) throw httpError(404, 'Lançamento não encontrado.');
+  await assertObra(req, transaction.cost_center_id);
   return transaction;
 }
 

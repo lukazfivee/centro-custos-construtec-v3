@@ -2,12 +2,14 @@ const crypto=require('crypto');
 const express=require('express');
 const {getDb}=require('../db');
 const { autenticar } = require('../middleware/auth');
+const { bloquearEscopado } = require('../services/obraScope');
 const { exigirPermissao } = require('../services/permissions');
 const {asyncRoute,httpError}=require('../lib/http');
 const {recordAudit}=require('../services/audit');
 
 const router=express.Router();
 router.use(autenticar);
+router.use(bloquearEscopado);
 
 router.get('/contas',asyncRoute(async(req,res)=>{
   const {rows}=await getDb().query(`SELECT id,name AS nome,account_type AS tipo,institution AS instituicao,opening_balance AS saldo_inicial,active AS ativo FROM financial_accounts ORDER BY active DESC,name`);

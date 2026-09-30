@@ -3,6 +3,7 @@
 const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
+const { paramObra, bloquearEscopado } = require('../services/obraScope');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { csvLine, decimalBr } = require('../lib/csv');
@@ -22,6 +23,7 @@ const {
 
 const router = express.Router();
 router.use(autenticar);
+router.param('id', paramObra);
 
 // Um gasto (apropriacao) so pode ser vinculado ou desvinculado pela obra a que pertence.
 async function ensureAllocationOfCenter(allocationId, costCenterId) {

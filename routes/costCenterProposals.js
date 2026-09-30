@@ -2,12 +2,14 @@ const crypto = require('crypto');
 const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
+const { paramObra, bloquearEscopado } = require('../services/obraScope');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(autenticar);
+router.param('id', paramObra);
 
 const MAX_SIZE = 5 * 1024 * 1024;
 

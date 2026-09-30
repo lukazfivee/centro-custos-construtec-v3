@@ -274,7 +274,7 @@ Textos, rótulos e mensagens exatos estão no `prototipo/Desktop.dc.html`. Use-o
 | p1 Ver painel financeiro | sim | sim | sim | sim | | |
 | p2 Lançar despesas | sim | sim | sim | sim | sim | |
 | p3 Editar e excluir lançamentos | sim | sim | sim | | | |
-| p4 Estornar lançamentos | sim | | sim | | | |
+| p4 Estornar lançamentos | sim | sim | sim | | | |
 | p5 Cadastros | sim | sim | | | | |
 | p6 Cobranças | sim | sim | sim | | | |
 | p7 Autorizar envio de cobrança | sim | sim | | | | |

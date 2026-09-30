@@ -2,12 +2,14 @@ const crypto = require('crypto');
 const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
+const { paramObra, bloquearEscopado } = require('../services/obraScope');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(autenticar);
+router.param('id', paramObra);
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const TIPOS = ['fornecedor', 'cliente'];
@@ -124,7 +126,7 @@ async function ledgerById(nfId) {
   return rows[0];
 }
 
-router.put('/notas-fiscais/:nfId', exigirPermissao('p6'), asyncRoute(async (req, res) => {
+router.put('/notas-fiscais/:nfId', bloquearEscopado, exigirPermissao('p6'), asyncRoute(async (req, res) => {
   const nfId = positiveId(req.params.nfId, 'Identificador da nota fiscal');
   const existing = await ledgerById(nfId);
   const status = req.body?.status !== undefined ? validStatus(req.body.status) : existing.status;
@@ -147,7 +149,7 @@ router.put('/notas-fiscais/:nfId', exigirPermissao('p6'), asyncRoute(async (req,
 }));
 
 // Baixa o PDF da nota fiscal (o desktop novo lista e baixa as NFs da obra).
-router.get('/notas-fiscais/:nfId/arquivo', asyncRoute(async (req, res) => {
+router.get('/notas-fiscais/:nfId/arquivo', bloquearEscopado, asyncRoute(async (req, res) => {
   const nfId = positiveId(req.params.nfId, 'Identificador da nota fiscal');
   const { rows } = await getDb().query('SELECT original_name,size_bytes,content FROM cost_center_invoices_ledger WHERE id=$1', [nfId]);
   if (!rows[0]) throw httpError(404, 'Nota fiscal não encontrada.');
@@ -159,7 +161,7 @@ router.get('/notas-fiscais/:nfId/arquivo', asyncRoute(async (req, res) => {
   res.send(Buffer.from(rows[0].content));
 }));
 
-router.delete('/notas-fiscais/:nfId', exigirPermissao('p6'), asyncRoute(async (req, res) => {
+router.delete('/notas-fiscais/:nfId', bloquearEscopado, exigirPermissao('p6'), asyncRoute(async (req, res) => {
   const nfId = positiveId(req.params.nfId, 'Identificador da nota fiscal');
   const existing = await ledgerById(nfId);
   await getDb().query('DELETE FROM cost_center_invoices_ledger WHERE id=$1', [nfId]);

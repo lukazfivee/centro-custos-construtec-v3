@@ -11,7 +11,7 @@ const MATRIX = {
   p1: ['admin', 'gestor', 'financeiro', 'engenharia'],
   p2: ['admin', 'gestor', 'financeiro', 'engenharia', 'tecnico'],
   p3: ['admin', 'gestor', 'financeiro'],
-  p4: ['admin', 'financeiro'],
+  p4: ['admin', 'gestor', 'financeiro'],
   p5: ['admin', 'gestor'],
   p6: ['admin', 'gestor', 'financeiro'],
   p7: ['admin', 'gestor'],

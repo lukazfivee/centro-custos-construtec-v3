@@ -1,11 +1,13 @@
 const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
+const { bloquearEscopado } = require('../services/obraScope');
 const { asyncRoute } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 
 const router=express.Router();
 router.use(autenticar);
+router.use(bloquearEscopado);
 
 const HISTORY_COLUMNS = `id,entity_type AS tipo,entity_id,action AS acao,summary AS resumo,data,
   user_name AS usuario,instance_name AS instancia,created_at`;

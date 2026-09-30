@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
+const { bloquearEscopado } = require('../services/obraScope');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
@@ -10,6 +11,7 @@ const schedule = require('../services/recurringSchedule');
 
 const router = express.Router();
 router.use(autenticar);
+router.use(bloquearEscopado);
 
 // inicio = mes da primeira parcela (AAAA-MM); modelos antigos sem o campo usam o mes em que foram criados.
 const RECURRING_SELECT = `

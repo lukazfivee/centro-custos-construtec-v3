@@ -3,12 +3,14 @@ const { validDate, todayIso } = require('../lib/dates');
 const express = require('express');
 const { getDb, getInstanceIdentity } = require('../db');
 const { autenticar } = require('../middleware/auth');
+const { bloquearEscopado } = require('../services/obraScope');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(autenticar);
+router.use(bloquearEscopado);
 
 router.get('/sugestoes', asyncRoute(async (req, res) => {
   const q = String(req.query.q || '').trim();

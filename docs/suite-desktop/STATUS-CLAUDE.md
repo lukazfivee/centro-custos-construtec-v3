@@ -43,6 +43,10 @@ central e os fluxos de login/handoff. Revisar as 53 chamadas de
 
 **Mudanças de comportamento para o Lucas conferir antes de publicar:** (a) gestor perde estornar (a matriz padrão dá p4 só a admin e financeiro; o admin pode religar na matriz); (b) supervisor legado vira técnico: não edita lançamento, não vê cobranças, mas registra medições; (c) financeiro ganha banco/produtividade (p3). Falta: filtro por obra (`escopoObras`) e 403 por URL, leitura de `p1` no painel, telas.
 
+**Passo 3 (obras por usuário) feito, sem deploy (30/09/2026):** `services/obraScope.js`. Engenharia e técnico com `all_cost_centers=FALSE` só veem as obras de `user_cost_centers`; sem obra atribuída não veem nada; contas antigas (TRUE) e os outros papéis veem tudo. Filtrados: lista de obras (com paginação), painel (`/dashboard/resumo`, soma só as obras do usuário), lançamentos (lista, CSV, leitura, criar, editar, excluir, estornar) e anexos. 403 por URL: detalhes, curva S, orçado x realizado, medições, propostas, notas fiscais por obra, `centroId` de outra obra. Fechados para escopados (somam tudo sem filtro): portfólio e CSV de obras, insights, histórico, bancos, produtividade, sincronização, recorrentes e NFs avulsas. Decisão do Lucas: gestor mantém "estornar" (p4) na matriz padrão (Worker, Centro e espec). Teste: `test/obra-scope.test.js` (tecnico e engenharia); `npm test` 316/316.
+
+**Falta da D6:** atribuir obras e apps pela API (`PUT /api/usuarios/:id` com papel, apps e obras, chamando `/v1/users/access` do Worker), papel novo no convite (`signup.js`) e `last_seen_at`, p1 no painel, telas (papéis e permissões, obras, apps, Ver o sistema como), migração 012 no D1 e 109 no Centro em produção (Worker antes do Container).
+
 Próximos passos: (1) validar a primeira tela em navegador nos dois temas;
 (2) conferir os testes e corrigir regressões; (3) desenhar migração 109
 aditiva, modelo de papéis e matriz no diretório central e no banco local;
