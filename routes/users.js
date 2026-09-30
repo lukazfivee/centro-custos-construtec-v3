@@ -2,7 +2,8 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { getDb } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { recordAudit } = require('../services/audit');
@@ -10,7 +11,7 @@ const cloudAuth = require('../services/cloudAuth');
 const { mirrorCloudUser, retire } = require('../services/cloudUserMirror');
 
 const router = express.Router();
-router.use(autenticar, exigirPapel('admin'));
+router.use(autenticar, exigirPermissao('p9'));
 
 const PUBLIC_COLUMNS = row => row && ({ id:row.id, nome:row.name, email:row.email, role:row.role, ativo:row.active, cloud_managed:row.cloud_managed === true, created_at:row.created_at });
 

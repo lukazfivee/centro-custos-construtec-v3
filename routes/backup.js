@@ -3,12 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { getDb, getInstanceIdentity } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
-router.use(autenticar, exigirPapel('admin'));
+router.use(autenticar, exigirPermissao('p9'));
 
 function restoreRootDir() {
   return path.resolve(process.env.RESTORE_ROOT_DIR || path.join(__dirname, '..', 'dados'));

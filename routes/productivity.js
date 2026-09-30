@@ -2,7 +2,8 @@ const { assertMutableTransaction, moneyCents } = require('../services/financialP
 const { validDate, todayIso } = require('../lib/dates');
 const express = require('express');
 const { getDb, getInstanceIdentity } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
@@ -33,7 +34,7 @@ router.get('/sugestoes', asyncRoute(async (req, res) => {
   res.json(rows);
 }));
 
-router.post('/acoes-em-massa', exigirPapel('admin','gestor'), asyncRoute(async (req,res) => {
+router.post('/acoes-em-massa', exigirPermissao('p3'), asyncRoute(async (req,res) => {
   const ids = Array.isArray(req.body.ids) ? [...new Set(req.body.ids.map(Number).filter(Number.isInteger).filter(v=>v>0))] : [];
   if (!ids.length || ids.length > 200) throw httpError(400,'Selecione entre 1 e 200 lançamentos.');
   const action=String(req.body.acao||'');
@@ -92,7 +93,7 @@ router.get('/rateio/:transactionId', asyncRoute(async(req,res)=>{
   res.json(rows);
 }));
 
-router.put('/rateio/:transactionId', exigirPapel('admin','gestor'), asyncRoute(async(req,res)=>{
+router.put('/rateio/:transactionId', exigirPermissao('p3'), asyncRoute(async(req,res)=>{
   const transactionId=positiveId(req.params.transactionId);
   if(!Array.isArray(req.body.rateios) || req.body.rateios.length>200) throw httpError(400,'Informe até 200 rateios.');
   const normalized=req.body.rateios.map(x=>({

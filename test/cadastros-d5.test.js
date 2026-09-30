@@ -50,9 +50,9 @@ test('D5: telas registradas e carregadas pelo index do desktop', () => {
   for (const tela of ['categorias', 'fornecedores', 'recorrentes']) {
     assert.ok(fs.readFileSync(path.join(raiz, 'telas', `${tela}.js`), 'utf8').includes(`D.tela('${tela}'`), `${tela} não se registra`);
   }
-  // A regra de papel do servidor: so admin e gestor gravam; o menu mantem Recorrentes so para admin (regra atual).
+  // A regra do servidor: gravar recorrentes exige a permissao de cadastros (p5: admin e gestor no padrao).
   const recorrentes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'recurring.js'), 'utf8');
-  assert.equal((recorrentes.match(/exigirPapel\('admin','gestor'\)/g) || []).length, 4, 'criar, editar, excluir e gerar exigem admin ou gestor');
+  assert.equal((recorrentes.match(/exigirPermissao\('p5'\)/g) || []).length, 4, 'criar, editar, excluir e gerar exigem a permissao p5');
 });
 
 test('cadastros: categorias, fornecedores e recorrentes por mês', async (context) => {

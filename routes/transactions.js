@@ -2,7 +2,8 @@ const { isMonthClosed } = require('../services/financialPolicy');
 const crypto = require('crypto');
 const express = require('express');
 const { getDb, getInstanceIdentity } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { buildTransactionFilters } = require('../lib/transactionFilters');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
@@ -88,7 +89,7 @@ router.get('/:id', asyncRoute(async (req, res) => {
   res.json(rows[0]);
 }));
 
-router.post('/', asyncRoute(async (req, res) => {
+router.post('/', exigirPermissao('p2'), asyncRoute(async (req, res) => {
   const data = validatePayload(req.body);
   const clientId = readClientId(req.body), replay = await findReplay(getDb(), req.usuario.id, clientId, data);
   if (replay && !replay.excluido) { await ensureCreatedAudit(replay.public_id, data, req.usuario); await maybeAutoAllocateExpense(data, replay.id); }
@@ -119,7 +120,7 @@ router.post('/', asyncRoute(async (req, res) => {
   res.status(201).json(rows[0]);
 }));
 
-router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/:id/estornar', exigirPermissao('p4'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const reason = String(req.body.motivo || '').trim();
   const reversalDate = String(req.body.data_estorno || todayIso());
@@ -189,7 +190,7 @@ router.post('/:id/estornar', exigirPapel('admin','gestor'), asyncRoute(async (re
   });
 }));
 
-router.put('/:id', asyncRoute(async (req, res) => {
+router.put('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const data = validatePayload(req.body);
   const id = positiveId(req.params.id);
   const expectedRevision = Number(req.body.revisao);
@@ -243,7 +244,7 @@ router.put('/:id', asyncRoute(async (req, res) => {
   res.json({ ok:true, revisao:result.rows[0].revision });
 }));
 
-router.delete('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.delete('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const instance = getInstanceIdentity();
   const id = positiveId(req.params.id);
   const existingResult = await getDb().query(

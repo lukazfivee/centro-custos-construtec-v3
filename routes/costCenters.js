@@ -3,6 +3,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { getDb } = require('../db');
 const { autenticar, exigirPapel } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { csvLine, decimalBr } = require('../lib/csv');
@@ -125,7 +126,7 @@ router.get('/exportar.csv', asyncRoute(async (req, res) => {
   res.send(`\uFEFF${lines.join('\r\n')}`);
 }));
 
-router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const data = validate(req.body);
   const publicId = crypto.randomUUID();
   const { rows } = await getDb().query(
@@ -139,7 +140,7 @@ router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
   res.status(201).json(rows[0]);
 }));
 
-router.put('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.put('/:id', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const data = validate(req.body);
   const id = positiveId(req.params.id);
   // Quem envia a revisao (desktop novo) nao sobrescreve a alteracao de outra pessoa.

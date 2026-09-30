@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { currentMonth, validMonth } = require('../lib/dates');
@@ -77,7 +78,7 @@ function buildSearchFilter(query) {
   return { where: 'WHERE rt.name ILIKE $1', values: [search] };
 }
 
-router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const data = validate(req.body);
   const inicio = data.inicio || schedule.inicioPadrao(data.dayOfMonth);
   const { rows } = await getDb().query(
@@ -91,7 +92,7 @@ router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
   res.status(201).json(rows[0]);
 }));
 
-router.put('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.put('/:id', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const data = validate(req.body);
   const id = positiveId(req.params.id);
   const result = await getDb().query(
@@ -107,7 +108,7 @@ router.put('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) =>
   res.json({ ok: true });
 }));
 
-router.delete('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.delete('/:id', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const result = await getDb().query('DELETE FROM recurring_templates WHERE id=$1', [id]);
   if (!result.rowCount) throw httpError(404, 'Modelo não encontrado.');
@@ -116,7 +117,7 @@ router.delete('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res)
 }));
 
 // Gera os lancamentos do mes escolhido (padrao: o atual) como "A pagar". Repetir nao duplica.
-router.post('/gerar', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.post('/gerar', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const mes = mesEscolhido(req.body && req.body.mes, { gerar: true });
   const planToken = req.body && req.body.planToken;
   if (planToken !== undefined && !/^[a-f0-9]{64}$/.test(planToken)) throw httpError(400, 'Token da prévia inválido.');

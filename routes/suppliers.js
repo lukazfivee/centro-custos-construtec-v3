@@ -1,7 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const { getDb } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { csvLine } = require('../lib/csv');
@@ -93,7 +94,7 @@ router.get('/:id/resumo', asyncRoute(async (req,res) => {
   res.json({ lancamentos: lista.rows, gasto_mes: Number(totais.rows[0].gasto), lancamentos_mes: Number(totais.rows[0].qtd) });
 }));
 
-router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req,res) => {
+router.post('/', exigirPermissao('p5'), asyncRoute(async (req,res) => {
   const data=validate(req.body);
   await assertDocumentoLivre(data.document);
   await assertCategoria(data.categoryId);
@@ -110,7 +111,7 @@ router.post('/', exigirPapel('admin','gestor'), asyncRoute(async (req,res) => {
   res.status(201).json(rows[0]);
 }));
 
-router.put('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req,res) => {
+router.put('/:id', exigirPermissao('p5'), asyncRoute(async (req,res) => {
   const id=positiveId(req.params.id);
   const current = await getDb().query('SELECT document FROM suppliers WHERE id=$1', [id]);
   if(!current.rows.length) throw httpError(404,'Fornecedor não encontrado.');

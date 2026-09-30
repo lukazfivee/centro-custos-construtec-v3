@@ -1,7 +1,8 @@
 const crypto = require('crypto');
 const express = require('express');
 const { getDb } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
@@ -74,7 +75,7 @@ router.get('/:id/proposta/arquivo', asyncRoute(async (req, res) => {
   res.send(Buffer.from(proposal.content));
 }));
 
-router.post('/:id/proposta', exigirPapel('admin', 'gestor'), asyncRoute(async (req, res) => {
+router.post('/:id/proposta', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const center = await centerById(positiveId(req.params.id));
   const file = decodePdf(req.body);
   const now = new Date();
@@ -97,7 +98,7 @@ router.post('/:id/proposta', exigirPapel('admin', 'gestor'), asyncRoute(async (r
   res.status(201).json({ proposta: publicProposal(rows[0]) });
 }));
 
-router.delete('/:id/proposta', exigirPapel('admin', 'gestor'), asyncRoute(async (req, res) => {
+router.delete('/:id/proposta', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const center = await centerById(positiveId(req.params.id));
   const proposal = await proposalRow(center.id);
   if (!proposal) throw httpError(404, 'Nenhuma proposta anexada a este centro de custo.');

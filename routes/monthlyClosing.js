@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
@@ -16,7 +17,7 @@ router.get('/', asyncRoute(async (req, res) => {
   res.json(rows);
 }));
 
-router.post('/', exigirPapel('admin'), asyncRoute(async (req, res) => {
+router.post('/', exigirPermissao('p8'), asyncRoute(async (req, res) => {
   const year = Number(req.body.ano);
   const month = Number(req.body.mes);
   if (!Number.isInteger(year) || year < 2000 || year > 2100) throw httpError(400, 'Ano inválido.');
@@ -29,7 +30,7 @@ router.post('/', exigirPapel('admin'), asyncRoute(async (req, res) => {
   res.status(201).json({ ok: true, mensagem: `Competência ${String(month).padStart(2,'0')}/${year} fechada com sucesso.` });
 }));
 
-router.delete('/:id', exigirPapel('admin'), asyncRoute(async (req, res) => {
+router.delete('/:id', exigirPermissao('p8'), asyncRoute(async (req, res) => {
   const id = Number(req.params.id);
   const suppliedReason = String(req.body?.motivo || '').trim();
   const reason = suppliedReason || 'Reabertura solicitada pela interface do sistema.';

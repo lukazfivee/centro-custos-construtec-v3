@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const { getDb } = require('../db');
 const { previewImport, confirmImportWithObservability: confirmImport } = require('../services/budgets/budgetImportService');
@@ -58,7 +59,7 @@ const router = express.Router();
 router.use(autenticarOuChaveIntegracao);
 
 // Importar orcamento e escrita na obra: so admin e gestor (a chave de integracao entra como admin).
-const podeImportar = exigirPapel('admin', 'gestor');
+const podeImportar = exigirPermissao('p5');
 
 router.post('/previas', podeImportar, asyncRoute(async (req, res) => {
   try {

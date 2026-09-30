@@ -1,7 +1,8 @@
 const crypto = require('crypto');
 const express = require('express');
 const { getDb } = require('../db');
-const { autenticar, exigirPapel } = require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
 
@@ -75,7 +76,7 @@ router.get('/:id/arquivo', asyncRoute(async (req, res) => {
   res.send(Buffer.from(file.content));
 }));
 
-router.delete('/:id', exigirPapel('admin','gestor'), asyncRoute(async (req, res) => {
+router.delete('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const { rows } = await getDb().query(`
     SELECT a.id,a.public_id,a.original_name,a.sha256,t.public_id AS transaction_public_id

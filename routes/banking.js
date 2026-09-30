@@ -1,7 +1,8 @@
 const crypto=require('crypto');
 const express=require('express');
 const {getDb}=require('../db');
-const {autenticar,exigirPapel}=require('../middleware/auth');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const {asyncRoute,httpError}=require('../lib/http');
 const {recordAudit}=require('../services/audit');
 
@@ -13,7 +14,7 @@ router.get('/contas',asyncRoute(async(req,res)=>{
   res.json(rows);
 }));
 
-router.post('/contas',exigirPapel('admin','gestor'),asyncRoute(async(req,res)=>{
+router.post('/contas',exigirPermissao('p3'),asyncRoute(async(req,res)=>{
   const nome=String(req.body.nome||'').trim(); if(!nome) throw httpError(400,'Informe o nome da conta.');
   const tipo=String(req.body.tipo||'banco'); if(!['banco','caixa','cartao','adiantamento'].includes(tipo)) throw httpError(400,'Tipo de conta inválido.');
   const instituicao=String(req.body.instituicao||'').trim()||null;
@@ -30,7 +31,7 @@ router.get('/movimentos',asyncRoute(async(req,res)=>{
   res.json(rows);
 }));
 
-router.post('/importar',exigirPapel('admin','gestor'),asyncRoute(async(req,res)=>{
+router.post('/importar',exigirPermissao('p3'),asyncRoute(async(req,res)=>{
   const accountId=Number(req.body.account_id); if(!accountId) throw httpError(400,'Selecione uma conta.');
   const rows=Array.isArray(req.body.movimentos)?req.body.movimentos:[]; if(!rows.length||rows.length>5000) throw httpError(400,'Envie entre 1 e 5000 movimentos.');
   let incluidos=0,ignorados=0;
@@ -55,14 +56,14 @@ router.get('/sugestoes/:movementId',asyncRoute(async(req,res)=>{
   res.json(rows);
 }));
 
-router.post('/conciliar/:movementId',exigirPapel('admin','gestor'),asyncRoute(async(req,res)=>{
+router.post('/conciliar/:movementId',exigirPermissao('p3'),asyncRoute(async(req,res)=>{
   const movementId=Number(req.params.movementId),transactionId=Number(req.body.transaction_id); if(!transactionId) throw httpError(400,'Selecione um lançamento.');
   const result=await getDb().query(`UPDATE bank_movements SET transaction_id=$1,status='conciliado',updated_at=NOW() WHERE id=$2 AND status='pendente'`,[transactionId,movementId]); if(!result.rowCount) throw httpError(409,'Movimento já conciliado ou inexistente.');
   await recordAudit({entityType:'conciliacao',entityId:movementId,action:'conciliada',summary:`Movimento bancário conciliado ao lançamento ${transactionId}.`,data:{transactionId},user:req.usuario});
   res.json({ok:true});
 }));
 
-router.post('/ignorar/:movementId',exigirPapel('admin','gestor'),asyncRoute(async(req,res)=>{
+router.post('/ignorar/:movementId',exigirPermissao('p3'),asyncRoute(async(req,res)=>{
   const result=await getDb().query(`UPDATE bank_movements SET status='ignorado',updated_at=NOW() WHERE id=$1 AND status='pendente'`,[Number(req.params.movementId)]); if(!result.rowCount) throw httpError(404,'Movimento pendente não encontrado.'); res.json({ok:true});
 }));
 
