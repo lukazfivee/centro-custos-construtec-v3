@@ -4,6 +4,9 @@
 -- Enquanto suite_role for NULL, o papel efetivo vem do mapeamento: supervisor -> tecnico.
 ALTER TABLE cloud_users ADD COLUMN suite_role TEXT;
 ALTER TABLE cloud_users ADD COLUMN apps TEXT;
+-- Convites guardam o papel novo e os apps para a conta nascer certa.
+ALTER TABLE signup_invites ADD COLUMN suite_role TEXT;
+ALTER TABLE signup_invites ADD COLUMN apps TEXT;
 
 -- Só as diferenças em relação à matriz padrão do código (suiteRoles.js).
 -- "Restaurar padrão" apaga todas as linhas.

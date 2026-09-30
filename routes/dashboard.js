@@ -3,11 +3,18 @@ const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
 const { obrasDaConsulta } = require('../services/obraScope');
+const { can, suiteRoleOf, SCOPED_ROLES } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { currentMonth, validMonth, monthRange, monthsEndingAt, todaySql } = require('../lib/dates');
 
 const router = express.Router();
 router.use(autenticar);
+
+// p1 (painel financeiro). Engenharia e tecnico sempre abrem o painel, limitado as suas obras.
+router.use(asyncRoute(async (req, res, next) => {
+  if (SCOPED_ROLES.includes(suiteRoleOf(req.usuario)) || await can(req.usuario, 'p1')) return next();
+  return res.status(403).json({ erro: 'Você não tem permissão para esta ação.' });
+}));
 
 router.get('/resumo', asyncRoute(async (req, res) => {
   const started = process.hrtime.bigint();

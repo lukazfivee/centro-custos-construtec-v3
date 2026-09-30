@@ -33,6 +33,11 @@ export function legacyRoleFor(suiteRole) {
   return 'supervisor';
 }
 
+// Conta nova sem papel escolhido: admin e gestor seguem o papel antigo; o resto entra como tecnico.
+export function suiteFromLegacy(role) {
+  return role === 'admin' || role === 'gestor' ? role : 'tecnico';
+}
+
 export function effectiveSuiteRole(row) {
   if (validSuiteRole(row?.suite_role)) return row.suite_role;
   if (row?.role === 'admin') return 'admin';

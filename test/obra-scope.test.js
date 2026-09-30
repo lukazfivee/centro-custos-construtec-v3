@@ -125,4 +125,8 @@ test('escopo por obra: lista, painel, lancamentos e anexos; 403 por URL fora do 
   const fin = await conta('financeiro', 'fin@teste.local', []);
   assert.equal((await call('GET', '/centros-custo', fin, undefined, 200)).data.length, 3);
   assert.equal((await call('GET', '/dashboard/resumo?mes=2026-09', fin, undefined, 200)).data.despesas, 600);
+
+  // p1 (painel financeiro): comercial nao tem; tecnico e engenharia abrem o painel limitado as suas obras.
+  const com = await conta('comercial', 'com@teste.local', []);
+  await call('GET', '/dashboard/resumo?mes=2026-09', com, undefined, 403);
 });

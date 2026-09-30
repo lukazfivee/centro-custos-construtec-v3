@@ -87,8 +87,29 @@ maybe('convite por e-mail cria a conta aprovada, uma vez, só para o e-mail conv
     const ok = await call('POST', '/v1/signup/request', { body: { ...person, email: 'novo@rcconstrutec.com.br', inviteToken } });
     assert.deepEqual(ok.data, { ok: true, status: 'approved' });
     assert.equal(env.DB.raw.prepare("SELECT role FROM cloud_users WHERE email='novo@rcconstrutec.com.br'").get().role, 'supervisor');
+    // Sem papel novo no convite, a conta nasce como tecnico (explicito, para entrar sem obras).
+    assert.equal(env.DB.raw.prepare("SELECT suite_role FROM cloud_users WHERE email='novo@rcconstrutec.com.br'").get().suite_role, 'tecnico');
+
     const again = await call('POST', '/v1/signup/request', { body: { ...person, email: 'outro@rcconstrutec.com.br', inviteToken } });
     assert.equal(again.data.code, 'INVITE_INVALID');
+  } finally { restore(); }
+});
+
+maybe('convite e aprovacao com papel novo e apps', async () => {
+  const { call, token, env, mails, restore } = await context();
+  try {
+    await call('POST', '/v1/signup/invite', { token, body: { email: 'eng@rcconstrutec.com.br', suiteRole: 'engenharia', apps: ['orcamentos'] } });
+    const inviteToken = new URLSearchParams(mails.at(-1).text.match(/https:\/\/\S+\/cadastro#\S+/)[0].split('#')[1]).get('convite');
+    const listed = await call('GET', '/v1/signup/requests', { token });
+    assert.equal(listed.data.invites[0].suiteRole, 'engenharia');
+    assert.equal((await call('POST', '/v1/signup/request', { body: { ...person, email: 'eng@rcconstrutec.com.br', inviteToken } })).status, 200);
+    const row = env.DB.raw.prepare("SELECT role,suite_role,apps FROM cloud_users WHERE email='eng@rcconstrutec.com.br'").get();
+    assert.deepEqual({ ...row }, { role: 'supervisor', suite_role: 'engenharia', apps: '["orcamentos"]' });
+
+    await call('POST', '/v1/signup/request', { body: { ...person, email: 'com@rcconstrutec.com.br', companyCode: (await call('GET', '/v1/signup/requests', { token })).data.code } });
+    const pending = (await call('GET', '/v1/signup/requests', { token })).data.requests[0];
+    await call('POST', '/v1/signup/approve', { token, body: { id: pending.id, suiteRole: 'comercial' } });
+    assert.deepEqual({ ...env.DB.raw.prepare("SELECT role,suite_role FROM cloud_users WHERE email='com@rcconstrutec.com.br'").get() }, { role: 'supervisor', suite_role: 'comercial' });
   } finally { restore(); }
 });
 

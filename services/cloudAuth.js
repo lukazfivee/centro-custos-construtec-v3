@@ -106,6 +106,26 @@ async function permissions(sessionToken) {
   return request('/v1/permissions', { method:'GET', headers:{ Authorization:`Bearer ${sessionToken}` } });
 }
 
+async function setUserAccess(sessionToken, payload) {
+  return request('/v1/users/access', {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${sessionToken}` },
+    body:JSON.stringify(payload),
+  });
+}
+
+async function setPermission(sessionToken, payload) {
+  return request('/v1/permissions', {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${sessionToken}` },
+    body:JSON.stringify(payload),
+  });
+}
+
+async function resetPermissions(sessionToken) {
+  return request('/v1/permissions/reset', { method:'POST', headers:{ Authorization:`Bearer ${sessionToken}` } });
+}
+
 async function session(sessionToken) {
   return request('/v1/auth/session', { method:'GET', headers:{ Authorization:`Bearer ${sessionToken}` } });
 }
@@ -192,6 +212,9 @@ async function removeProfilePhoto(sessionToken) {
 
 module.exports = {
   session,
+  setUserAccess,
+  setPermission,
+  resetPermissions,
   permissions,
   handoff,
   sessionHash,

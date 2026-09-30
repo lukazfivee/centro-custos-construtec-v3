@@ -9,6 +9,7 @@ const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pag
 const { recordAudit } = require('../services/audit');
 const cloudAuth = require('../services/cloudAuth');
 const { mirrorCloudUser, retire } = require('../services/cloudUserMirror');
+const { readAccess, applySuite, setObras, decorate, legacyRoleFor } = require('../services/userAccess');
 
 const router = express.Router();
 router.use(autenticar, exigirPermissao('p9'));
@@ -103,6 +104,7 @@ async function upsertRemoteUsers(remoteList) {
     for (const row of rows) resultByEmail.set(row.email.toLowerCase(), row);
   }
 
+  await applySuite(db, [...byEmail.values()], toInsert.map(i => i.email));
   return order.map(email => resultByEmail.get(email)).filter(Boolean).map(user => ({ ...user, cloud_managed:true }));
 }
 
@@ -111,7 +113,8 @@ router.get('/', asyncRoute(async (req, res) => {
     try {
       const remote = await cloudAuth.listUsers(req.usuario.cloud_session_token);
       const users = await upsertRemoteUsers(remote.users || []);
-      return res.json(users);
+      const remoteByEmail = new Map((remote.users || []).map(r => [String(r.email || '').toLowerCase(), r]));
+      return res.json(await decorate(getDb(), users, remoteByEmail));
     } catch (error) {
       if (error.status === 401) throw httpError(401,'Sua sessão corporativa expirou. Entre novamente.');
       throw httpError(503,'Não foi possível carregar os usuários corporativos agora.');
@@ -123,7 +126,7 @@ router.get('/', asyncRoute(async (req, res) => {
   if (!wantsPagination(req.query)) {
     const { rows } = await getDb().query(`${usersSelect} ORDER BY ${orderBy} LIMIT 500`);
     res.setHeader('X-Result-Limit', '500');
-    return res.json(rows);
+    return res.json(await decorate(getDb(), rows));
   }
   const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
   const [dataResult, countResult] = await Promise.all([
@@ -139,7 +142,8 @@ router.post('/', asyncRoute(async (req, res) => {
   const name = String(req.body.nome || '').trim();
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.senha || '');
-  const role = String(req.body.role || '');
+  const access = readAccess(req.body);
+  const role = access.suiteRole ? legacyRoleFor(access.suiteRole) : String(req.body.role || '');
   if (!name || !email || !password) throw httpError(400, 'Preencha nome, e-mail e senha.');
   if (password.length < 10) throw httpError(400, 'A senha provisória precisa ter pelo menos 10 caracteres.');
   if (!['admin', 'gestor', 'supervisor'].includes(role)) throw httpError(400, 'Perfil inválido.');
@@ -151,20 +155,23 @@ router.post('/', asyncRoute(async (req, res) => {
     if (!req.usuario.cloud_session_token) throw httpError(401,'Entre novamente para gerenciar usuários corporativos.');
     let remote;
     try {
-      remote = await cloudAuth.createUser(req.usuario.cloud_session_token,{ name,email,password,role });
+      remote = await cloudAuth.createUser(req.usuario.cloud_session_token,{ name,email,password,role,suiteRole:access.suiteRole,apps:access.apps });
     } catch (error) {
       if ([400,401,403,409].includes(error.status)) throw httpError(error.status,error.code === 'EMAIL_NOT_AUTHORIZED' ? 'E-mail não autorizado. Autorize o e-mail externo antes de criar a conta.' : error.message);
       throw httpError(503,'Não foi possível criar o usuário corporativo agora.');
     }
     const created = await upsertRemoteUser(remote.user);
-    await recordAudit({entityType:'usuario',entityId:created.id,action:'criado',summary:`Usuário corporativo ${created.nome} criado com perfil ${role}.`,data:created,user:req.usuario});
-    return res.status(201).json(created);
+    if (access.obras !== undefined) await setObras(getDb(), created.id, access.obras);
+    await recordAudit({entityType:'usuario',entityId:created.id,action:'criado',summary:`Usuário corporativo ${created.nome} criado com perfil ${access.suiteRole || role}.`,data:created,user:req.usuario});
+    return res.status(201).json((await decorate(getDb(), [created]))[0]);
   }
 
   const { rows } = await getDb().query(
-    `INSERT INTO users (name, email, password_hash, role) VALUES ($1,$2,$3,$4) RETURNING id,name,email,role,active`,
-    [name.slice(0, 120), email.slice(0, 180), await bcrypt.hash(password, 12), role]
+    `INSERT INTO users (name, email, password_hash, role, suite_role, apps) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,email,role,active`,
+    [name.slice(0, 120), email.slice(0, 180), await bcrypt.hash(password, 12), role, access.suiteRole || null, access.apps ? JSON.stringify(access.apps) : null]
   );
+  if (access.obras !== undefined) await setObras(getDb(), rows[0].id, access.obras);
+  else if (['engenharia','tecnico'].includes(access.suiteRole)) await setObras(getDb(), rows[0].id, []);
   await recordAudit({entityType:'usuario',entityId:rows[0].id,action:'criado',summary:`Usuário ${rows[0].name} criado com perfil ${role}.`,data:rows[0],user:req.usuario});
   res.status(201).json(rows[0]);
 }));

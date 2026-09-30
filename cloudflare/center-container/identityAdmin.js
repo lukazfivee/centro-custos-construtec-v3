@@ -18,7 +18,7 @@ import {
 } from './centralAuth.js';
 import { forgetSessionDevice } from './notifications.js';
 import {
-  PERMISSIONS, SUITE_ROLES, validSuiteRole, legacyRoleFor, normalizeApps, defaultMatrix, loadMatrix,
+  PERMISSIONS, SUITE_ROLES, validSuiteRole, legacyRoleFor, suiteFromLegacy, normalizeApps, defaultMatrix, loadMatrix,
 } from './suiteRoles.js';
 
 const MIN_SERVICE_KEY_LENGTH = 32;
@@ -112,7 +112,8 @@ async function handleCreateUser(request, env, auth) {
   const wantedSuite = auth.centroAdmin && body.suiteRole !== undefined ? text(body.suiteRole) : null;
   if (wantedSuite !== null && !validSuiteRole(wantedSuite)) return json({ ok: false, error: 'Papel invalido.' }, 400);
   const role = wantedSuite ? legacyRoleFor(wantedSuite) : auth.centroAdmin ? text(body.role) : SERVICE_CREATED_ROLE;
-  const suiteRole = wantedSuite || null;
+  // Conta nova sempre nasce com papel novo explicito (sem ele, o tecnico entraria vendo todas as obras).
+  const suiteRole = wantedSuite || suiteFromLegacy(role);
   const apps = auth.centroAdmin ? normalizeApps(body.apps) : null;
   if (!name || !validEmail(email) || password.length < 10 || !validRole(role)) {
     return json({ ok: false, error: 'Preencha nome, e-mail, senha de 10+ caracteres e perfil valido.' }, 400);
