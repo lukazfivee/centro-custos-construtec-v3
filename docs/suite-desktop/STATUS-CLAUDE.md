@@ -55,6 +55,8 @@ central e os fluxos de login/handoff. Revisar as 53 chamadas de
 
 **Descartar e recuperar obra (30/09/2026, sem publicar):** o Lucas não conseguia excluir obra e orçamento de teste. A exclusão recusa obra com qualquer vínculo (as `CC-PA-100x` vieram de propostas aprovadas e têm contrato e base de custo selada). Novo: `POST /api/centros-custo/:id/descartar` (só admin; confirma com o código da obra; recusa se houver lançamento, rateio, recorrência, medição ou nota fiscal), `GET /descartadas` e `POST /descartadas/:id/restaurar`. O conteúdo vai para `discarded_cost_centers` (migração 110, JSON) e a restauração devolve obra, contrato, base de custo e importação. `GET /api/integracao/orcamentos/contratos/:id/resumo` ganhou `movementCount`, que o Orçamentos usa antes de descartar a proposta. Tela: Obras > "Obras descartadas" e, ao falhar a exclusão por vínculo, o admin é levado a "Descartar obra". Serviço `services/costCenterArchive.js`, teste `test/cost-center-discard.test.js`; `npm test` 319/319. Publicar com a migração 110 e este Container antes do Orçamentos.
 
+**Situação em 30/09/2026 20:20:** PR #70 do Centro e PR #108 do Orçamentos mesclados. O Centro está em produção: `/api/centros-custo/descartadas` responde 401 e uma rota inexistente responde 404; o Container subiu por volta das 19:52. Orçamentos publicado às ~20:35 (commit `e6d380d`, versão do Worker `3c531084`). Depois, o Lucas testa descartar uma `CC-PA-100x` e a proposta de teste.
+
 Próximos passos: (1) validar a primeira tela em navegador nos dois temas;
 (2) conferir os testes e corrigir regressões; (3) desenhar migração 109
 aditiva, modelo de papéis e matriz no diretório central e no banco local;
