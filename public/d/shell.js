@@ -41,7 +41,7 @@
     return D.MENU.map(([grupo, itens]) => {
       const visiveis = itens.filter((i) => !i[3] || D.pode(i[3]));
       if (!visiveis.length) return '';
-      return `<div class="grupo"><span>${esc(grupo)}</span>${visiveis.map(([k, icone, rotulo]) => `<a class="nav" href="#/${k}" data-nav="${k}" title="${esc(rotulo)}">${D.ic(icone)}<span class="rot">${esc(rotulo)}</span><span class="badge" data-badge="${k}" hidden></span></a>`).join('')}</div>`;
+      return `<div class="grupo"><span>${esc(grupo)}</span>${visiveis.map(([k, icone, rotulo]) => `<a class="nav" href="#/${k}" data-nav="${k}" data-rot="${esc(rotulo)}" aria-label="${esc(rotulo)}">${D.ic(icone)}<span class="rot">${esc(rotulo)}</span><span class="badge" data-badge="${k}" hidden></span></a>`).join('')}</div>`;
     }).join('');
   }
 
@@ -52,8 +52,9 @@
   D.montarEstrutura = function () {
     const u = D.usuario();
     CC.$('#app').innerHTML = `<div class="app">
-      <aside class="side" aria-label="Menu">
-        <a class="marca" href="#/inicio"><img src="logo-fundo-escuro.png" alt="Construtec"><span>Centro de Custos</span></a>
+      <aside class="side" id="menu-lateral" aria-label="Menu">
+        <a class="marca" href="#/inicio"><img class="logo" src="logo-fundo-escuro.png" alt="Construtec"><img class="simb" src="simbolo.png" alt=""><span>Centro de Custos</span></a>
+        <button type="button" class="recolher" data-recolher aria-controls="menu-lateral">${D.ic('caret-left', 14)}</button>
         <nav aria-label="Navegação principal">${menu()}</nav>
         <div class="quem">${avatar(u)}<span class="nome"><b>${esc(u.nome || u.name || '')}</b><span>${esc(D.papelNome())}${D.simulando() ? ' · simulação' : ''}</span></span>
           <button type="button" class="ibtn" data-sair aria-label="Sair" title="Sair">${D.ic('sign-out', 18)}</button></div>
@@ -75,8 +76,35 @@
     const voltar = CC.$('[data-sair-como]');
     if (voltar) voltar.addEventListener('click', () => { D.simular(''); location.hash = '#/usuarios'; location.reload(); });
     document.addEventListener('d:tema', pintarTema);
+    iniciarRecolher();
     carregarFoto();
   };
+
+  // Menu recolhido: escolha do usuario guardada; sem escolha, recolhe abaixo de 1280 px.
+  const CHAVE_MENU = 'cc_d_menu';
+  function iniciarRecolher() {
+    const app = CC.$('.app');
+    const bt = CC.$('[data-recolher]');
+    let salvo = '';
+    try { salvo = localStorage.getItem(CHAVE_MENU) || ''; } catch { /* sem armazenamento */ }
+    const aplicar = (recolhido) => {
+      app.classList.toggle('recolhido', recolhido);
+      bt.setAttribute('aria-expanded', String(!recolhido));
+      bt.setAttribute('aria-label', recolhido ? 'Expandir menu' : 'Recolher menu');
+      bt.title = `${bt.getAttribute('aria-label')} (Ctrl B)`;
+    };
+    aplicar(salvo ? salvo === 'recolhido' : window.innerWidth < 1280);
+    const alternar = () => {
+      const recolhido = !app.classList.contains('recolhido');
+      aplicar(recolhido);
+      try { localStorage.setItem(CHAVE_MENU, recolhido ? 'recolhido' : 'aberto'); } catch { /* segue */ }
+    };
+    bt.addEventListener('click', alternar);
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') { e.preventDefault(); alternar(); }
+    });
+    requestAnimationFrame(() => app.classList.add('anima'));
+  }
 
   function pintarTema() {
     const bt = CC.$('[data-tema]');

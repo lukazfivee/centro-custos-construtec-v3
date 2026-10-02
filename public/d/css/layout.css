@@ -1,7 +1,7 @@
 /* Estrutura: menu lateral, barra do topo, conteudo, busca, Suite e selo de sincronizacao. */
 .app { display: flex; height: 100vh; overflow: hidden; }
 
-.side { width: var(--side-w); flex: none; height: 100%; background: var(--side-bg); color: #fefefe; display: flex; flex-direction: column; padding: 18px 14px 14px; gap: 18px; }
+.side { position: relative; z-index: 30; width: var(--side-w); flex: none; height: 100%; background: var(--side-bg); color: #fefefe; display: flex; flex-direction: column; padding: 18px 14px 14px; gap: 18px; }
 .side .marca { display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 10px; border-bottom: 1px solid rgba(255, 255, 255, .08); text-decoration: none; }
 .side .marca img { height: 28px; width: auto; align-self: flex-start; }
 .side .marca span { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #5fd0ee; }
@@ -71,14 +71,5 @@
 .suite .res .ic { width: 32px; height: 32px; }
 .suite .sep { height: 1px; margin: 6px 4px; background: var(--color-divider); }
 
-/* Abaixo de 1280 px o menu recolhe para icones. */
-@media (max-width: 1279px) {
-  .app { --side-w: 72px; }
-  .side { padding: 18px 10px 14px; }
-  .side .marca span, .side .grupo > span, .nav .rot, .side .quem .nome { display: none; }
-  .side .marca img { height: 22px; align-self: center; }
-  .nav { justify-content: center; padding: 0; position: relative; }
-  .nav .badge { position: absolute; top: 2px; right: 6px; min-width: 16px; height: 16px; font-size: 10px; padding: 0 4px; }
-  .side .quem { flex-direction: column; padding: 10px 0 0; }
-  .top { gap: 12px; padding: 0 20px 0 24px; }
-}
+/* Menu recolhido, sombra e animacoes do menu ficam em menu.css. */
+@media (max-width: 1279px) { .top { gap: 12px; padding: 0 20px 0 24px; } }
