@@ -43,13 +43,16 @@
 .app.recolhido .side .quem .nome { display: none; }
 
 /* Dica com o nome do item quando recolhido. */
-.app.recolhido .nav:hover .rot, .app.recolhido .nav:focus-visible .rot { position: absolute; left: calc(100% + 14px); top: 50%; width: auto; flex: none; padding: 7px 11px; border-radius: 8px; background: #0b3544; color: #fefefe; font-size: 12.5px; box-shadow: 0 8px 20px rgba(0, 0, 0, .3); opacity: 1; overflow: visible; transform: translateY(-50%); animation: menuDica .18s cubic-bezier(.2, .8, .2, 1) both; }
-.app.recolhido .side nav { overflow: visible; }
 
 @keyframes menuBarra { from { transform: scaleY(0); opacity: 0 } to { transform: none; opacity: 1 } }
+/* Dica fica fora do menu (position fixed) para a lista poder rolar em telas baixas. */
+.menu-dica { position: fixed; z-index: 60; transform: translateY(-50%); padding: 7px 11px; border-radius: 8px; background: #0b3544; color: #fefefe; font: 500 12.5px var(--font-body); white-space: nowrap; box-shadow: 0 8px 20px rgba(0, 0, 0, .3); pointer-events: none; animation: menuDica .18s cubic-bezier(.2, .8, .2, 1) both; }
+.side nav { scrollbar-width: none; margin: 0 -14px; padding: 0 14px; }
+.app.recolhido .side nav { margin: 0 -10px; padding: 0 10px; }
+
 @keyframes menuDica { from { opacity: 0; transform: translate(-6px, -50%) } to { opacity: 1; transform: translate(0, -50%) } }
 
 @media (prefers-reduced-motion: reduce) {
   .app.anima .side, .nav, .nav::before, .nav .ph, .nav .rot, .recolher, .recolher .ph, .side .marca .simb { transition: none; }
-  .nav[aria-current="page"]::after, .app.recolhido .nav:hover .rot { animation: none; }
+  .nav[aria-current="page"]::after, .menu-dica { animation: none; }
 }

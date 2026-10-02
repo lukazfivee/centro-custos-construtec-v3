@@ -104,6 +104,32 @@
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') { e.preventDefault(); alternar(); }
     });
     requestAnimationFrame(() => app.classList.add('anima'));
+    iniciarDica(app);
+  }
+
+  // Nome do item ao lado do icone com o menu recolhido.
+  function iniciarDica(app) {
+    let dica = null;
+    const tirar = () => { if (dica) { dica.remove(); dica = null; } };
+    const mostrar = (e) => {
+      const a = e.target.closest('[data-nav]');
+      tirar();
+      if (!a || !app.classList.contains('recolhido')) return;
+      const r = a.getBoundingClientRect();
+      dica = document.createElement('div');
+      dica.className = 'menu-dica';
+      dica.textContent = a.dataset.rot;
+      dica.style.left = `${r.right + 14}px`;
+      dica.style.top = `${r.top + r.height / 2}px`;
+      document.body.appendChild(dica);
+    };
+    const nav = CC.$('.side nav');
+    nav.addEventListener('mouseover', mostrar);
+    nav.addEventListener('focusin', mostrar);
+    nav.addEventListener('mouseleave', tirar);
+    nav.addEventListener('focusout', tirar);
+    nav.addEventListener('scroll', tirar);
+    nav.addEventListener('click', tirar);
   }
 
   function pintarTema() {
