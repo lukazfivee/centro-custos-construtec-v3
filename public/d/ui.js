@@ -56,6 +56,14 @@
   };
 
   U.vazio = (icone, titulo, texto) => `<div class="vazio-tela">${D.ic(icone)}<b>${esc(titulo)}</b>${texto ? `<span>${esc(texto)}</span>` : ''}</div>`;
+  // Botao em andamento: trava, mostra o giro e o texto; devolve a funcao que volta ao normal.
+  U.ocupar = (botao, texto) => {
+    const antes = botao.innerHTML;
+    botao.disabled = true;
+    botao.setAttribute('aria-busy', 'true');
+    botao.innerHTML = `<span class="spin" aria-hidden="true"></span>${esc(texto)}`;
+    return () => { botao.disabled = false; botao.removeAttribute('aria-busy'); botao.innerHTML = antes; };
+  };
   U.carregando = (texto) => `<div class="carregando"><span class="spin" aria-hidden="true"></span>${esc(texto || 'Carregando…')}</div>`;
   U.faixa = (tom, icone, texto, acao) => `<div class="faixa ${esc(tom)}" role="status">${D.ic(icone)}<span>${esc(texto)}</span>${acao || ''}</div>`;
 })(window.CC);
