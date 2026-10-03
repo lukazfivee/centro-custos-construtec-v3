@@ -4,18 +4,26 @@
 // O conteudo e guardado em JSON (discarded_cost_centers) e a obra pode ser restaurada.
 const { httpError } = require('../lib/http');
 
+// Lancamento excluido (deleted_at) nao conta como movimento: ele e guardado junto com a obra e volta na restauracao.
+const LIVE_TX = 'transaction_id IN (SELECT id FROM transactions WHERE deleted_at IS NULL)';
+const DELETED_TX = 'SELECT id FROM transactions WHERE cost_center_id=$1 AND deleted_at IS NOT NULL';
+
 // Se houver alguma linha nestas tabelas, a obra tem movimento e nao pode ser descartada.
+// [tabela, rotulo, filtro extra]
 const MOVEMENT = [
-  ['transactions', 'lançamentos'],
-  ['transaction_allocations', 'rateios de lançamentos'],
+  ['transactions', 'lançamentos', 'deleted_at IS NULL'],
+  ['transaction_allocations', 'rateios de lançamentos', LIVE_TX],
   ['recurring_templates', 'recorrências'],
-  ['expense_allocations', 'apropriações de despesas'],
+  ['expense_allocations', 'apropriações de despesas', LIVE_TX],
   ['cost_recognitions', 'reconhecimentos de custos'],
   ['labor_measurements', 'medições de mão de obra'],
   ['contract_measurements', 'medições contratuais'],
   ['cost_center_invoices', 'notas fiscais vinculadas'],
   ['cost_center_invoices_ledger', 'notas fiscais'],
 ];
+const movementWhere = (extra) => `cost_center_id=$1${extra ? ` AND ${extra}` : ''}`;
+// Lancamento excluido ja conciliado com o extrato nao pode sair do banco.
+const RECONCILED = `SELECT 1 FROM bank_movements WHERE transaction_id IN (${DELETED_TX}) LIMIT 1`;
 
 const CONTRACTS = 'SELECT id FROM project_contracts WHERE cost_center_id=$1';
 const BASELINES = `SELECT id FROM budget_baselines WHERE contract_id IN (${CONTRACTS})`;
@@ -36,20 +44,31 @@ const STRUCTURE = [
   ['budget_labor_lines', `baseline_id IN (${BASELINES})`],
   ['cost_center_proposals', 'cost_center_id=$1'],
   ['user_cost_centers', 'cost_center_id=$1'],
+  // Lancamentos excluidos da obra (historico) e o que pende deles.
+  ['transactions', `id IN (${DELETED_TX})`],
+  ['transaction_attachments', `transaction_id IN (${DELETED_TX})`],
+  ['transaction_allocations', `cost_center_id=$1 OR transaction_id IN (${DELETED_TX})`],
+  ['expense_allocations', `cost_center_id=$1 OR transaction_id IN (${DELETED_TX})`],
 ];
-// Linhas de base de custo selada tem gatilho contra alteracao; so o descarte e a restauracao os desligam.
+// Linhas de base de custo selada e lancamentos excluidos tem gatilhos contra alteracao;
+// so o descarte e a restauracao os desligam, dentro da transacao.
 const GUARDED = [
   ['budget_baselines', 'baseline_immutable_guard'],
   ['budget_material_lines', 'baseline_materials_immutable_guard'],
   ['budget_labor_lines', 'baseline_labor_immutable_guard'],
+  ['transactions', 'financial_transaction_guard'],
+  ['transactions', 'financial_consistency'],
+  ['transaction_allocations', 'financial_allocation_guard'],
+  ['transaction_allocations', 'allocation_consistency'],
 ];
 
 async function movements(db, id) {
   const found = [];
-  for (const [table, label] of MOVEMENT) {
-    const { rows } = await db.query(`SELECT 1 FROM ${table} WHERE cost_center_id=$1 LIMIT 1`, [id]);
+  for (const [table, label, extra] of MOVEMENT) {
+    const { rows } = await db.query(`SELECT 1 FROM ${table} WHERE ${movementWhere(extra)} LIMIT 1`, [id]);
     if (rows.length) found.push(label);
   }
+  if ((await db.query(RECONCILED, [id])).rows.length) found.push('lançamentos excluídos já conciliados com o extrato');
   return found;
 }
 
@@ -65,7 +84,10 @@ async function movementSummary(db, id) {
   const out = {};
   for (const [key, tables] of GROUPS) {
     out[key] = 0;
-    for (const table of tables) out[key] += (await db.query(`SELECT COUNT(*)::int AS n FROM ${table} WHERE cost_center_id=$1`, [id])).rows[0].n;
+    for (const table of tables) {
+      const extra = (MOVEMENT.find((m) => m[0] === table) || [])[2];
+      out[key] += (await db.query(`SELECT COUNT(*)::int AS n FROM ${table} WHERE ${movementWhere(extra)}`, [id])).rows[0].n;
+    }
   }
   return out;
 }
@@ -80,11 +102,11 @@ async function toggleGuards(db, enable) {
 // Quantos registros de movimento a obra tem (usado pelo Orcamentos antes de descartar a proposta).
 async function movementCount(db, id) {
   let total = 0;
-  for (const [table] of MOVEMENT) {
-    const { rows } = await db.query(`SELECT COUNT(*)::int AS n FROM ${table} WHERE cost_center_id=$1`, [id]);
+  for (const [table, , extra] of MOVEMENT) {
+    const { rows } = await db.query(`SELECT COUNT(*)::int AS n FROM ${table} WHERE ${movementWhere(extra)}`, [id]);
     total += rows[0].n;
   }
-  return total;
+  return total + (await db.query(RECONCILED, [id])).rows.length;
 }
 
 async function discardCostCenter(db, id, user, reason) {
