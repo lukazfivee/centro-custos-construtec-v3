@@ -10,7 +10,7 @@ test('celular: tres pontos da obra com excluir (sem vinculo) e descartar (com vi
   const acoes = read('screen-obra-acoes.js');
   assert.match(obra, /id="obra-mais"/);
   assert.match(obra, /CC\.obraMenu\(c\)/);
-  assert.match(acoes, /const canDel = !linked && r === 'admin'/);
+  assert.match(acoes, /const canDel = !linked && \(r === 'admin' \|\| r === 'gestor'\)/);
   assert.match(acoes, /const canDesc = linked && r === 'admin'/);
   assert.match(acoes, /method: 'DELETE'/);
   assert.match(acoes, /\/descartar`, \{ method: 'POST', body: \{ confirmar:/);

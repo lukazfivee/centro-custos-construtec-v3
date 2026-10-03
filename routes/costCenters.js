@@ -171,8 +171,9 @@ router.put('/:id', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   res.json({ ok: true,revisao:result.rows[0].revision });
 }));
 
-router.delete('/:id', exigirPapel('admin'), asyncRoute(async (req, res) => {
+router.delete('/:id', exigirPapel('admin', 'gestor'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
+  await assertObra(req, id);
   const vinculados = [
     ['transactions', 'lançamentos'],
     ['transaction_allocations', 'rateios de lançamentos'],

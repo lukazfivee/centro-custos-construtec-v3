@@ -42,7 +42,7 @@
   CC.obraMenu = function (c) {
     const linked = !!(c.proposta_origem && c.proposta_origem.id);
     const r = role();
-    const canDel = !linked && r === 'admin'; // a rota de exclusao do servidor e so de admin
+    const canDel = !linked && (r === 'admin' || r === 'gestor');
     const canDesc = linked && r === 'admin';
     const propLabel = linked ? (c.proposta_origem.numero || 'proposta aprovada') : '';
     const item = (id, ic, t, s, cls) => `<button type="button" class="suite-item om-item${cls ? ` ${cls}` : ''}" id="${id}">${icon(ic, 22)}<span><b>${esc(t)}</b><small>${esc(s)}</small></span></button>`;

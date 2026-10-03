@@ -56,7 +56,8 @@ test('exclusão de centro exige admin, preserva vínculos e remove apenas centro
   const oldCsv = await csvResponse.text();
   const oldPackage = await smartSync.buildPackage();
   assert.equal((await request(`/centros-custo/${empty}`, 'DELETE', null)).status, 401);
-  assert.equal((await request(`/centros-custo/${empty}`, 'DELETE', gestor)).status, 403);
+  const doGestor = await center();
+  assert.equal((await request(`/centros-custo/${doGestor}`, 'DELETE', gestor)).status, 200);
   assert.equal((await request(`/centros-custo/${empty}`, 'DELETE', admin)).status, 200);
   assert.equal((await request(`/centros-custo/${empty}`, 'DELETE', admin)).status, 404);
   assert.equal((await getDb().query('SELECT 1 FROM cost_center_tombstones WHERE public_id=$1', [publicId])).rows.length, 1);
