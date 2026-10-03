@@ -28,14 +28,18 @@
         return;
       }
       ocupado = true;
+      ctl.erro('');
+      const cancelar = CC.$('[data-fechar]', ctl.rodape);
+      if (cancelar) cancelar.disabled = true;
+      const voltar = U.ocupar(CC.$('[data-confirmar]', ctl.rodape), 'Descartando…');
       try {
         await CC.api(`/centros-custo/${obra.id}/descartar`, { method: 'POST', body });
         ctl.marcarSalvo();
         ctl.fechar(true);
         CC.toast('Obra descartada. Dá para recuperar em "Obras descartadas".');
         await depois();
-      } catch (error) { ctl.erro(error.message); }
-      finally { ocupado = false; }
+      } catch (error) { voltar(); ctl.erro(error.message); }
+      finally { ocupado = false; if (cancelar) cancelar.disabled = false; }
     };
     CC.$('form', ctl.corpo).addEventListener('submit', (event) => { event.preventDefault(); enviar(); });
     CC.$('[data-confirmar]', ctl.rodape).addEventListener('click', enviar);
@@ -53,14 +57,15 @@
     });
     if (!ctl) return;
     CC.$$('[data-restaurar]', ctl.corpo).forEach((b) => b.addEventListener('click', async () => {
-      b.disabled = true;
+      if (b.disabled) return;
+      const voltar = U.ocupar(b, 'Restaurando…');
       try {
         await CC.api(`/centros-custo/descartadas/${b.dataset.restaurar}/restaurar`, { method: 'POST', body: {} });
         ctl.marcarSalvo();
         ctl.fechar(true);
         CC.toast('Obra restaurada');
         await depois();
-      } catch (error) { ctl.erro(error.message); b.disabled = false; }
+      } catch (error) { voltar(); ctl.erro(error.message); }
     }));
   };
 })(window.CC);
