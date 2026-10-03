@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
-const { autenticar } = require('../middleware/auth');
+const { autenticar, exigirPapel } = require('../middleware/auth');
+const { discardByContract, restoreByContract, findOpenDiscard, IntegrationError } = require('../services/budgets/budgetContractDiscard');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const { getDb } = require('../db');
@@ -154,11 +155,30 @@ router.get('/contratos/:id/baselines', asyncRoute(async (req, res) => {
 router.get('/contratos/:id/resumo', asyncRoute(async (req, res) => {
   const { getContractSummary } = require('../services/budgets/budgetContractSummary');
   const summary = await getContractSummary(getDb(), String(req.params.id));
-  if (!summary) throw httpError(404, 'Contrato não encontrado');
+  if (!summary) {
+    // Obra descartada (sem restaurar): o Orcamentos volta a proposta para "Aprovada sem Centro de Custo".
+    const gone = await findOpenDiscard(getDb(), String(req.params.id));
+    if (gone) {
+      return res.status(410).json({ code: 'CENTER_DISCARDED', discarded: true, discardedAt: gone.discarded_at, discardedBy: gone.discarded_by_name, costCenterCode: gone.code });
+    }
+  }
+  if (!summary) throw httpError(404,'Contrato não encontrado');
   // Movimento da obra: o Orcamentos so descarta a proposta aprovada se nao houver nenhum.
   const { movementCount } = require('../services/costCenterArchive');
   res.json({ ...summary, movementCount: summary.costCenterId ? await movementCount(getDb(), summary.costCenterId) : 0 });
 }));
+
+// Descarte/recuperacao da obra pedidos pelo Orcamentos (so admin; a chave de integracao entra como admin).
+const integrationRoute = (action) => [exigirPapel('admin'), async (req, res, next) => {
+  try {
+    res.json(await action(getDb(), String(req.params.id), req.body || {}, req.usuario));
+  } catch (error) {
+    if (!(error instanceof IntegrationError)) return next(error);
+    res.status(error.statusCode).json({ code: error.code, erro: error.message, ...error.extra });
+  }
+}];
+router.post('/contratos/:id/descartar', ...integrationRoute(discardByContract));
+router.post('/contratos/:id/restaurar', ...integrationRoute(restoreByContract));
 
 router.get('/portfolio-summary', asyncRoute(async (req, res) => {
   const { getPortfolioSummary } = require('../services/budgets/budgetPortfolio');

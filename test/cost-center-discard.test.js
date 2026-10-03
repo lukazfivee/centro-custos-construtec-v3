@@ -89,4 +89,19 @@ test('descartar e recuperar obra vinda de orcamento aprovado, sem movimento', as
   assert.match(blocked.data.erro, /lançamentos/);
   assert.equal((await call('GET', `/centros-custo/${costCenterId}/impedimentos`, admin)).data.lancamentos, 1);
   assert.deepEqual(await counts(), before, 'recusado: nada foi apagado');
+
+  // Lancamento excluido nao conta como movimento: a obra descarta, e o lancamento excluido vai junto e volta na restauracao.
+  assert.equal((await call('DELETE', `/lancamentos/${tx.data.id}`, admin)).status, 200);
+  assert.equal((await call('GET', `/centros-custo/${costCenterId}/impedimentos`, admin)).data.lancamentos, 0);
+  const txRow = async () => (await db.query('SELECT id, deleted_at IS NOT NULL AS excluido FROM transactions WHERE id=$1', [tx.data.id])).rows[0];
+  assert.equal((await txRow()).excluido, true);
+  const withDeleted = await call('POST', `/centros-custo/${costCenterId}/descartar`, admin, { confirmar: code });
+  assert.equal(withDeleted.status, 200, JSON.stringify(withDeleted.data));
+  assert.equal(await txRow(), undefined, 'o lancamento excluido sai junto com a obra');
+  const pending = (await call('GET', '/centros-custo/descartadas', admin)).data.find((row) => !row.restored_at);
+  assert.equal((await call('POST', `/centros-custo/descartadas/${pending.id}/restaurar`, admin)).status, 200);
+  assert.deepEqual(await txRow(), { id: tx.data.id, excluido: true }, 'volta como excluido');
+  assert.deepEqual(await counts(), before);
+  // Continua imutavel depois de restaurado.
+  await assert.rejects(db.query('UPDATE transactions SET description=$2 WHERE id=$1', [tx.data.id, 'x']));
 });

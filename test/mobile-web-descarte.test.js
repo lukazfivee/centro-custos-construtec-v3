@@ -15,8 +15,7 @@ test('celular: tres pontos da obra com excluir (sem vinculo) e descartar (com vi
   assert.match(acoes, /method: 'DELETE'/);
   assert.match(acoes, /\/descartar`, \{ method: 'POST', body: \{ confirmar:/);
   assert.match(acoes, /\/impedimentos`/);
-  assert.match(acoes, /continua aprovada no Orçamentos/);
-  assert.doesNotMatch(acoes, /Aprovada sem Centro de Custo/);
+  assert.match(acoes, /volta a "Aprovada sem Centro de Custo" no Orçamentos e volta a apontar para a obra/);
   assert.match(acoes, /go\.disabled = !ok\(\)/, 'botao so libera com o codigo');
   assert.match(acoes, /Nada foi alterado/);
 });
