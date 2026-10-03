@@ -247,3 +247,9 @@ html[data-theme="escuro"] .tab { text-shadow: 0 1px 3px rgba(0, 18, 27, .75); }
 .login-tip { display: flex; gap: 12px; align-items: flex-start; margin-top: 10px; font-size: 13px; color: var(--n300); }
 .login-tip b { display: block; color: var(--text); font-size: 14px; }
 .login-tip .ico { color: var(--accent-300); margin-top: 2px; }
+
+/* Detalhe da obra: botoes numa linha e o nome inteiro embaixo (com os tres pontos o titulo ficava espremido). */
+.top.obra-top { flex-wrap: wrap; row-gap: 6px; }
+.top.obra-top .grow { order: 9; flex: 1 0 100%; min-width: 0; }
+.top.obra-top #obra-mais { margin-left: auto; }
+
