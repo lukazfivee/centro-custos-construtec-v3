@@ -7,7 +7,7 @@
     ['obras', 'Obras', 'buildings', ['obras', 'obra']],
     ['lancar', 'Lançar', 'plus-circle', ['lancar', 'ok']],
     ['lancamentos', 'Lançamentos', 'list-bullets', ['lancamentos']],
-    ['menu', 'Menu', 'list', ['menu', 'pedidos', 'perfil']],
+    ['menu', 'Menu', 'list', ['menu', 'pedidos', 'perfil', 'descartadas', 'descartada']],
   ];
   let current = 'home', currentParams = {};
   let lensTimer;
@@ -116,7 +116,7 @@
     if (obra > 0) return CC.go('obra', { id: obra });
     if (pedidos) return CC.go('pedidos');
     const first = location.hash.slice(1);
-    CC.go(CC.screens[first] && !['ok', 'obra', 'login'].includes(first) ? first : 'home');
+    CC.go(CC.screens[first] && !['ok', 'obra', 'login', 'descartada'].includes(first) ? first : 'home');
   }
 
   document.addEventListener('DOMContentLoaded', boot);

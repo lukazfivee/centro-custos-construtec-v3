@@ -77,13 +77,16 @@
       : (tab === 'caixa' ? caixa(list)
         : (list.length || queued ? `${queued}${byDate(list)}` : `<div class="empty">${icon('receipt', 28)}Nenhum lançamento nesta obra ainda.</div>`));
     CC.render(`<div class="top"><button class="back" type="button" id="voltar" aria-label="Voltar">${icon('caret-left', 20)}</button>
-        <span class="grow"><h1>${esc(c.nome)}</h1><small class="muted">${esc([c.cliente, c.codigo].filter(Boolean).join(' · '))}</small></span>${CC.bellBtn ? CC.bellBtn() : ''}${CC.suitePill()}</div>
+        <span class="grow"><h1>${esc(c.nome)}</h1><small class="muted">${esc([c.cliente, c.codigo].filter(Boolean).join(' · '))}</small></span>
+        ${CC.obraMenu ? `<button class="back" type="button" id="obra-mais" aria-label="Mais ações da obra" aria-haspopup="dialog">${icon('dots-three', 22)}</button>` : ''}${CC.bellBtn ? CC.bellBtn() : ''}${CC.suitePill()}</div>
       ${CC.staleNote(result)}
       <div class="seg" role="group" aria-label="Seções da obra">${TABS.map(([k, label]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${label}</button>`).join('')}</div>
       ${body}
       <div class="actions"><button class="btn" type="button" id="lancar">${icon('camera', 18)}Lançar despesa</button></div>`, true, params);
     CC.$('#voltar').addEventListener('click', () => CC.go('obras'));
     CC.$$('[data-tab]').forEach((b) => b.addEventListener('click', () => CC.screens.obra({ id, tab: b.dataset.tab })));
+    const mais = CC.$('#obra-mais');
+    if (mais) mais.addEventListener('click', () => CC.obraMenu(c));
     CC.$('#lancar').addEventListener('click', () => CC.go('lancar', { obraId: id, from: ['obra', { id, tab: 'lanc' }] }));
   };
 })(window.CC = window.CC || {});

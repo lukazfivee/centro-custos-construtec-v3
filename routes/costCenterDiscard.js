@@ -5,7 +5,7 @@ const { getDb } = require('../db');
 const { autenticar, exigirPapel } = require('../middleware/auth');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
-const { discardCostCenter, restoreCostCenter, listDiscarded } = require('../services/costCenterArchive');
+const { discardCostCenter, restoreCostCenter, listDiscarded, movementSummary } = require('../services/costCenterArchive');
 
 const router = express.Router();
 // Sem router.use: este roteador divide o prefixo /api/centros-custo com os outros e nao pode barrar as rotas deles.
@@ -19,6 +19,14 @@ router.post('/descartadas/:id/restaurar', admin, asyncRoute(async (req, res) => 
   const { center } = await restoreCostCenter(getDb(), positiveId(req.params.id, 'Registro'), req.usuario);
   await recordAudit({ entityType: 'obra', entityId: center.id, action: 'restaurada', summary: `Obra / centro restaurado: ${center.name}`, data: { codigo: center.code }, user: req.usuario });
   res.json({ ok: true, id: center.id });
+}));
+
+// So leitura: quantos registros impedem o descarte (o celular lista antes de pedir o codigo).
+router.get('/:id/impedimentos', admin, asyncRoute(async (req, res) => {
+  const id = positiveId(req.params.id);
+  const db = getDb();
+  if (!(await db.query('SELECT 1 FROM cost_centers WHERE id=$1', [id])).rows.length) throw httpError(404, 'Centro de custo não encontrado.');
+  res.json(await movementSummary(db, id));
 }));
 
 // A confirmacao e o codigo da obra, digitado por quem descarta.

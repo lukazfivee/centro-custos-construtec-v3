@@ -53,6 +53,23 @@ async function movements(db, id) {
   return found;
 }
 
+// O que impede o descarte, agrupado como o celular mostra (so leitura).
+const GROUPS = [
+  ['lancamentos', ['transactions']],
+  ['rateios', ['transaction_allocations', 'expense_allocations', 'cost_recognitions']],
+  ['recorrentes', ['recurring_templates']],
+  ['medicoes', ['labor_measurements', 'contract_measurements']],
+  ['notas', ['cost_center_invoices', 'cost_center_invoices_ledger']],
+];
+async function movementSummary(db, id) {
+  const out = {};
+  for (const [key, tables] of GROUPS) {
+    out[key] = 0;
+    for (const table of tables) out[key] += (await db.query(`SELECT COUNT(*)::int AS n FROM ${table} WHERE cost_center_id=$1`, [id])).rows[0].n;
+  }
+  return out;
+}
+
 async function toggleGuards(db, enable) {
   for (const [table, trigger] of GUARDED) {
     const { rows } = await db.query('SELECT 1 FROM pg_trigger WHERE tgname=$1', [trigger]);
@@ -103,7 +120,9 @@ async function discardCostCenter(db, id, user, reason) {
 
 async function listDiscarded(db) {
   const { rows } = await db.query(`SELECT id, code, name, reason, discarded_by_name, discarded_at, restored_at, restored_by_name,
-      (payload->'project_contracts'->0->>'id') IS NOT NULL AS tinha_contrato
+      (payload->'project_contracts'->0->>'id') IS NOT NULL AS tinha_contrato,
+      payload->'cost_centers'->0->>'client' AS cliente, payload->'cost_centers'->0->>'contract_amount' AS valor_contrato,
+      payload->'project_contracts'->0->>'number' AS contrato_numero
     FROM discarded_cost_centers ORDER BY discarded_at DESC LIMIT 200`);
   return rows;
 }
@@ -133,4 +152,4 @@ async function restoreCostCenter(db, discardId, user) {
   });
 }
 
-module.exports = { discardCostCenter, restoreCostCenter, listDiscarded, movementCount, movements };
+module.exports = { discardCostCenter, restoreCostCenter, listDiscarded, movementCount, movements, movementSummary };
