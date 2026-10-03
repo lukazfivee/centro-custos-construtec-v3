@@ -63,6 +63,7 @@
         <button class="menu-item" type="button" id="m-tema">${icon(dark ? 'sun' : 'moon', 22)}<span>${dark ? 'Modo claro' : 'Modo escuro'}</span></button>
         ${inApp ? `<button class="menu-item" type="button" id="m-seg">${icon('shield-check', 22)}<span>Segurança<small>PIN, digital, bloqueio automático e aparelhos</small></span></button>` : ''}
         ${CC.isAdmin && CC.isAdmin() ? `<button class="menu-item" type="button" id="m-pedidos">${icon('user-plus', 22)}<span>Pedidos de acesso<small>Aprovar cadastros, convidar por e-mail e código da empresa</small></span></button>` : ''}
+        ${CC.isAdmin && CC.isAdmin() && CC.screens.descartadas ? `<button class="menu-item" type="button" id="m-desc">${icon('archive', 22)}<span>Obras descartadas<small id="m-desc-n">Recuperar obras guardadas</small></span></button>` : ''}
         ${inApp ? `<button class="menu-item" type="button" id="m-tour">${icon('arrow-right', 22)}<span>Rever o tour<small>As quatro telas de boas-vindas da Suíte</small></span></button>` : ''}
         <a class="menu-item" href="/" id="m-web" style="color:inherit;text-decoration:none">${icon('desktop', 22)}<span>Versão completa<small>Todas as telas do Centro de Custos</small></span></a>
         <button class="menu-item danger" type="button" id="m-sair">${icon('sign-out', 22)}<span>Sair</span></button>
@@ -84,6 +85,11 @@
     if (bug) bug.addEventListener('click', () => CC.ia.open('Quero reportar um problema no app.'));
     const pedidos = CC.$('#m-pedidos', el);
     if (pedidos) pedidos.addEventListener('click', () => CC.go('pedidos'));
+    const desc = CC.$('#m-desc', el);
+    if (desc) {
+      desc.addEventListener('click', () => CC.go('descartadas'));
+      CC.loadDescartadasCount().then((n) => { const s = CC.$('#m-desc-n'); if (s && n != null) s.textContent = n ? `${n} ${n > 1 ? 'guardadas' : 'guardada'} · recuperar` : 'Nenhuma guardada'; });
+    }
     const seg = CC.$('#m-seg', el);
     if (seg) seg.addEventListener('click', () => { location.href = 'suite://seguranca'; });
     const tour = CC.$('#m-tour', el);

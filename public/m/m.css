@@ -157,6 +157,18 @@ body.no-tabs .tabs { display: none; }
 .suite-item > .ico:last-child { flex: none; color: var(--n300); }
 .suite-item.current { box-shadow: 0 0 0 1.5px var(--accent); }
 .suite-item.current em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--accent-300); }
+.om-item { width: 100%; border: 0; text-align: left; font: inherit; color: inherit; }
+.om-item.danger b, .om-item.danger > .ico:first-child { color: var(--danger); }
+.od-sub { margin: 2px 0 8px; font-size: 13px; } .od-txt { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
+.od-acts { margin-top: 14px; } .btn.danger { background: var(--danger); } .btn[disabled], .btn2[disabled] { opacity: .45; }
+.od-code { margin-top: 10px; } .od-code input { font-weight: 600; letter-spacing: .04em; } .field.bad input { box-shadow: inset 0 0 0 2px var(--danger); }
+.od-err, .od-blk { display: flex; gap: 10px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--warn-soft); color: var(--warn-text); }
+.od-err span, .od-blk { flex-direction: column; } .od-err span { display: grid; gap: 2px; } .od-err small, .od-blk > small { font-size: 12.5px; }
+.od-blk > b { display: flex; align-items: center; gap: 8px; } .od-blk-row { display: flex; align-items: center; gap: 10px; min-height: 44px; border-top: 1px solid rgba(0, 0, 0, .08); }
+.od-blk-row span { flex: 1; font-weight: 600; } .od-link { min-height: 44px; padding: 0 14px; border: 0; background: transparent; color: inherit; font-weight: 600; text-decoration: underline; }
+.od-done { display: grid; justify-items: center; gap: 6px; padding: 16px 0 4px; text-align: center; } .od-done b { font-size: 17px; } .od-done small { color: var(--n300); font-size: 13px; }
+.od-row { width: 100%; border: 0; text-align: left; font: inherit; } .ico.spin { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg) } }
 .suite-item.ctx { background: var(--accent-900); box-shadow: none; }
 
 .bell-btn, .ia-btn { position: relative; flex: none; width: 44px; height: 44px; border: 0; border-radius: 22px; background: transparent; display: grid; place-items: center; }
@@ -235,3 +247,9 @@ html[data-theme="escuro"] .tab { text-shadow: 0 1px 3px rgba(0, 18, 27, .75); }
 .login-tip { display: flex; gap: 12px; align-items: flex-start; margin-top: 10px; font-size: 13px; color: var(--n300); }
 .login-tip b { display: block; color: var(--text); font-size: 14px; }
 .login-tip .ico { color: var(--accent-300); margin-top: 2px; }
+
+/* Detalhe da obra: botoes numa linha e o nome inteiro embaixo (com os tres pontos o titulo ficava espremido). */
+.top.obra-top { flex-wrap: wrap; row-gap: 6px; }
+.top.obra-top .grow { order: 9; flex: 1 0 100%; min-width: 0; }
+.top.obra-top #obra-mais { margin-left: auto; }
+

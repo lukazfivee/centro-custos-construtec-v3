@@ -56,7 +56,7 @@
         <span><span class="lbl">Contratado</span><b>${esc(CC.moneyShort(Number(o.valor_contrato || n.contractValue || 0)))}</b></span></div>
       <div class="bts"><a class="btn btn-p" href="#/obras/${esc(o.id)}">Abrir obra</a>
         ${D.pode('cadastrar') ? `<button type="button" class="btn btn-s" data-editar="${esc(o.id)}">Editar</button>` : ''}
-        ${D.papel() === 'admin' ? `<button type="button" class="btn btn-d" data-excluir="${esc(o.id)}">Excluir</button>` : ''}</div></article>`;
+        ${['admin', 'gestor'].includes(D.papel()) ? `<button type="button" class="btn btn-d" data-excluir="${esc(o.id)}">Excluir</button>` : ''}</div></article>`;
   }
 
   async function render(el, rota, vivo) {

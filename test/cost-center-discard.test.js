@@ -45,6 +45,10 @@ test('descartar e recuperar obra vinda de orcamento aprovado, sem movimento', as
   assert.equal((await call('DELETE', `/centros-custo/${costCenterId}`, admin)).status, 409);
   assert.equal((await call('POST', `/centros-custo/${costCenterId}/descartar`, admin, { confirmar: 'errado' })).status, 400);
 
+  // Impedimentos (so leitura, usado pelo celular): obra importada sem movimento.
+  assert.deepEqual((await call('GET', `/centros-custo/${costCenterId}/impedimentos`, admin)).data, { lancamentos: 0, rateios: 0, recorrentes: 0, medicoes: 0, notas: 0 });
+  assert.equal((await call('GET', '/centros-custo/999999/impedimentos', admin)).status, 404);
+
   // Descarte sem movimento.
   const discarded = await call('POST', `/centros-custo/${costCenterId}/descartar`, admin, { confirmar: code, motivo: 'obra de teste' });
   assert.equal(discarded.status, 200, JSON.stringify(discarded.data));
@@ -59,6 +63,7 @@ test('descartar e recuperar obra vinda de orcamento aprovado, sem movimento', as
   assert.equal(list.data.length, 1);
   assert.equal(list.data[0].code, code);
   assert.equal(list.data[0].discarded_by_name.length > 0, true);
+  assert.ok('cliente' in list.data[0] && 'valor_contrato' in list.data[0] && 'contrato_numero' in list.data[0]);
   assert.ok((await db.query("SELECT 1 FROM audit_log WHERE action='descartada'")).rows.length);
 
   // Recuperar: tudo volta como era.
@@ -82,5 +87,6 @@ test('descartar e recuperar obra vinda de orcamento aprovado, sem movimento', as
   const blocked = await call('POST', `/centros-custo/${costCenterId}/descartar`, admin, { confirmar: code });
   assert.equal(blocked.status, 409);
   assert.match(blocked.data.erro, /lançamentos/);
+  assert.equal((await call('GET', `/centros-custo/${costCenterId}/impedimentos`, admin)).data.lancamentos, 1);
   assert.deepEqual(await counts(), before, 'recusado: nada foi apagado');
 });
