@@ -11,6 +11,7 @@
       icone: 'trash', titulo: 'Descartar obra',
       sub: `${obra.codigo} · ${obra.nome}`,
       corpo: `${U.faixa('warn', 'warning', 'A obra sai da carteira, com o contrato e a base de custo. Só vale para obra sem lançamento, nota fiscal, medição nem recorrência. Fica guardada em "Obras descartadas" e pode ser recuperada.')}
+        ${U.faixa('info', 'info', 'Se a obra veio do Orçamentos, a proposta de origem volta a "Aprovada sem Centro de Custo" no Orçamentos e volta a apontar para a obra se ela for recuperada.')}
         <form class="form-lanc" novalidate>
           ${U.campo({ rotulo: 'Motivo (opcional)', name: 'motivo', placeholder: 'Ex.: obra de teste' })}
           ${U.campo({ rotulo: `Digite o código da obra (${obra.codigo}) para confirmar`, name: 'confirmar', obrigatorio: true })}

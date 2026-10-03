@@ -1,6 +1,6 @@
 // Tres pontos do detalhe da obra: copiar codigo, proposta de origem, excluir (obra sem vinculo)
 // e descartar (obra de orcamento aprovado, so admin). Prototipo: Rodada 26 (omLinked, omFree, odExc*, odDesc*, odBlk).
-// Cada sistema descarta so o seu: a proposta de origem continua aprovada no Orcamentos.
+// Ao descartar, a proposta de origem volta a "Aprovada sem Centro de Custo" no Orcamentos (ele le o 410 do resumo).
 (function (CC) {
   const { esc, icon } = CC;
   const role = () => ((CC.session.user() || {}).role || '');
@@ -101,7 +101,7 @@
     const form = (err) => {
       sh.set(`${CC.sheetHead('trash', `Descartar ${c.codigo}?`)}
         <p class="muted od-sub">${esc([c.nome, c.cliente].filter(Boolean).join(' · '))}</p>
-        <p class="od-txt">A obra sai da lista com o contrato e a base de custo, e fica guardada com quem descartou e quando. A ${esc(prop)} continua aprovada no Orçamentos. Um administrador pode recuperar em Menu › Obras descartadas.</p>
+        <p class="od-txt">A obra sai da lista com o contrato e a base de custo, e fica guardada com quem descartou e quando. A ${esc(prop)} volta a "Aprovada sem Centro de Custo" no Orçamentos e volta a apontar para a obra se ela for recuperada. Um administrador pode recuperar em Menu › Obras descartadas.</p>
         ${blocked ? blockList(counts) : `<label class="field"><span>Motivo (opcional)</span><input id="od-motivo" maxlength="300" autocomplete="off" placeholder="Ex.: obra de teste"></label>
         <label class="field od-code"><span>Código da obra</span><input id="od-code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="digite ${esc(c.codigo)} para liberar"></label>`}
         ${err ? CC.sheetErr(err) : ''}
