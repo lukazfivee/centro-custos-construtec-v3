@@ -1,6 +1,7 @@
 const os = require('os');
 const { getDb, getInstanceIdentity } = require('../db');
 const logger = require('../lib/logger');
+const { colunas } = require('../lib/bugReportDados');
 
 let retryTimer = null;
 let flushing = false;
@@ -13,17 +14,18 @@ function requestHeaders(json = false) {
 function platformLabel() { return `${os.platform()} ${os.release()} ${os.arch()}`; }
 
 async function loadReport(id) {
-  const { rows } = await getDb().query(`SELECT b.*,u.name AS author_name,u.email AS author_email FROM bug_reports b JOIN users u ON u.id=b.created_by WHERE b.id=$1`, [id]);
+  const { rows } = await getDb().query(`SELECT ${colunas('b', ['diagnostico'])},u.name AS author_name,u.email AS author_email FROM bug_reports b JOIN users u ON u.id=b.created_by WHERE b.id=$1`, [id]);
   return rows[0] || null;
 }
 
 function payloadFromReport(report) {
   const instance = getInstanceIdentity();
   return {
-    clientReportId: report.client_report_id, title: report.titulo, description: report.descricao,
-    type: report.tipo, severity: report.severidade, createdAt: report.created_at,
+    clientReportId: report.client_report_id, title: report.titulo, description: report.tipo === 'duvida' ? `[Dúvida] ${report.descricao}` : report.descricao,
+    type: report.tipo === 'duvida' ? 'sugestao' : report.tipo, severity: report.severidade, createdAt: report.created_at,
     user: { name: report.author_name, email: report.author_email },
     installation: { id: instance.id, name: instance.name },
+    screen: report.tela || null, diagnostics: report.diagnostico || null, localType: report.tipo,
     app: { version: report.app_version || require('../package.json').version, platform: report.platform || platformLabel() },
   };
 }
