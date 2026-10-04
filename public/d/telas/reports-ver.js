@@ -56,6 +56,9 @@
     }
   }
 
+  // Só admin e gestor respondem (o servidor confere de novo), e nunca um report que ainda está na fila local.
+  const podeResponder = (r) => !r.local && ['admin', 'gestor'].includes(D.papel());
+
   function corpo(r, diag, anexoHtml) {
     const t = R.tipo(r.tipo);
     const e = R.entrega(r);
@@ -73,7 +76,10 @@
     ${acoes.length ? `<details class="rep-acoes"><summary>Últimas ${acoes.length} ações</summary><ol>${acoes.map((a) => `<li>${esc(a.acao)}</li>`).join('')}</ol></details>` : ''}
     <div class="rep-caixa"><span class="eyebrow">Descrição</span><p><b>${esc(r.titulo)}</b></p><p>${esc(r.descricao)}</p></div>
     ${anexoHtml}
-    ${r.resposta_equipe ? `<div class="rep-caixa resposta"><span class="eyebrow">Resposta da equipe do sistema</span><p>${esc(r.resposta_equipe)}</p></div>`
+    ${podeResponder(r) ? `<div class="rep-caixa resposta"><span class="eyebrow">Resposta da equipe do sistema</span>
+      <textarea class="inp" rows="4" maxlength="5000" data-resposta placeholder="Escreva a resposta para quem enviou o report.">${esc(r.resposta_equipe || '')}</textarea>
+      <button type="button" class="btn btn-s" data-salvar-resposta>${D.ic('paper-plane-tilt')}${r.resposta_equipe ? 'Atualizar resposta' : 'Responder'}</button></div>`
+    : r.resposta_equipe ? `<div class="rep-caixa resposta"><span class="eyebrow">Resposta da equipe do sistema</span><p>${esc(r.resposta_equipe)}</p></div>`
       : '<div class="rep-caixa vazia"><span class="eyebrow">Resposta da equipe do sistema</span><p class="muted">A equipe ainda não respondeu.</p></div>'}`;
   }
 
@@ -96,6 +102,19 @@
     const alvo = CC.$('[data-print]', ctl.corpo);
     if (alvo && local) alvo.innerHTML = `<img src="data:${esc(r.anexo.tipo)};base64,${esc(r.anexo.dados)}" alt="Print que será enviado com o report">`;
     else if (alvo) carregarPrint(detalhe.id, alvo);
+    const salvar = CC.$('[data-salvar-resposta]', ctl.corpo);
+    if (salvar) salvar.addEventListener('click', async () => {
+      const campo = CC.$('[data-resposta]', ctl.corpo);
+      const texto = campo.value.trim();
+      if (!texto) { CC.toast('Escreva a resposta antes de enviar.', 'warning-circle'); campo.focus(); return; }
+      salvar.disabled = true;
+      try {
+        await CC.api(`/bug-reports/${detalhe.id}`, { method: 'PUT', body: { resposta: texto } });
+        CC.toast('Resposta registrada.');
+        ctl.fechar(true);
+        if (aoMudar) aoMudar();
+      } catch (error) { salvar.disabled = false; CC.toast(error.message, 'warning-circle'); }
+    });
     const bt = CC.$('[data-reenviar]', ctl.rodape);
     if (bt) bt.addEventListener('click', async () => {
       await R.reenviar(detalhe, bt);

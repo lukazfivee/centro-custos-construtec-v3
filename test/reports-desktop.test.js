@@ -159,3 +159,10 @@ test('reports do desktop: tela registrada, fila no navegador e botão antigo for
   assert.match(fila, /addEventListener\('online'/);
   assert.doesNotMatch(index + fila, /report-v2|bugreport-form|report-consent/);
 });
+
+test('reports do desktop: botão de responder só para admin e gestor, nunca na fila local', () => {
+  const ver = fs.readFileSync(path.join(__dirname, '..', 'public', 'd', 'telas', 'reports-ver.js'), 'utf8');
+  assert.match(ver, /data-salvar-resposta/);
+  assert.match(ver, /\['admin', 'gestor'\]\.includes\(D\.papel\(\)\)/);
+  assert.match(ver, /!r\.local && /);
+});
