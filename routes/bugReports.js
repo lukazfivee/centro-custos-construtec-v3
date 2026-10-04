@@ -201,7 +201,7 @@ router.put('/:id', exigirPapel('admin', 'gestor'), asyncRoute(async (req, res) =
   const values = keys.map((k) => allowedFields[k]);
   values.push(id);
   const result = await db.query(`UPDATE bug_reports SET ${setClause} WHERE id = $${keys.length + 1} RETURNING ${colunas()}`, values);
-  await recordAudit({ entityType: 'bug_report', entityId: id, action: 'update', summary: `Status → ${result.rows[0].status}`, user: req.usuario });
+  await recordAudit({ entityType: 'bug_report', entityId: id, action: 'update', summary: allowedFields.resposta_equipe ? 'Resposta da equipe registrada' : `Status para ${result.rows[0].status}`, user: req.usuario });
   res.json(result.rows[0]);
 }));
 
