@@ -16,7 +16,7 @@ router.get('/status', asyncRoute(async (req, res) => {
   const pkg = require('../package.json');
   const db = getDb();
   const database = getDatabaseInfo();
-  const [countsResult, migrationsResult, storage] = await Promise.all([
+  const [countsResult, migrationsResult, storage, backupSettings] = await Promise.all([
     db.query(`
       SELECT
         (SELECT COUNT(*)::int FROM transactions WHERE deleted_at IS NULL) AS lancamentos_ativos,
@@ -28,6 +28,7 @@ router.get('/status', asyncRoute(async (req, res) => {
     `),
     db.query('SELECT filename,applied_at FROM schema_migrations ORDER BY filename DESC'),
     inspectStorage(database.dataDir),
+    db.query('SELECT enabled FROM backup_settings WHERE id=1'),
   ]);
   const pendingRestore = pendingRestoreInfo();
   const counts = countsResult.rows[0] || {};
@@ -44,7 +45,10 @@ router.get('/status', asyncRoute(async (req, res) => {
       pid: process.pid,
       hostname: os.hostname(),
       instance: getInstanceIdentity(),
+      uptimeSeconds: Math.round(process.uptime()),
     },
+    // Datas em Brasília e valores em real, como o resto do sistema.
+    regional: { timezone: 'America/Sao_Paulo', currency: 'BRL' },
     database: {
       mode: database.mode,
       storage,
@@ -62,7 +66,7 @@ router.get('/status', asyncRoute(async (req, res) => {
       },
     },
     backup: {
-      automaticConfigured: false,
+      automaticConfigured: Boolean(backupSettings.rows[0]?.enabled),
       pendingRestore,
     },
     metrics,

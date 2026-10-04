@@ -43,7 +43,7 @@ async function runAutoBackup(force=false){
 
 function enforceRetention(limit){
   if(!fs.existsSync(dir()))return;
-  const files=fs.readdirSync(dir()).filter(n=>n.endsWith('.tar.gz')).map(name=>({name,path:path.join(dir(),name),mtime:fs.statSync(path.join(dir(),name)).mtimeMs})).sort((a,b)=>b.mtime-a.mtime);
+  const files=fs.readdirSync(dir()).filter(n=>n.startsWith('auto-')&&n.endsWith('.tar.gz')).map(name=>({name,path:path.join(dir(),name),mtime:fs.statSync(path.join(dir(),name)).mtimeMs})).sort((a,b)=>b.mtime-a.mtime);
   for(const old of files.slice(Math.max(3,limit))){try{fs.unlinkSync(old.path);if(fs.existsSync(`${old.path}.sha256`))fs.unlinkSync(`${old.path}.sha256`);}catch{}}
 }
 

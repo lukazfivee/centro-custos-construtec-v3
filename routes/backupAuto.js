@@ -13,7 +13,7 @@ router.use(autenticar,exigirPermissao('p9'));
 router.get('/',asyncRoute(async(req,res)=>{
   const settings=(await getDb().query('SELECT * FROM backup_settings WHERE id=1')).rows[0];
   let arquivos=[];const dir=autoBackupDir();
-  if(fs.existsSync(dir()))arquivos=fs.readdirSync(dir()).filter(n=>n.endsWith('.tar.gz')).map(name=>{const s=fs.statSync(path.join(dir,name));return{name,bytes:s.size,modificado_em:s.mtime.toISOString()};}).sort((a,b)=>b.modificado_em.localeCompare(a.modificado_em)).slice(0,20);
+  if(fs.existsSync(dir))arquivos=fs.readdirSync(dir).filter(n=>n.endsWith('.tar.gz')).map(name=>{const s=fs.statSync(path.join(dir,name));return{name,bytes:s.size,modificado_em:s.mtime.toISOString()};}).sort((a,b)=>b.modificado_em.localeCompare(a.modificado_em)).slice(0,20);
   res.json({config:{ativo:settings.enabled,intervalo_horas:settings.interval_hours,retencao:settings.retention_count,ultima_execucao:settings.last_run_at,ultimo_sucesso:settings.last_success_at,ultimo_erro:settings.last_error},arquivos});
 }));
 

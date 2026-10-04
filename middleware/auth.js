@@ -9,10 +9,14 @@ async function autenticar(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const { rows } = await getDb().query(
-      'SELECT id, name, email, role, suite_role, all_cost_centers, cloud_managed, cloud_session_token, cloud_user_id FROM users WHERE id = $1 AND active = TRUE',
+      'SELECT id, name, email, role, suite_role, all_cost_centers, cloud_managed, cloud_session_token, cloud_user_id, sessions_valid_from FROM users WHERE id = $1 AND active = TRUE',
       [payload.sub]
     );
     if (!rows[0]) return res.status(401).json({ erro: 'Usuário inativo ou inexistente.' });
+    // Troca de senha no modo local: sessões emitidas antes da troca deixam de valer.
+    if (rows[0].sessions_valid_from && Number(payload.iat || 0) < Math.floor(new Date(rows[0].sessions_valid_from).getTime() / 1000)) {
+      return res.status(401).json({ erro: 'Sua senha foi alterada em outro aparelho. Entre novamente.' });
+    }
     if (rows[0].cloud_managed) {
       const handoffHash = typeof payload.centralSessionHash === 'string' ? payload.centralSessionHash : null;
       const sessionValid = handoffHash

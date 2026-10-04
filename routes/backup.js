@@ -7,6 +7,7 @@ const { autenticar } = require('../middleware/auth');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
+const { listarCopias, caminhoDaCopia, gravarCopia } = require('../services/backupCopies');
 
 const router = express.Router();
 router.use(autenticar, exigirPermissao('p9'));
@@ -47,6 +48,35 @@ router.get('/status', asyncRoute(async (req, res) => {
   });
 }));
 
+router.get('/copias', asyncRoute(async (req, res) => {
+  const db = getDb();
+  if (!db.dump) return res.json({ modo:'postgres', copias:[], resumo:{ total:0, bytes:0, ultima:null } });
+  const settings = (await db.query('SELECT enabled,interval_hours,retention_count FROM backup_settings WHERE id=1')).rows[0] || {};
+  const copias = listarCopias();
+  res.json({
+    modo:'local',
+    copias,
+    resumo:{ total:copias.length, bytes:copias.reduce((soma, c) => soma + c.bytes, 0), ultima:copias[0] || null,
+      automatico:{ ativo:Boolean(settings.enabled), intervaloHoras:settings.interval_hours || 24, retencao:settings.retention_count || 30 } },
+  });
+}));
+
+router.post('/copias', asyncRoute(async (req, res) => {
+  const db = getDb();
+  if (!db.dump) throw httpError(501, 'No modo PostgreSQL central, faça o backup com pg_dump.');
+  const copia = await gravarCopia(db, 'manual');
+  await recordAudit({ entityType:'backup', action:'criado', summary:'Backup manual guardado pelo administrador.',
+    data:{ nome:copia.nome, bytes:copia.bytes, sha256:copia.sha256 }, user:req.usuario });
+  res.status(201).json({ ok:true, copia });
+}));
+
+router.get('/copias/:nome', asyncRoute(async (req, res) => {
+  const arquivo = caminhoDaCopia(req.params.nome);
+  await recordAudit({ entityType:'backup', action:'baixado', summary:`Cópia ${path.basename(arquivo)} baixada pelo administrador.`,
+    data:{ nome:path.basename(arquivo) }, user:req.usuario });
+  res.download(arquivo, path.basename(arquivo));
+}));
+
 router.get('/', asyncRoute(async (req, res) => {
   const db = getDb();
   if (!db.dump) throw httpError(501, 'No modo PostgreSQL central, faça o backup com pg_dump.');
@@ -75,9 +105,18 @@ router.post('/restaurar', asyncRoute(async (req, res) => {
   if (fs.existsSync(markerPath())) {
     throw httpError(409, 'Já existe uma restauração agendada. Reinicie o sistema ou remova o agendamento antes de enviar outro arquivo.');
   }
-  const filename = String(req.body.nomeArquivo || '').slice(0, 240);
-  if (!/\.tar\.gz$/i.test(filename)) throw httpError(400, 'Selecione um backup .tar.gz gerado pelo sistema.');
-  const buffer = decodeBase64(req.body.conteudoBase64);
+  let filename;
+  let buffer;
+  if (req.body.copia) {
+    // Cópia guardada neste computador (tabela das Configurações): lê direto da pasta de cópias.
+    const arquivo = caminhoDaCopia(req.body.copia);
+    filename = path.basename(arquivo);
+    buffer = fs.readFileSync(arquivo);
+  } else {
+    filename = String(req.body.nomeArquivo || '').slice(0, 240);
+    if (!/\.tar\.gz$/i.test(filename)) throw httpError(400, 'Selecione um backup .tar.gz gerado pelo sistema.');
+    buffer = decodeBase64(req.body.conteudoBase64);
+  }
   if (buffer.length < 1024 || buffer.length > 80 * 1024 * 1024) {
     throw httpError(400, 'O backup deve ter entre 1 KB e 80 MB.');
   }
@@ -93,6 +132,8 @@ router.post('/restaurar', asyncRoute(async (req, res) => {
     throw httpError(400, 'O checksum do arquivo não confere. O backup pode estar corrompido.');
   }
   ensureFreeSpace(restoreRootDir(), buffer.length * 3);
+  // Antes de agendar, guarda uma cópia do estado atual: dá para voltar atrás.
+  const copiaAntes = await gravarCopia(db, 'antes-restaurar');
 
   const directory = path.join(restoreRootDir(), 'restauracoes');
   fs.mkdirSync(directory, { recursive:true });
@@ -109,11 +150,11 @@ router.post('/restaurar', asyncRoute(async (req, res) => {
   fs.renameSync(tempMarker, markerPath());
   await recordAudit({
     entityType:'backup',action:'agendado',summary:`Restauração agendada a partir de ${filename}.`,
-    data:{ filename,bytes:buffer.length,sha256 },user:req.usuario,
+    data:{ filename,bytes:buffer.length,sha256,copiaAntes:copiaAntes.nome },user:req.usuario,
   });
   res.json({
-    ok:true,reinicioNecessario:true,sha256,
-    mensagem:'Backup validado e agendado. Reinicie o sistema para aplicar. A base atual será preservada automaticamente.',
+    ok:true,reinicioNecessario:true,sha256,copiaAntes:copiaAntes.nome,
+    mensagem:'Backup validado e agendado. Reinicie o sistema para aplicar. Uma cópia do estado atual foi guardada antes.',
   });
 }));
 
