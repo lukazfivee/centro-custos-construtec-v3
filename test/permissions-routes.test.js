@@ -16,6 +16,9 @@ const CASES = [
   ['POST', '/notas-fiscais-centro/999999', 'p6'],
   ['POST', '/cloud-sync/cobrancas/x/autorizar', 'p7'], // p6 das cobrancas em si: test/cobrancas-desktop.test.js
   ['POST', '/fechamento-mensal', 'p8'],
+  ['DELETE', '/fechamento-mensal/999999', 'p8'],
+  ['GET', '/fechamento-mensal/resumo?ano=2026', 'p8'],
+  ['GET', '/fechamento-mensal/checklist?ano=2026&mes=9', 'p8'],
   ['GET', '/usuarios', 'p9'],
   ['POST', '/centros-custo/999999/medicoes', 'p12'],
 ];
