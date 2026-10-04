@@ -12,11 +12,15 @@ const { mirrorCloudUser } = require('../services/cloudUserMirror');
 const logger = require('../lib/logger');
 const { decodeProfilePhoto } = require('../lib/profilePhoto');
 const { recordAudit } = require('../services/audit');
+const { createLoginThrottle } = require('../lib/loginThrottle');
+const { clientIp } = require('../lib/clientIp');
+const { appAllowed, APP_DENIED_MESSAGE } = require('../services/appAccess');
 
 const router = express.Router();
 const LOGIN_MAX_FAILURES = 5;
+const LOGIN_EMAIL_MAX_FAILURES = 30;
 const LOGIN_BLOCK_MS = 15 * 60 * 1000;
-const loginFailures = new Map();
+const LOGIN_SWEEP_MS = 5 * 60 * 1000;
 
 function profilePhotoPayload(row, synchronized = true) {
   return {
@@ -32,37 +36,28 @@ function cloudProfileError(error) {
   return httpError(503,'Não foi possível sincronizar a foto de perfil agora. Verifique a internet e tente novamente.');
 }
 
-function loginFailureState(email) {
-  const key = String(email || '').trim().toLowerCase();
-  const state = loginFailures.get(key);
-  if (!state) return null;
-  if (state.blockedUntil && state.blockedUntil <= Date.now()) {
-    loginFailures.delete(key);
-    return null;
-  }
-  return state;
+// Bloqueio por e-mail + IP (5 falhas = 15 min) e um limite global por e-mail (30 falhas = 15 min) para
+// barrar forca bruta distribuida. Um unico IP so consegue gastar 5 falhas do limite global por vez,
+// entao nao basta para trancar a conta de outra pessoa.
+const loginKey = (email) => String(email || '').trim().toLowerCase();
+const pairThrottle = createLoginThrottle({ maxFailures:LOGIN_MAX_FAILURES, windowMs:LOGIN_BLOCK_MS, blockMs:LOGIN_BLOCK_MS });
+const emailThrottle = createLoginThrottle({ maxFailures:LOGIN_EMAIL_MAX_FAILURES, windowMs:LOGIN_BLOCK_MS, blockMs:LOGIN_BLOCK_MS });
+setInterval(() => { pairThrottle.sweep(); emailThrottle.sweep(); }, LOGIN_SWEEP_MS).unref();
+
+function assertLoginAllowed(email, ip) {
+  const minutes = Math.max(pairThrottle.blockedMinutes(`${loginKey(email)}|${ip}`), emailThrottle.blockedMinutes(loginKey(email)));
+  if (minutes) throw httpError(429, `Muitas tentativas de login para este e-mail. Tente novamente em ${minutes} minuto(s).`);
 }
 
-function assertLoginAllowed(email) {
-  const state = loginFailureState(email);
-  if (!state?.blockedUntil) return;
-  const minutes = Math.max(1, Math.ceil((state.blockedUntil - Date.now()) / 60000));
-  throw httpError(429, `Muitas tentativas de login para este e-mail. Tente novamente em ${minutes} minuto(s).`);
-}
-
-function registerLoginFailure(email) {
-  const key = String(email || '').trim().toLowerCase();
+function registerLoginFailure(email, ip) {
+  const key = loginKey(email);
   if (!key) return;
-  const current = loginFailureState(key) || { count:0, blockedUntil:null };
-  const count = current.count + 1;
-  loginFailures.set(key, {
-    count,
-    blockedUntil: count >= LOGIN_MAX_FAILURES ? Date.now() + LOGIN_BLOCK_MS : null,
-  });
+  pairThrottle.fail(`${key}|${ip}`);
+  emailThrottle.fail(key);
 }
 
-function clearLoginFailures(email) {
-  loginFailures.delete(String(email || '').trim().toLowerCase());
+function clearLoginFailures(email, ip) {
+  pairThrottle.clear(`${loginKey(email)}|${ip}`);
 }
 
 async function localCorporateCandidate(email) {
@@ -78,10 +73,10 @@ async function upsertCloudUser(remoteUser, sessionToken) {
   return mirrorCloudUser(getDb(), remoteUser, { sessionToken });
 }
 
-async function corporateLogin(email, password) {
+async function corporateLogin(email, password, ip) {
   let remote;
   try {
-    remote = await cloudAuth.login(email,password);
+    remote = await cloudAuth.login(email,password,{ ip });
   } catch (error) {
     if (error.code !== 'DIRECTORY_EMPTY') throw error;
 
@@ -98,7 +93,7 @@ async function corporateLogin(email, password) {
       password,
       role:local.role,
     });
-    remote = await cloudAuth.login(email,password);
+    remote = await cloudAuth.login(email,password,{ ip });
   }
 
   if (!remote?.user || !remote?.sessionToken) {
@@ -112,11 +107,13 @@ async function corporateLogin(email, password) {
 // E-mail fora do dominio na nuvem: so conta central autorizada por um admin.
 // O diretorio e a unica fonte de login ali; recusa ou indisponibilidade nao
 // caem para uma senha local antiga. No desktop continua o login local.
-async function externalCloudLogin(email, password) {
+async function externalCloudLogin(email, password, ip) {
   try {
-    const remote = await cloudAuth.login(email,password);
+    const remote = await cloudAuth.login(email,password,{ ip });
     if (remote?.user && remote?.sessionToken) return upsertCloudUser(remote.user,remote.sessionToken);
   } catch (error) {
+    if (error.status === 429) throw httpError(429,error.message);
+    if (error.status === 403 && error.code === 'APP_NOT_ALLOWED') throw httpError(403,error.message);
     if ([400,401,409].includes(error.status)) throw httpError(401,'E-mail ou senha inválidos.');
     logger.warn('external_cloud_login_unavailable', { status:error.status || null });
     throw httpError(503,'Não foi possível validar o acesso agora. Verifique a internet e tente novamente.');
@@ -139,6 +136,7 @@ router.post('/handoff-bridge', asyncRoute(async (req, res) => {
     || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(remote?.email || ''))
     || !['admin','gestor','supervisor'].includes(remote?.role)
     || remote?.active !== true) return res.status(400).json({ ok:false, code:'HANDOFF_INVALID' });
+  if (!appAllowed({ apps:remote.apps },'centro')) return res.status(403).json({ ok:false, code:'APP_NOT_ALLOWED' });
   const user = await mirrorCloudUser(getDb(),remote);
   const token = jwt.sign({ centralSessionHash:sessionHash },process.env.JWT_SECRET,
     { subject:String(user.id),expiresIn:'8h' });
@@ -152,27 +150,29 @@ router.post('/handoff-bridge', asyncRoute(async (req, res) => {
 router.post('/login', asyncRoute(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.senha || '');
+  const ip = clientIp(req);
 
   try {
-    assertLoginAllowed(email);
+    assertLoginAllowed(email, ip);
     if (!email || !password) throw httpError(400, 'Informe e-mail e senha.');
 
     let user;
     if (cloudAuth.corporateEmail(email)) {
       try {
-        user = await corporateLogin(email,password);
+        user = await corporateLogin(email,password,ip);
       } catch (error) {
-        if (error.status === 401 || error.status === 400) throw httpError(error.status,error.message);
+        if (error.status === 401 || error.status === 400 || error.status === 429) throw httpError(error.status,error.message);
+        if (error.status === 403 && error.code === 'APP_NOT_ALLOWED') throw httpError(403,error.message);
         if (error.code === 'BOOTSTRAP_KEY_MISSING') throw httpError(503,error.message);
         if (error.status === 409) throw httpError(409,error.message);
         throw httpError(503,'Não foi possível validar o acesso corporativo agora. Verifique a internet e tente novamente.');
       }
     } else if (process.env.DATABASE_URL) {
-      user = await externalCloudLogin(email,password);
+      user = await externalCloudLogin(email,password,ip);
     }
     if (!user) {
       const { rows } = await getDb().query(
-        `SELECT id, name, email, password_hash, role
+        `SELECT id, name, email, password_hash, role, apps
          FROM users WHERE LOWER(email) = $1 AND active = TRUE AND deleted_at IS NULL AND cloud_managed = FALSE`, [email]
       );
       user = rows[0];
@@ -181,7 +181,8 @@ router.post('/login', asyncRoute(async (req, res) => {
       }
     }
 
-    clearLoginFailures(email);
+    if (!appAllowed(user, 'centro')) throw httpError(403, APP_DENIED_MESSAGE);
+    clearLoginFailures(email, ip);
     const token = jwt.sign({}, process.env.JWT_SECRET, { subject: String(user.id), expiresIn: '8h' });
     res.json({
       token,
@@ -190,7 +191,7 @@ router.post('/login', asyncRoute(async (req, res) => {
     });
   } catch (error) {
     const status = Number(error.statusCode || error.status || 500);
-    if (status === 401) registerLoginFailure(email);
+    if (status === 401) registerLoginFailure(email, ip);
     logger.warn('login_failed', {
       email: email || null,
       requestId:req.requestId,

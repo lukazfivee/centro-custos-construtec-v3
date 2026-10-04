@@ -19,6 +19,7 @@ const {
   listLaborMeasurements,
   recordContractMeasurement,
   listContractMeasurements,
+  assertContractOfCenter,
 } = require('../services/budgets/budgetMeasurements');
 
 const router = express.Router();
@@ -183,6 +184,8 @@ router.post('/:id/medicoes', exigirPermissao('p12'), asyncRoute(async (req, res)
     const cRes = await getDb().query('SELECT id FROM project_contracts WHERE cost_center_id = $1 AND status = \'active\' LIMIT 1', [id]);
     if (!cRes.rows[0]) throw httpError(400, 'Obra sem contrato ativo para registrar medições.');
     contractId = cRes.rows[0].id;
+  } else {
+    await assertContractOfCenter(getDb(), contractId, id);
   }
   if (type === 'contract') {
     const result = await recordContractMeasurement(getDb(), { ...params, contractId, costCenterId: id, userId: req.usuario?.id });

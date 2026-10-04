@@ -1,11 +1,14 @@
 import { json, publicUser, requireSession, sha256Text, cleanSyncKey } from './centralAuth.js';
 import { serviceKeyValid } from './identityAdmin.js';
 import { effectiveSuiteRole, parseApps } from './suiteRoles.js';
+import { appAllowed, appDenied } from './loginGuard.js';
 
 // Destinos do handoff (contrato §6). O código só vale no destino para o qual
 // foi emitido; o do Orçamentos só é trocado pelo servidor do Orçamentos
 // (CONSTRUTEC_IDENTITY_KEY) e vira uma sessão central filha da sessão do app.
 const TARGETS = new Set(['centro-custos', 'orcamentos']);
+// Destino do handoff -> identificador do app na lista `apps` da conta.
+const APP_OF = { 'centro-custos': 'centro', orcamentos: 'orcamentos' };
 const WEB_NAMES = { 'centro-custos': 'Centro de Custos web', orcamentos: 'Orçamentos web' };
 
 function code() {
@@ -22,6 +25,7 @@ export async function issueHandoff(request, env) {
   let body;
   try { body = await request.json(); } catch { body = null; }
   if (!TARGETS.has(body?.target)) return targetInvalid();
+  if (!appAllowed(auth.user, APP_OF[body.target])) return json(appDenied(APP_OF[body.target]), 403);
   const value = code();
   const expiresAt = Math.floor(Date.now() / 1000) + 60;
   await env.DB.prepare('INSERT INTO session_handoffs(code_hash,session_hash,user_id,expires_at,target) VALUES(?,?,?,?,?)')
@@ -48,6 +52,7 @@ export async function consumeHandoff(request, env) {
     WHERE h.code_hash=? AND h.target=? AND h.used_at IS NULL AND h.expires_at>? AND s.expires_at>?`)
     .bind(hash, target, now, now).first();
   if (!row) return invalid();
+  if (!appAllowed(row, APP_OF[target])) return json(appDenied(APP_OF[target]), 403);
   if (target === 'centro-custos' && (cleanSyncKey(env).length < 32 || !env.API)) {
     return json({ ok: false, code: 'SERVER_ERROR', error: 'Handoff web indisponível.' }, 503);
   }
