@@ -102,7 +102,10 @@
       sh.set(`${CC.sheetHead('trash', `Descartar ${c.codigo}?`)}
         <p class="muted od-sub">${esc([c.nome, c.cliente].filter(Boolean).join(' · '))}</p>
         <p class="od-txt">A obra sai da lista com o contrato e a base de custo, e fica guardada com quem descartou e quando. A ${esc(prop)} volta a "Aprovada sem Centro de Custo" no Orçamentos e volta a apontar para a obra se ela for recuperada. Um administrador pode recuperar em Menu › Obras descartadas.</p>
-        ${blocked ? blockList(counts) : `<label class="field"><span>Motivo (opcional)</span><input id="od-motivo" maxlength="300" autocomplete="off" placeholder="Ex.: obra de teste"></label>
+        ${blocked ? `${blockList(counts)}${Number(counts.lancamentos) + Number(counts.recorrentes) > 0 ? `
+        <p class="od-txt">Os lançamentos vão para a lixeira e são guardados junto com a obra; estornos e meses fechados ficam como estão.</p>
+        <label class="field od-code"><span>Código da obra</span><input id="od-clear-code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="digite ${esc(c.codigo)} para confirmar"></label>
+        <button class="btn2" type="button" id="od-clear" style="width:100%">${icon('trash', 18)}Excluir todos os lançamentos e recorrentes</button>` : ''}` : `<label class="field"><span>Motivo (opcional)</span><input id="od-motivo" maxlength="300" autocomplete="off" placeholder="Ex.: obra de teste"></label>
         <label class="field od-code"><span>Código da obra</span><input id="od-code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="digite ${esc(c.codigo)} para liberar"></label>`}
         ${err ? CC.sheetErr(err) : ''}
         <div class="grid2 od-acts"><button class="btn2" type="button" id="od-cancel">Cancelar</button>
@@ -111,6 +114,17 @@
       CC.$('#od-cancel', sh.el).addEventListener('click', sh.close);
       const lanc = CC.$('#od-lanc', sh.el);
       if (lanc) lanc.addEventListener('click', () => { sh.close(); CC.screens.obra({ id: c.id, tab: 'lanc' }); });
+      const clear = CC.$('#od-clear', sh.el);
+      if (clear) clear.addEventListener('click', async () => {
+        const cc = CC.$('#od-clear-code', sh.el);
+        if (cc.value.trim().toLowerCase() !== String(c.codigo).trim().toLowerCase()) { cc.parentElement.classList.add('bad'); return; }
+        CC.busy(clear, 'Excluindo…');
+        try {
+          const { data } = await CC.api(`/centros-custo/${c.id}/excluir-lancamentos`, { method: 'POST', body: { confirmar: cc.value.trim() } });
+          CC.toast(`${data.excluidos} lançamento(s) e ${data.recorrentes} recorrente(s) excluídos${data.ignorados.length ? ` · ${data.ignorados.length} ficaram (estorno ou mês fechado)` : ''}`);
+          descartar(c);
+        } catch (e3) { form(e3); }
+      });
       if (!code) return;
       const ok = () => code.value.trim().toLowerCase() === String(c.codigo).trim().toLowerCase();
       code.addEventListener('input', () => { go.disabled = !ok(); code.parentElement.classList.toggle('bad', !!code.value.trim() && !ok()); });
