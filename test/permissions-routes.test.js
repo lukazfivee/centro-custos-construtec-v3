@@ -21,6 +21,26 @@ const CASES = [
   ['GET', '/fechamento-mensal/checklist?ano=2026&mes=9', 'p8'],
   ['GET', '/usuarios', 'p9'],
   ['POST', '/centros-custo/999999/medicoes', 'p12'],
+  // Revisao de seguranca: sincronizacao, historico, update, aparencia e integracao por sessao.
+  ['GET', '/sincronizacao-inteligente/exportar', 'p9'],
+  ['GET', '/sincronizacao-inteligente/historico', 'p9'],
+  ['GET', '/sincronizacao-inteligente/conflitos', 'p9'],
+  ['POST', '/sincronizacao-inteligente/importar', 'p5'],
+  ['GET', '/cadastro-sync/exportar.csv', 'p5'],
+  ['POST', '/cadastro-sync/importar', 'p5'],
+  ['POST', '/sincronizacao/importar', 'p3'],
+  ['GET', '/sincronizacao/historico', 'p3'],
+  ['GET', '/sincronizacao/conflitos', 'p3'],
+  ['POST', '/sincronizacao/conflitos/999999/resolver', 'p3'],
+  ['GET', '/historico', 'p9'],
+  ['GET', '/historico/pessoas', 'p9'],
+  ['GET', '/historico/exportar.csv', 'p9'],
+  ['GET', '/update/status', 'p9'],
+  ['POST', '/appearance', 'p9'],
+  ['GET', '/integracao/orcamentos/portfolio-summary', 'p10'],
+  ['GET', '/integracao/orcamentos/contratos/00000000-0000-4000-8000-000000000000/resumo', 'p10'],
+  ['GET', '/integracao/orcamentos/contratos/00000000-0000-4000-8000-000000000000/baselines', 'p10'],
+  ['GET', '/integracao/orcamentos/importacoes/00000000-0000-4000-8000-000000000000', 'p10'],
 ];
 
 test('cada papel da Suite passa so pelas rotas da sua permissao', async (context) => {

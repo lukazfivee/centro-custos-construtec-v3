@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 const updater = require('../services/updater');
 
-router.get('/check', autenticar, (req, res) => {
+router.get('/check', autenticar, exigirPermissao('p9'), (req, res) => {
   try {
     updater.check();
     res.json({ ok: true });
@@ -12,11 +13,11 @@ router.get('/check', autenticar, (req, res) => {
   }
 });
 
-router.get('/status', autenticar, (req, res) => {
+router.get('/status', autenticar, exigirPermissao('p9'), (req, res) => {
   res.json(updater.getState());
 });
 
-router.post('/download', autenticar, (req, res) => {
+router.post('/download', autenticar, exigirPermissao('p9'), (req, res) => {
   try {
     updater.download();
     res.json({ ok: true });
@@ -25,7 +26,7 @@ router.post('/download', autenticar, (req, res) => {
   }
 });
 
-router.post('/install', autenticar, (req, res) => {
+router.post('/install', autenticar, exigirPermissao('p9'), (req, res) => {
   try {
     res.json({ ok: true, mensagem: 'Instalando atualização...' });
     setTimeout(() => updater.install(), 500);

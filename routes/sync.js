@@ -1,6 +1,7 @@
 const express = require('express');
 const { autenticar } = require('../middleware/auth');
 const { bloquearEscopado } = require('../services/obraScope');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const { todayIso } = require('../lib/dates');
 const { buildTransactionFilters } = require('../lib/transactionFilters');
@@ -30,14 +31,14 @@ router.get('/exportar.csv', asyncRoute(async (req, res) => {
   res.send(csv);
 }));
 
-router.post('/importar', asyncRoute(async (req, res) => {
+router.post('/importar', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const result = await importTransactions({
     content:req.body.conteudo,filename:req.body.nomeArquivo,user:req.usuario,
   });
   res.json(result);
 }));
 
-router.get('/historico', asyncRoute(async (req, res) => {
+router.get('/historico', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const { rows } = await getDb().query(`
     SELECT si.id,si.filename,si.source_instance_name,si.included_count,si.updated_count,
       si.ignored_count,si.conflict_count,si.error_count,si.created_at,u.name AS imported_by_name
@@ -47,7 +48,7 @@ router.get('/historico', asyncRoute(async (req, res) => {
   res.json(rows);
 }));
 
-router.get('/conflitos', asyncRoute(async (req, res) => {
+router.get('/conflitos', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const { rows } = await getDb().query(`
     SELECT sc.id,sc.transaction_public_id,sc.reason,sc.status,sc.created_at,si.filename,
       sc.local_data,sc.incoming_data
@@ -57,7 +58,7 @@ router.get('/conflitos', asyncRoute(async (req, res) => {
   res.json(rows);
 }));
 
-router.post('/conflitos/:id/resolver', asyncRoute(async (req, res) => {
+router.post('/conflitos/:id/resolver', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) throw httpError(400,'ID inválido.');
   const escolha = String(req.body.escolha || '').trim();
