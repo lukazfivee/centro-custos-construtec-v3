@@ -9,12 +9,14 @@ const { csvLine } = require('../lib/csv');
 const { currentMonth, monthRange, validMonth } = require('../lib/dates');
 const { digits, documentoValido, formatarDocumento } = require('../lib/documento');
 const { recordAudit } = require('../services/audit');
+const { obrasPermitidas } = require('../services/obraScope');
 
 const router = express.Router();
 router.use(autenticar);
 
-// $1 e $2 = inicio e fim do mes. O lancamento so liga ao fornecedor pelo nome (counterparty).
-const SUPPLIERS_SELECT = `
+// $1 e $2 = inicio e fim do mes; $3 = obras permitidas, so para usuario escopado (`scope`).
+// O lancamento so liga ao fornecedor pelo nome (counterparty).
+const suppliersSelect = (scope) => `
   SELECT s.id,s.name AS nome,s.document AS documento,s.contact_name AS contato,s.email,s.phone AS telefone,
     s.notes AS observacao,s.active AS ativo,s.revision,s.default_category_id AS categoria_id,c.name AS categoria,
     s.created_at,s.updated_at,COALESCE(m.gasto,0) AS gasto_mes,COALESCE(m.qtd,0) AS lancamentos_mes
@@ -25,7 +27,7 @@ const SUPPLIERS_SELECT = `
       SUM(amount*accounting_sign) FILTER (WHERE type='despesa') AS gasto,
       COUNT(*) FILTER (WHERE accounting_sign=1) AS qtd
     FROM transactions
-    WHERE deleted_at IS NULL AND counterparty IS NOT NULL AND transaction_date >= $1 AND transaction_date < $2
+    WHERE deleted_at IS NULL AND counterparty IS NOT NULL AND transaction_date >= $1 AND transaction_date < $2${scope}
     GROUP BY 1
   ) m ON m.chave=LOWER(TRIM(s.name))`;
 
@@ -38,26 +40,35 @@ function periodo(query) {
 router.get('/', asyncRoute(async (req,res) => {
   const { start, end } = periodo(req.query);
   const orderBy = 's.active DESC,s.name';
-  const { where, values } = buildSearchFilter(req.query, [start, end]);
+  // Usuario escopado soma so as obras permitidas (sem nenhuma, tudo zera); o cadastro em si e global.
+  const obras = await obrasPermitidas(req);
+  const values = obras ? [start, end, obras] : [start, end];
+  const select = suppliersSelect(obras ? ' AND cost_center_id = ANY($3::int[])' : '');
+  const search = searchTerm(req.query);
+  const dataValues = search ? [...values, search] : values;
+  const where = search ? searchWhere(dataValues.length) : '';
   if (!wantsPagination(req.query)) {
-    const { rows } = await getDb().query(`${SUPPLIERS_SELECT} ${where} ORDER BY ${orderBy} LIMIT 500`, values);
+    const { rows } = await getDb().query(`${select} ${where} ORDER BY ${orderBy} LIMIT 500`, dataValues);
     res.setHeader('X-Result-Limit', '500');
     return res.json(rows);
   }
   const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
   const [dataResult, countResult] = await Promise.all([
-    getDb().query(`${SUPPLIERS_SELECT} ${where} ORDER BY ${orderBy} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, limit, offset]),
-    getDb().query(`SELECT COUNT(*)::int AS total FROM suppliers s ${where.replaceAll('$3', '$1')}`, values.slice(2)),
+    getDb().query(`${select} ${where} ORDER BY ${orderBy} LIMIT $${dataValues.length + 1} OFFSET $${dataValues.length + 2}`, [...dataValues, limit, offset]),
+    getDb().query(`SELECT COUNT(*)::int AS total FROM suppliers s ${search ? searchWhere(1) : ''}`, search ? [search] : []),
   ]);
   const total = Number(countResult.rows[0]?.total || 0);
   res.setHeader('X-Total-Count', String(total));
   return res.json({ itens: dataResult.rows, paginacao: paginationMeta(total, page, limit) });
 }));
 
-function buildSearchFilter(query, base) {
-  if (!query.busca || !String(query.busca).trim()) return { where: '', values: base };
-  const search = `%${String(query.busca).trim().slice(0, 100)}%`;
-  return { where: `WHERE (s.name ILIKE $3 OR COALESCE(s.document, '') ILIKE $3 OR COALESCE(s.contact_name, '') ILIKE $3)`, values: [...base, search] };
+function searchTerm(query) {
+  if (!query.busca || !String(query.busca).trim()) return null;
+  return `%${String(query.busca).trim().slice(0, 100)}%`;
+}
+
+function searchWhere(n) {
+  return `WHERE (s.name ILIKE $${n} OR COALESCE(s.document, '') ILIKE $${n} OR COALESCE(s.contact_name, '') ILIKE $${n})`;
 }
 
 router.get('/exportar.csv', asyncRoute(async (req,res) => {
@@ -76,20 +87,23 @@ router.get('/:id/resumo', asyncRoute(async (req,res) => {
   const supplier = await getDb().query('SELECT id,name FROM suppliers WHERE id=$1', [id]);
   if (!supplier.rows.length) throw httpError(404,'Fornecedor não encontrado.');
   const db = getDb();
+  const obras = await obrasPermitidas(req);
+  const values = [supplier.rows[0].name, start, end];
+  if (obras) values.push(obras);
   const [lista, totais] = await Promise.all([db.query(
     `SELECT t.id,t.description AS descricao,t.type AS tipo,t.amount AS valor,t.accounting_sign AS sinal,
        t.transaction_date::text AS data,t.financial_status AS status,cc.code AS obra_codigo,c.name AS categoria
      FROM transactions t JOIN cost_centers cc ON cc.id=t.cost_center_id JOIN categories c ON c.id=t.category_id
      WHERE t.deleted_at IS NULL AND LOWER(TRIM(t.counterparty))=LOWER(TRIM($1))
-       AND t.transaction_date >= $2 AND t.transaction_date < $3
+       AND t.transaction_date >= $2 AND t.transaction_date < $3${obras ? ' AND t.cost_center_id = ANY($4::int[])' : ''}
      ORDER BY t.transaction_date DESC,t.id DESC LIMIT 50`,
-    [supplier.rows[0].name, start, end]
+    values
   ), db.query(
     `SELECT COALESCE(SUM(amount*accounting_sign) FILTER (WHERE type='despesa'),0) AS gasto,
        COUNT(*) FILTER (WHERE accounting_sign=1) AS qtd
      FROM transactions WHERE deleted_at IS NULL AND LOWER(TRIM(counterparty))=LOWER(TRIM($1))
-       AND transaction_date >= $2 AND transaction_date < $3`,
-    [supplier.rows[0].name, start, end]
+       AND transaction_date >= $2 AND transaction_date < $3${obras ? ' AND cost_center_id = ANY($4::int[])' : ''}`,
+    values
   )]);
   res.json({ lancamentos: lista.rows, gasto_mes: Number(totais.rows[0].gasto), lancamentos_mes: Number(totais.rows[0].qtd) });
 }));
