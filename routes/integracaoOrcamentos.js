@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { autenticar, exigirPapel } = require('../middleware/auth');
 const { discardByContract, restoreByContract, findOpenDiscard, IntegrationError } = require('../services/budgets/budgetContractDiscard');
 const { exigirPermissao } = require('../services/permissions');
+const { bloquearEscopado, assertObra } = require('../services/obraScope');
 const { asyncRoute, httpError } = require('../lib/http');
 const { getDb } = require('../db');
 const { previewImport, confirmImportWithObservability: confirmImport } = require('../services/budgets/budgetImportService');
@@ -36,11 +37,19 @@ function expectedIntegrationKey() {
   return configured;
 }
 
+// No desktop (PGlite local) a chave padrao e publica no repositorio; por isso, la, a chave de
+// integracao so vale vinda do proprio computador (loopback), salvo CONSTRUTEC_INTEGRATION_LOOPBACK_ONLY=false.
+// Na nuvem a exigencia continua opcional ('true'): o trafego chega pelo Worker e a chave e forte.
+function integrationRequiresLoopback() {
+  const flag = String(process.env.CONSTRUTEC_INTEGRATION_LOOPBACK_ONLY || '').trim().toLowerCase();
+  if (flag === 'true') return true;
+  return !process.env.DATABASE_URL && flag !== 'false';
+}
+
 async function autenticarOuChaveIntegracao(req, res, next) {
   const integrationKey = req.headers['x-construtec-integration-key'];
   if (integrationKey) {
-    const requireLoopback = process.env.CONSTRUTEC_INTEGRATION_LOOPBACK_ONLY === 'true';
-    if (requireLoopback && !isLoopback(req)) {
+    if (integrationRequiresLoopback() && !isLoopback(req)) {
       return res.status(403).json({ erro: 'Acesso negado: sincronização direta restrita a loopback local (127.0.0.1).' });
     }
     const expectedKey = expectedIntegrationKey();
@@ -51,6 +60,7 @@ async function autenticarOuChaveIntegracao(req, res, next) {
       return res.status(401).json({ erro: 'Chave de integração inválida.' });
     }
     req.usuario = { id: null, name: 'Sincronização Direta Orçamentos', role: 'admin' };
+    req.viaChaveIntegracao = true;
     return next();
   }
   return autenticar(req, res, next);
@@ -123,7 +133,21 @@ const handleDirectSync = asyncRoute(async (req, res) => {
 router.post('/confirmar-direto', podeImportar, handleDirectSync);
 router.post('/sync-direto', podeImportar, handleDirectSync);
 
-router.get('/importacoes/:id', asyncRoute(async (req, res) => {
+// Leituras: a chave de integracao (servico do Orcamentos) passa direto; sessao de usuario precisa de p10
+// e, nas rotas por contrato/importacao, ter acesso a obra.
+const leituraPorSessao = (req, res, next) => (req.viaChaveIntegracao ? next() : exigirPermissao('p10')(req, res, next));
+// O resumo da carteira soma todas as obras e nao tem filtro: usuario restrito a obras nao entra.
+const leituraDaCarteira = [leituraPorSessao, (req, res, next) => (req.viaChaveIntegracao ? next() : bloquearEscopado(req, res, next))];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+async function conferirObraDoContrato(req, contractId) {
+  if (req.viaChaveIntegracao) return;
+  const found = UUID.test(String(contractId))
+    ? await getDb().query('SELECT cost_center_id FROM project_contracts WHERE id=$1', [contractId])
+    : { rows: [] };
+  if (found.rows[0]) await assertObra(req, found.rows[0].cost_center_id);
+}
+
+router.get('/importacoes/:id', leituraPorSessao, asyncRoute(async (req, res) => {
   const result = await getDb().query(`
     SELECT bi.id, bi.source_system, bi.namespace_id, bi.series_id, bi.source_proposal_id,
       bi.source_revision, bi.payload_hash, bi.imported_at, bi.contract_id,
@@ -134,10 +158,12 @@ router.get('/importacoes/:id', asyncRoute(async (req, res) => {
   `, [req.params.id]);
 
   if (!result.rows[0]) throw httpError(404, 'Importação não encontrada');
+  if (!req.viaChaveIntegracao && result.rows[0].cost_center_id) await assertObra(req, result.rows[0].cost_center_id);
   res.json(result.rows[0]);
 }));
 
-router.get('/contratos/:id/baselines', asyncRoute(async (req, res) => {
+router.get('/contratos/:id/baselines', leituraPorSessao, asyncRoute(async (req, res) => {
+  await conferirObraDoContrato(req, req.params.id);
   const result = await getDb().query(`
     SELECT b.id, b.contract_id, b.version, b.predecessor_id, b.materials_cost,
       b.labor_cost, b.base_cost, b.contract_value, b.additions, b.sealed_at,
@@ -152,7 +178,8 @@ router.get('/contratos/:id/baselines', asyncRoute(async (req, res) => {
 }));
 
 // Acompanhamento da obra para a proposta integrada no Orcamentos.
-router.get('/contratos/:id/resumo', asyncRoute(async (req, res) => {
+router.get('/contratos/:id/resumo', leituraPorSessao, asyncRoute(async (req, res) => {
+  await conferirObraDoContrato(req, req.params.id);
   const { getContractSummary } = require('../services/budgets/budgetContractSummary');
   const summary = await getContractSummary(getDb(), String(req.params.id));
   if (!summary) {
@@ -180,10 +207,11 @@ const integrationRoute = (action) => [exigirPapel('admin'), async (req, res, nex
 router.post('/contratos/:id/descartar', ...integrationRoute(discardByContract));
 router.post('/contratos/:id/restaurar', ...integrationRoute(restoreByContract));
 
-router.get('/portfolio-summary', asyncRoute(async (req, res) => {
+router.get('/portfolio-summary', leituraDaCarteira, asyncRoute(async (req, res) => {
   const { getPortfolioSummary } = require('../services/budgets/budgetPortfolio');
   res.json(await getPortfolioSummary(getDb()));
 }));
 
 module.exports = router;
 module.exports.expectedIntegrationKey = expectedIntegrationKey;
+module.exports.integrationRequiresLoopback = integrationRequiresLoopback;
