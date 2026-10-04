@@ -38,7 +38,7 @@ async function buildPackage() {
   const [categories, centers, suppliers, transactions] = await Promise.all([
     db.query(`SELECT public_id,name,type,active,revision,created_at,updated_at FROM categories ORDER BY public_id`),
     db.query(`SELECT public_id,code,name,responsible,monthly_budget,active,client,contract_number,start_date,end_date,
-      contract_amount,project_status,description,revision,created_at,updated_at FROM cost_centers ORDER BY public_id`),
+      contract_amount,project_status,description,kind,revision,created_at,updated_at FROM cost_centers ORDER BY public_id`),
     db.query(`SELECT public_id,name,document,contact_name,email,phone,notes,active,revision,created_at,updated_at
       FROM suppliers ORDER BY public_id`),
     readTransactions(db),
@@ -52,7 +52,7 @@ async function buildPackage() {
     costCenters: centers.rows.map((r) => ({
       publicId:r.public_id,code:r.code,name:r.name,responsible:r.responsible,monthlyBudget:Number(r.monthly_budget || 0),
       active:r.active,client:r.client,contractNumber:r.contract_number,startDate:dateOnly(r.start_date),endDate:dateOnly(r.end_date),
-      contractAmount:Number(r.contract_amount || 0),projectStatus:r.project_status,description:r.description,
+      contractAmount:Number(r.contract_amount || 0),projectStatus:r.project_status,description:r.description,kind:r.kind || 'obra',
       revision:Number(r.revision || 1),createdAt:iso(r.created_at),updatedAt:iso(r.updated_at),
     })),
     suppliers: suppliers.rows.map((r) => ({
@@ -113,6 +113,11 @@ async function addConflict(tx, packageImportId, type, publicId, reason, localDat
     [packageImportId,type,publicId,reason,JSON.stringify(localData || null),JSON.stringify(incomingData)]);
   result.conflitos += 1;
   result.porTipo[type].conflitos += 1;
+}
+
+// Obra ou servico. Pacotes antigos nao trazem o tipo: valem como obra.
+function kindOf(item) {
+  return item?.kind === 'servico' ? 'servico' : 'obra';
 }
 
 function validRevision(item) {
@@ -201,16 +206,16 @@ async function runImport(pack, filename, user, ctx = noopJobContext) {
     ctx.checkDeadline();
 
     for (const item of pack.payload.costCenters) {
-      const clean = {...item,revision:validRevision(item),active:item.active !== false};
+      const clean = {...item,revision:validRevision(item),active:item.active !== false,kind:kindOf(item)};
       await importSimpleEntity(tx, {
         type:'obra',table:'cost_centers',item:clean,packageImportId,result,
-        selectFields:'public_id,code,name,responsible,monthly_budget,active,client,contract_number,start_date,end_date,contract_amount,project_status,description,revision,created_at,updated_at',
-        businessFields:['code','name','responsible','monthlyBudget','active','client','contractNumber','startDate','endDate','contractAmount','projectStatus','description'],
-        normalizeExisting:r=>({publicId:r.public_id,code:r.code,name:r.name,responsible:r.responsible,monthlyBudget:Number(r.monthly_budget||0),active:r.active,client:r.client,contractNumber:r.contract_number,startDate:dateOnly(r.start_date),endDate:dateOnly(r.end_date),contractAmount:Number(r.contract_amount||0),projectStatus:r.project_status,description:r.description,revision:Number(r.revision||1),createdAt:iso(r.created_at),updatedAt:iso(r.updated_at)}),
-        insertSql:`INSERT INTO cost_centers (public_id,code,name,responsible,monthly_budget,active,client,contract_number,start_date,end_date,contract_amount,project_status,description,revision,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-        insertValues:i=>[i.publicId,String(i.code||'').slice(0,40),String(i.name||'').slice(0,140),i.responsible||null,Number(i.monthlyBudget||0),i.active,i.client||null,i.contractNumber||null,i.startDate||null,i.endDate||null,Number(i.contractAmount||0),['planejamento','execucao','pausado','concluido'].includes(i.projectStatus)?i.projectStatus:'planejamento',i.description||null,i.revision,i.createdAt||new Date(),i.updatedAt||new Date()],
-        updateSql:`UPDATE cost_centers SET code=$2,name=$3,responsible=$4,monthly_budget=$5,active=$6,client=$7,contract_number=$8,start_date=$9,end_date=$10,contract_amount=$11,project_status=$12,description=$13,revision=$14,updated_at=$15 WHERE public_id=$1`,
-        updateValues:i=>[i.publicId,String(i.code||'').slice(0,40),String(i.name||'').slice(0,140),i.responsible||null,Number(i.monthlyBudget||0),i.active,i.client||null,i.contractNumber||null,i.startDate||null,i.endDate||null,Number(i.contractAmount||0),['planejamento','execucao','pausado','concluido'].includes(i.projectStatus)?i.projectStatus:'planejamento',i.description||null,i.revision,i.updatedAt||new Date()],
+        selectFields:'public_id,code,name,responsible,monthly_budget,active,client,contract_number,start_date,end_date,contract_amount,project_status,description,kind,revision,created_at,updated_at',
+        businessFields:['code','name','responsible','monthlyBudget','active','client','contractNumber','startDate','endDate','contractAmount','projectStatus','description','kind'],
+        normalizeExisting:r=>({publicId:r.public_id,code:r.code,name:r.name,responsible:r.responsible,monthlyBudget:Number(r.monthly_budget||0),active:r.active,client:r.client,contractNumber:r.contract_number,startDate:dateOnly(r.start_date),endDate:dateOnly(r.end_date),contractAmount:Number(r.contract_amount||0),projectStatus:r.project_status,description:r.description,kind:r.kind||'obra',revision:Number(r.revision||1),createdAt:iso(r.created_at),updatedAt:iso(r.updated_at)}),
+        insertSql:`INSERT INTO cost_centers (public_id,code,name,responsible,monthly_budget,active,client,contract_number,start_date,end_date,contract_amount,project_status,description,revision,created_at,updated_at,kind) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+        insertValues:i=>[i.publicId,String(i.code||'').slice(0,40),String(i.name||'').slice(0,140),i.responsible||null,Number(i.monthlyBudget||0),i.active,i.client||null,i.contractNumber||null,i.startDate||null,i.endDate||null,Number(i.contractAmount||0),['planejamento','execucao','pausado','concluido'].includes(i.projectStatus)?i.projectStatus:'planejamento',i.description||null,i.revision,i.createdAt||new Date(),i.updatedAt||new Date(),kindOf(i)],
+        updateSql:`UPDATE cost_centers SET code=$2,name=$3,responsible=$4,monthly_budget=$5,active=$6,client=$7,contract_number=$8,start_date=$9,end_date=$10,contract_amount=$11,project_status=$12,description=$13,revision=$14,updated_at=$15,kind=$16 WHERE public_id=$1`,
+        updateValues:i=>[i.publicId,String(i.code||'').slice(0,40),String(i.name||'').slice(0,140),i.responsible||null,Number(i.monthlyBudget||0),i.active,i.client||null,i.contractNumber||null,i.startDate||null,i.endDate||null,Number(i.contractAmount||0),['planejamento','execucao','pausado','concluido'].includes(i.projectStatus)?i.projectStatus:'planejamento',i.description||null,i.revision,i.updatedAt||new Date(),kindOf(i)],
       });
     }
     ctx.checkDeadline();
@@ -361,12 +366,12 @@ async function applyIncomingConflict(tx, conflict, user) {
   if (conflict.entity_type === 'obra') {
     const deleted = await tx.query('SELECT 1 FROM cost_center_tombstones WHERE public_id=$1', [publicId]);
     if (deleted.rows.length) throw httpError(409, 'Esta obra foi excluída nesta instalação e não pode ser recriada. Mantenha a versão local.');
-    const values = [publicId,String(item.code||'').slice(0,40),String(item.name||'').slice(0,140),item.responsible||null,Number(item.monthlyBudget||0),item.active !== false,item.client||null,item.contractNumber||null,item.startDate||null,item.endDate||null,Number(item.contractAmount||0),['planejamento','execucao','pausado','concluido'].includes(item.projectStatus)?item.projectStatus:'planejamento',item.description||null,validRevision(item),item.createdAt||new Date(),item.updatedAt||new Date()];
+    const values = [publicId,String(item.code||'').slice(0,40),String(item.name||'').slice(0,140),item.responsible||null,Number(item.monthlyBudget||0),item.active !== false,item.client||null,item.contractNumber||null,item.startDate||null,item.endDate||null,Number(item.contractAmount||0),['planejamento','execucao','pausado','concluido'].includes(item.projectStatus)?item.projectStatus:'planejamento',item.description||null,validRevision(item),item.createdAt||new Date(),item.updatedAt||new Date(),kindOf(item)];
     const existing = (await tx.query('SELECT id FROM cost_centers WHERE public_id=$1',[publicId])).rows[0];
     if (existing) {
-      await tx.query(`UPDATE cost_centers SET code=$2,name=$3,responsible=$4,monthly_budget=$5,active=$6,client=$7,contract_number=$8,start_date=$9,end_date=$10,contract_amount=$11,project_status=$12,description=$13,revision=$14,updated_at=$16 WHERE public_id=$1`,values);
+      await tx.query(`UPDATE cost_centers SET code=$2,name=$3,responsible=$4,monthly_budget=$5,active=$6,client=$7,contract_number=$8,start_date=$9,end_date=$10,contract_amount=$11,project_status=$12,description=$13,revision=$14,updated_at=$16,kind=$17 WHERE public_id=$1`,values);
     } else {
-      await tx.query(`INSERT INTO cost_centers (public_id,code,name,responsible,monthly_budget,active,client,contract_number,start_date,end_date,contract_amount,project_status,description,revision,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,values);
+      await tx.query(`INSERT INTO cost_centers (public_id,code,name,responsible,monthly_budget,active,client,contract_number,start_date,end_date,contract_amount,project_status,description,revision,created_at,updated_at,kind) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,values);
     }
     return;
   }

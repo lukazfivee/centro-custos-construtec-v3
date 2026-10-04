@@ -75,6 +75,15 @@
     CC.$$('[data-task]').forEach((b) => b.addEventListener('click', () => { const t = tasks[Number(b.dataset.task)]; CC.go(t.go[0], t.go[1]); }));
   };
 
+  // Filtro Obras / Servicos / Todos da lista, lembrado no celular (sem armazenamento, volta para Obras).
+  const TIPO_CHAVE = 'cc.m.obras.tipo';
+  const TIPOS = [['obra', 'Obras'], ['servico', 'Serviços'], ['todos', 'Todos']];
+  function tipoAtual() {
+    try { const v = localStorage.getItem(TIPO_CHAVE); if (TIPOS.some(([t]) => t === v)) return v; } catch (e) { /* sem armazenamento */ }
+    return 'obra';
+  }
+  function guardarTipo(v) { try { localStorage.setItem(TIPO_CHAVE, v); } catch (e) { /* sem armazenamento */ } }
+
   CC.screens.obras = async function (params) {
     const el = CC.render(`${header('Obras')}<div class="skeleton"></div><div class="skeleton"></div>`);
     let result;
@@ -83,20 +92,24 @@
     } catch (error) {
       return CC.errorScreen(el, error, () => CC.screens.obras());
     }
-    const list = (result.data || []).filter((c) => c.ativo !== false);
+    const tipo = tipoAtual();
+    const list = (result.data || []).filter((c) => c.ativo !== false && (tipo === 'todos' || (c.tipo || 'obra') === tipo));
     const running = list.filter((c) => c.situacao !== 'concluido').length;
+    const nome = tipo === 'servico' ? ['serviço', 'serviços'] : tipo === 'todos' ? ['item', 'itens'] : ['obra', 'obras'];
+    const seg = `<div class="seg obras-tipo" role="group" aria-label="Obra ou serviço">${TIPOS.map(([v, t]) => `<button type="button" data-tipo="${v}" aria-pressed="${v === tipo}">${t}</button>`).join('')}</div>`;
     const rows = list.map((c) => {
       const budget = Number(c.orcamento), spent = Number(c.total_comprometido), p = pct(spent, budget);
       const over = p !== null && p > 100;
       const tag = Number(c.total_lancamentos || 0) === 0 && !spent ? '<span class="tag">Nova</span>'
         : (p === null ? '<span class="tag">Sem orçamento</span>' : `<span class="tag${over ? ' warn' : ''}">${p}% gasto</span>`);
       return `<button class="row" type="button" data-obra="${c.id}">
-        <span class="line"><span class="grow"><span class="name">${esc(c.nome)}</span><br><span class="cli">${esc(c.cliente || c.codigo || '')}</span></span>${tag}${icon('caret-right', 16)}</span>
+        <span class="line"><span class="grow"><span class="name">${esc(c.nome)}</span>${c.tipo === 'servico' ? ' <span class="tag">Serviço</span>' : ''}<br><span class="cli">${esc(c.cliente || c.codigo || '')}</span></span>${tag}${icon('caret-right', 16)}</span>
         ${p === null ? '' : `<span class="bar${over ? ' warn' : ''}"><span style="width:${Math.min(100, p)}%"></span></span>`}
         <span class="foot">Gasto ${esc(moneyShort(spent))}${budget > 0 ? ` de ${esc(moneyShort(budget))} orçado` : ''}</span></button>`;
     }).join('');
-    CC.render(`${header('Obras')}<p class="sub">${running === 1 ? '1 obra em execução' : `${running} obras em execução`}</p>${staleNote(result)}
-      <div class="rows">${rows || `<div class="empty">${icon('buildings', 28)}Nenhuma obra cadastrada.</div>`}</div>`, false, params);
+    CC.render(`${header('Obras')}<p class="sub">${running === 1 ? `1 ${nome[0]} em execução` : `${running} ${nome[1]} em execução`}</p>${staleNote(result)}${seg}
+      <div class="rows">${rows || `<div class="empty">${icon('buildings', 28)}${tipo === 'servico' ? 'Nenhum serviço cadastrado.' : tipo === 'todos' ? 'Nenhuma obra ou serviço cadastrado.' : 'Nenhuma obra cadastrada.'}</div>`}</div>`, false, params);
+    CC.$$('[data-tipo]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.tipo === tipo) return; guardarTipo(b.dataset.tipo); CC.screens.obras(params); }));
     CC.$$('[data-obra]').forEach((b) => b.addEventListener('click', () => CC.go('obra', { id: Number(b.dataset.obra) })));
   };
 })(window.CC = window.CC || {});

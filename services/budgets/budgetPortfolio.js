@@ -3,14 +3,18 @@
  * Construtec Centro de Custos v3
  */
 
-async function getPortfolioSummary(pool) {
+// kind opcional ('obra' ou 'servico'): os numeros ficam so desse tipo (abas da tela Obras).
+async function getPortfolioSummary(pool, { kind = null } = {}) {
+  const k = kind === 'obra' || kind === 'servico' ? kind : null;
+  const params = k ? [k] : [];
+  const ofKind = (column) => (k ? ` AND ${column} IN (SELECT id FROM cost_centers WHERE kind = $1)` : '');
   // 1. Obras cadastradas e situações
   const centersRes = await pool.query(`
     SELECT id, code, name, project_status, active, contract_amount, monthly_budget
     FROM cost_centers
-    WHERE active = true
+    WHERE active = true${k ? ' AND kind = $1' : ''}
     ORDER BY name ASC
-  `);
+  `, params);
   const centers = centersRes.rows;
   const statusCounts = { planejamento: 0, execucao: 0, pausado: 0, concluido: 0 };
   centers.forEach(c => {
@@ -23,8 +27,8 @@ async function getPortfolioSummary(pool) {
            COALESCE((SELECT SUM(planned_team_hours) FROM budget_labor_lines WHERE baseline_id = bb.id), 0) AS labor_hours_total
     FROM project_contracts pc
     JOIN budget_baselines bb ON bb.id = pc.current_baseline_id
-    WHERE pc.status = 'active'
-  `);
+    WHERE pc.status = 'active'${ofKind('pc.cost_center_id')}
+  `, params);
   const baselines = baselinesRes.rows;
 
   let totalContractValue = 0;
@@ -43,24 +47,24 @@ async function getPortfolioSummary(pool) {
     FROM transactions t
     WHERE t.deleted_at IS NULL
       AND t.type = 'despesa'
-      AND t.financial_status = 'liquidado'
-  `);
+      AND t.financial_status = 'liquidado'${ofKind('t.cost_center_id')}
+  `, params);
   const totalRealizedCost = Math.max(0, Number(realizedRes.rows[0]?.total_realized || 0));
 
   // 4. Horas de mão de obra de equipe medidas em campo
   const laborRes = await pool.query(`
     SELECT COALESCE(SUM(team_hours), 0) AS total_team_hours
     FROM labor_measurements
-    WHERE status = 'approved'
-  `);
+    WHERE status = 'approved'${ofKind('cost_center_id')}
+  `, params);
   const totalConsumedHours = Number(laborRes.rows[0]?.total_team_hours || 0);
 
   // 5. Total de medições contratuais faturadas ao cliente
   const contractMeasRes = await pool.query(`
     SELECT COALESCE(SUM(measured_amount), 0) AS total_billed_amount
     FROM contract_measurements
-    WHERE status = 'approved'
-  `);
+    WHERE status = 'approved'${k ? ' AND contract_id IN (SELECT id FROM project_contracts WHERE cost_center_id IN (SELECT id FROM cost_centers WHERE kind = $1))' : ''}
+  `, params);
   const totalClientBilled = Number(contractMeasRes.rows[0]?.total_billed_amount || 0);
 
   // 6. Indicadores consolidados
@@ -76,9 +80,9 @@ async function getPortfolioSummary(pool) {
     FROM cost_centers cc
     LEFT JOIN transactions t ON t.cost_center_id = cc.id
       AND t.deleted_at IS NULL AND t.type = 'despesa' AND t.financial_status = 'liquidado'
-    WHERE cc.active = true
+    WHERE cc.active = true${k ? ' AND cc.kind = $1' : ''}
     GROUP BY cc.id, cc.code, cc.name
-  `);
+  `, params);
 
   const baselineByCenter = new Map();
   baselines.forEach(b => baselineByCenter.set(b.cost_center_id, Number(b.base_cost || 0)));

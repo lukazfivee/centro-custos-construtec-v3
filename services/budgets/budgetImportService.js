@@ -8,6 +8,8 @@ const { notifyAll } = require('../notify');
 
 async function confirmImport(db, params, userId) {
   const { previewId, confirmedHash, costCenterId, envelope } = params;
+  // Obra ou servico: vale so quando a importacao cria o centro de custo.
+  const costCenterKind = params.costCenterKind === 'servico' ? 'servico' : 'obra';
 
   let payload = null;
   let eventId = null;
@@ -118,8 +120,8 @@ async function confirmImport(db, params, userId) {
         const name = `${proposal.number} - ${clientName} - ${work.name}`.slice(0, 140);
         const newCc = await tx.query(`
           INSERT INTO cost_centers
-            (public_id, code, name, responsible, monthly_budget, active, client, contract_number, contract_amount, project_status)
-          VALUES ($1, $2, $3, $4, 0, true, $5, $6, $7, 'planejamento')
+            (public_id, code, name, responsible, monthly_budget, active, client, contract_number, contract_amount, project_status, kind)
+          VALUES ($1, $2, $3, $4, 0, true, $5, $6, $7, 'planejamento', $8)
           RETURNING id
         `, [
           crypto.randomUUID(),
@@ -129,6 +131,7 @@ async function confirmImport(db, params, userId) {
           clientName,
           proposal.number,
           Number(totals.contractValue),
+          costCenterKind,
         ]);
         resolvedCostCenterId = newCc.rows[0].id;
       }

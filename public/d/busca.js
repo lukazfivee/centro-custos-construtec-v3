@@ -24,7 +24,7 @@
     ]);
     const achadas = lista.filter((o) => normal([o.nome, o.codigo, o.cliente].join(' ')).includes(alvo)).slice(0, 3);
     return [
-      ...achadas.map((o) => ({ tipo: 'obra', id: o.id, icone: 'buildings', titulo: o.nome, sub: [o.codigo, o.cliente].filter(Boolean).join(' · '), valor: '' })),
+      ...achadas.map((o) => ({ tipo: 'obra', id: o.id, icone: 'buildings', titulo: o.nome, sub: [o.tipo === 'servico' ? 'Serviço' : '', o.codigo, o.cliente].filter(Boolean).join(' · '), valor: '' })),
       ...lancs.map((l) => {
         D.lancCache.set(String(l.id), l);
         const v = D.valorSinal(l);

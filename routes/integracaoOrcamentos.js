@@ -66,6 +66,16 @@ async function autenticarOuChaveIntegracao(req, res, next) {
   return autenticar(req, res, next);
 }
 
+// Obra ou servico do centro de custo criado pela importacao. Aceita na raiz do corpo
+// (contrato com o Orcamentos: costCenterKind) ou em options. Ausente vale obra.
+function costCenterKindFrom(body) {
+  const raw = body?.costCenterKind ?? body?.options?.costCenterKind;
+  if (raw == null || raw === '') return 'obra';
+  const kind = String(raw).trim().toLowerCase();
+  if (kind !== 'obra' && kind !== 'servico') throw httpError(400, 'costCenterKind inválido. Use obra ou servico.');
+  return kind;
+}
+
 const router = express.Router();
 router.use(autenticarOuChaveIntegracao);
 
@@ -90,6 +100,7 @@ router.post('/previas/:id/confirmar', podeImportar, asyncRoute(async (req, res) 
       previewId: req.params.id,
       confirmedHash: req.body.hash,
       costCenterId: req.body.costCenterId,
+      costCenterKind: costCenterKindFrom(req.body),
     }, req.usuario?.id);
 
     const status = result.status === 'already_imported' ? 200 : 201;
@@ -108,10 +119,12 @@ router.post('/previas/:id/confirmar', podeImportar, asyncRoute(async (req, res) 
 const handleDirectSync = asyncRoute(async (req, res) => {
   try {
     const envelope = req.body?.envelope || req.body;
+    const costCenterKind = costCenterKindFrom(req.body);
     const result = await confirmImport(getDb(), {
       envelope,
       confirmedHash: envelope?.payloadSha256,
       costCenterId: req.body?.costCenterId,
+      costCenterKind,
     }, req.usuario?.id);
 
     const status = result.status === 'already_imported' ? 200 : 201;

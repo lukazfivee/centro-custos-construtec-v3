@@ -60,3 +60,6 @@
   .grade-nf { grid-template-columns: minmax(0, 1fr); }
 }
 .obras [data-corpo] { display: flex; flex-direction: column; gap: 14px; }
+
+/* Aba Obras / Servicos / Todos no topo da carteira */
+.obras .abas-tipo { margin-bottom: 14px; }
