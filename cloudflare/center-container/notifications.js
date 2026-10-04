@@ -3,7 +3,7 @@ import { sendPush } from './fcm.js';
 
 // Fase 4 da Suíte mobile: central de notificações, preferências e push (FCM).
 // Rotas do app (Bearer da sessão central) e internas (x-sync-key, do Container).
-export const TYPES = ['proposta_aprovada', 'acima_orcado', 'conta_vencer', 'novo_acesso', 'pedido_acesso'];
+export const TYPES = ['proposta_aprovada', 'acima_orcado', 'conta_vencer', 'novo_acesso', 'pedido_acesso', 'cliente_aprovou', 'cliente_ajuste'];
 const APPS = new Set(['centro-custos', 'orcamentos', 'conta']);
 // Mesmo formato do seletor Suíte: app e, se houver, o destino validado.
 const LINK = /^(centro-custos|orcamentos)(\?(obra=[0-9]{1,12}|proposta=[A-Za-z0-9-]{1,64}|pedidos=1))?$/;
@@ -16,6 +16,33 @@ export function isNotificationRoute(pathname) {
 function syncKeyValid(request, env) {
   const expected = String(env.SYNC_SHARED_KEY || '');
   return expected.length >= 32 && timingSafeEqual(request.headers.get('x-sync-key') || '', expected);
+}
+
+// Chave de serviço do Orçamentos (a mesma da identidade compartilhada), normalizada como em identityAdmin.js.
+function identityKeyValid(request, env) {
+  const clean = (value) => String(value || '').replace(/^﻿/, '').trim();
+  const expected = clean(env.CONSTRUTEC_IDENTITY_KEY);
+  return expected.length >= 32 && timingSafeEqual(clean(request.headers.get('x-construtec-identity-key')), expected);
+}
+
+// O cliente respondeu ao link da proposta: avisa o responsável e os admins. O texto é montado aqui,
+// o Orçamentos só informa o fato (nada do que o cliente escreveu vai para o aviso).
+async function clientReply(env, body) {
+  const proposalId = String(body.proposalId || '');
+  const number = clip(body.proposalNumber, 40).replace(/[^A-Za-z0-9._-]/g, '');
+  const approved = body.event === 'approved';
+  if (!/^[A-Za-z0-9-]{1,64}$/.test(proposalId) || !number || (!approved && body.event !== 'adjust')) return json({ ok: false, code: 'EVENT_INVALID', error: 'Evento inválido.' }, 400);
+  const event = {
+    type: approved ? 'cliente_aprovou' : 'cliente_ajuste', app: 'orcamentos', link: `orcamentos?proposta=${proposalId}`,
+    title: approved ? `Cliente aprovou a proposta ${number}` : `Cliente pediu ajuste na proposta ${number}`,
+    body: approved ? 'Abra a proposta e confirme a aprovação para ela virar Aprovada.' : 'A proposta voltou para edição como nova revisão. Veja o pedido do cliente.',
+    dedupeKey: `${body.event}:${proposalId}:${Date.now().toString(36)}`,
+  };
+  const admins = await deliver(env, { ...event, audience: 'admins' });
+  const owner = String(body.responsibleCentroUserId || '');
+  // Quem já recebeu como admin não recebe de novo (mesmo dedupeKey por usuário).
+  const own = owner ? await deliver(env, { ...event, userId: owner }) : { created: 0 };
+  return json({ ok: true, created: admins.created + own.created });
 }
 
 const placeholders = (list) => list.map(() => '?').join(',');
@@ -146,6 +173,10 @@ export async function handleNotifications(request, env, url) {
   let body = {};
   if (request.method !== 'GET') { try { body = (await request.json()) || {}; } catch { body = {}; } }
   try {
+    if (request.method === 'POST' && url.pathname === '/v1/internal/orcamentos-notify') {
+      if (!identityKeyValid(request, env)) return json({ ok: false, code: 'FORBIDDEN', error: 'Sem permissão.' }, 403);
+      return await clientReply(env, body);
+    }
     if (url.pathname.startsWith('/v1/internal/')) {
       if (!syncKeyValid(request, env)) return json({ ok: false, code: 'FORBIDDEN', error: 'Sem permissão.' }, 403);
       if (request.method === 'POST' && url.pathname === '/v1/internal/notify') return json({ ok: true, ...(await deliver(env, body)) });

@@ -4,7 +4,7 @@
 (function (CC) {
   const { esc, icon } = CC;
   const APPS = [['', 'Todos'], ['centro-custos', 'Centro de Custos'], ['orcamentos', 'Orçamentos'], ['conta', 'Conta']];
-  const PREFS = [['proposta_aprovada', 'Proposta aprovada'], ['acima_orcado', 'Item acima do orçado'], ['conta_vencer', 'Contas a vencer'], ['novo_acesso', 'Novo acesso à conta'], ['pedido_acesso', 'Pedido de acesso (admin)']];
+  const PREFS = [['proposta_aprovada', 'Proposta aprovada'], ['acima_orcado', 'Item acima do orçado'], ['conta_vencer', 'Contas a vencer'], ['novo_acesso', 'Novo acesso à conta'], ['pedido_acesso', 'Pedido de acesso (admin)'], ['cliente_aprovou', 'Cliente aprovou a proposta'], ['cliente_ajuste', 'Cliente pediu ajuste']];
 
   CC.notif = { unread: 0 };
   CC.bellBtn = () => {
