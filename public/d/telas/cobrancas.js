@@ -70,6 +70,7 @@
   }
 
   async function render(el, rota, vivo) {
+    if (FILTROS.some(([valor]) => valor && valor === rota.query.filtro)) filtro = rota.query.filtro; // #/cobrancas?filtro=pendentes (vem do Fechamento)
     el.innerHTML = `<div class="pagina cobrancas">${U.cabecalho({ grupo: 'Operação', titulo: 'Cobranças', sub: ' ', acoes: `<button type="button" class="btn btn-s" data-csv>${D.ic('download-simple')}Exportar CSV</button>` })}
       <div data-corpo>${U.carregando('Carregando as cobranças…')}</div></div>`;
     CC.$('[data-csv]', el).addEventListener('click', baixarCsv);

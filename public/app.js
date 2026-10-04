@@ -130,6 +130,19 @@ function confirmDialog(message,options={}) {
     observer.observe(backdrop,{attributes:true,attributeFilter:['class']});
   });
 }
+// Pede o motivo (pelo menos 10 caracteres, como o servidor exige) e devolve o texto, ou null se cancelar.
+function reasonDialog(message,options={}) {
+  return new Promise((resolve)=>{
+    modal(options.title||'Informe o motivo',`<p>${esc(message)}</p><label for="reason-dialog-text" class="hint">Motivo (mínimo 10 caracteres)</label><textarea id="reason-dialog-text" rows="3" style="width:100%"></textarea><p class="hint" id="reason-dialog-erro" role="alert"></p><div class="row-actions" style="justify-content:flex-end;gap:8px;margin-top:18px"><button type="button" class="btn secondary" id="reason-dialog-cancel">Cancelar</button><button type="button" class="btn danger" id="reason-dialog-ok">${esc(options.confirmLabel||'Confirmar')}</button></div>`);
+    let settled=false;
+    const finish=(value)=>{ if(settled) return; settled=true; observer.disconnect(); if(!$('#modal-fundo').classList.contains('oculto')) closeModal(); resolve(value); };
+    $('#reason-dialog-ok').addEventListener('click',()=>{ const text=$('#reason-dialog-text').value.trim(); if(text.length<10){ $('#reason-dialog-erro').textContent='Informe um motivo com pelo menos 10 caracteres.'; return; } finish(text); });
+    $('#reason-dialog-cancel').addEventListener('click',()=>finish(null));
+    const backdrop=$('#modal-fundo');
+    const observer=new MutationObserver(()=>{ if(backdrop.classList.contains('oculto')) finish(null); });
+    observer.observe(backdrop,{attributes:true,attributeFilter:['class']});
+  });
+}
 $('#btn-sair').addEventListener('click',logout);
 
 function closeProfileMenu() {
@@ -751,7 +764,7 @@ $('#btn-restaurar').addEventListener('click',async()=>{if(!restoreFile)return;co
 
 const monthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 (async()=>{const now=new Date();if($('#fechamento-ano'))$('#fechamento-ano').value=now.getFullYear();if($('#fechamento-mes'))$('#fechamento-mes').value=now.getMonth()+1;if($('#fechamentos-ativos'))await loadClosings();})();
-async function loadClosings(){try{const closings=await api('/fechamento-mensal');$('#fechamentos-ativos').innerHTML=closings.length?`<p class="hint" style="margin-top:12px">Competências bloqueadas:</p><div class="closing-tags">${closings.map(c=>`<span class="closing-tag">${String(c.month).padStart(2,'0')}/${c.year}${usuario.role==='admin'?`<button data-close-id="${c.id}" class="closing-remove" aria-label="Reabrir competência ${String(c.month).padStart(2,'0')}/${c.year}" title="Permitir novamente alterações nos lançamentos desta competência">Reabrir</button>`:''}</span>`).join('')}</div>`:'';$$('[data-close-id]').forEach(btn=>btn.addEventListener('click',async()=>{if(!(await confirmDialog('Reabrir esta competência? Lançamentos poderão ser editados novamente.',{confirmLabel:'Reabrir'})))return;try{await api(`/fechamento-mensal/${btn.dataset.closeId}`,{method:'DELETE'});toast('Competência reaberta.');await loadClosings();}catch(error){toast(error.message,true);}}));}catch{}}
+async function loadClosings(){try{const closings=await api('/fechamento-mensal');$('#fechamentos-ativos').innerHTML=closings.length?`<p class="hint" style="margin-top:12px">Competências bloqueadas:</p><div class="closing-tags">${closings.map(c=>`<span class="closing-tag">${String(c.month).padStart(2,'0')}/${c.year}${usuario.role==='admin'?`<button data-close-id="${c.id}" class="closing-remove" aria-label="Reabrir competência ${String(c.month).padStart(2,'0')}/${c.year}" title="Permitir novamente alterações nos lançamentos desta competência">Reabrir</button>`:''}</span>`).join('')}</div>`:'';$$('[data-close-id]').forEach(btn=>btn.addEventListener('click',async()=>{const motivo=await reasonDialog('Reabrir esta competência? Lançamentos poderão ser editados novamente.',{title:'Reabrir competência',confirmLabel:'Reabrir'});if(!motivo)return;try{await api(`/fechamento-mensal/${btn.dataset.closeId}`,{method:'DELETE',body:JSON.stringify({motivo})});toast('Competência reaberta.');await loadClosings();}catch(error){toast(error.message,true);}}));}catch{}}
 $('#btn-fechar-mes')?.addEventListener('click',async()=>{const ano=Number($('#fechamento-ano').value);const mes=Number($('#fechamento-mes').value);const msg=$('#fechamento-mensagem');msg.textContent='';try{await api('/fechamento-mensal',{method:'POST',body:JSON.stringify({ano,mes})});msg.style.color='var(--green)';msg.textContent=`Competência ${String(mes).padStart(2,'0')}/${ano} fechada.`;toast('Competência fechada.');await loadClosings();}catch(error){msg.style.color='var(--red)';msg.textContent=error.message;}});
 
 const freqLabels={mensal:'Mensal',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'};

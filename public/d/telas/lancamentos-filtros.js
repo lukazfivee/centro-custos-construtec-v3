@@ -27,7 +27,7 @@
     return apoio.fechamentos.find((f) => Number(f.year) === a && Number(f.month) === m) || null;
   };
 
-  const PADRAO = { busca: '', tipo: '', sit: '', obra: '', mes: CC.month(), categoria: '', de: '', ate: '', ordenar: 'data', ordem: 'desc', limite: 50, pagina: 1, mais: false };
+  const PADRAO = { busca: '', tipo: '', sit: '', obra: '', mes: CC.month(), categoria: '', doc: '', de: '', ate: '', ordenar: 'data', ordem: 'desc', limite: 50, pagina: 1, mais: false };
   L.lerFiltros = () => {
     let salvo = {};
     try { salvo = JSON.parse(localStorage.getItem(CHAVE) || '{}') || {}; } catch { salvo = {}; }
@@ -38,6 +38,7 @@
 
   // Situacao do prototipo -> parametros do servidor (tipo + situacao).
   const SIT = {
+    pendentes: { situacao: 'pendente' },
     a_pagar: { tipo: 'despesa', situacao: 'pendente' },
     vencidos: { situacao: 'vencido' },
     pagos: { tipo: 'despesa', situacao: 'liquidado' },
@@ -55,6 +56,7 @@
     if (s.situacao) q.set('situacao', s.situacao);
     if (f.obra) q.set('centroId', f.obra);
     if (f.categoria) q.set('categoriaId', f.categoria);
+    if (f.doc === 'sem') q.set('semAnexo', '1');
     if (f.mes) q.set('mes', f.mes);
     else {
       if (f.de) q.set('dataInicio', f.de);
@@ -66,7 +68,7 @@
     return q.toString();
   };
 
-  const alterado = (f, fixa) => f.busca || f.tipo || f.sit || (f.obra && !fixa) || f.categoria || f.de || f.ate || f.mes !== (fixa ? '' : CC.month()) || f.ordenar !== 'data' || f.ordem !== 'desc';
+  const alterado = (f, fixa) => f.busca || f.tipo || f.sit || (f.obra && !fixa) || f.categoria || f.doc || f.de || f.ate || f.mes !== (fixa ? '' : CC.month()) || f.ordenar !== 'data' || f.ordem !== 'desc';
 
   function meses() {
     const [a, m] = CC.month().split('-').map(Number);
@@ -84,7 +86,7 @@
       <div class="linha">
         <label class="campo-busca">${D.ic('magnifying-glass')}<input class="inp" type="search" data-f="busca" value="${esc(f.busca)}" placeholder="Descrição, favorecido ou NF" aria-label="Buscar lançamentos"></label>
         ${U.seg('tipo', [{ valor: '', rotulo: 'Todos' }, { valor: 'despesa', rotulo: 'Despesas' }, { valor: 'receita', rotulo: 'Receitas' }], f.tipo, 'Tipo')}
-        ${U.seg('sit', [{ valor: '', rotulo: 'Todas' }, { valor: 'a_pagar', rotulo: 'A pagar' }, { valor: 'vencidos', rotulo: 'Vencidos' }, { valor: 'pagos', rotulo: 'Pagos' }, { valor: 'a_receber', rotulo: 'A receber' }, { valor: 'recebidos', rotulo: 'Recebidos' }], f.sit, 'Situação')}
+        ${U.seg('sit', [{ valor: '', rotulo: 'Todas' }, { valor: 'pendentes', rotulo: 'Em aberto' }, { valor: 'a_pagar', rotulo: 'A pagar' }, { valor: 'vencidos', rotulo: 'Vencidos' }, { valor: 'pagos', rotulo: 'Pagos' }, { valor: 'a_receber', rotulo: 'A receber' }, { valor: 'recebidos', rotulo: 'Recebidos' }], f.sit, 'Situação')}
       </div>
       <div class="linha">
         ${opcoes.obraFixa ? '' : `<select class="inp" data-f="obra" aria-label="Obra" style="width:240px">${opc(a.obras.map((o) => ({ valor: o.id, rotulo: [o.codigo, o.nome].filter(Boolean).join(' · ') })), f.obra, 'Todas as obras')}</select>`}
@@ -94,6 +96,7 @@
       </div>
       <div class="linha mais"${f.mais ? '' : ' hidden'}>
         <select class="inp" data-f="categoria" aria-label="Categoria" style="width:220px">${opc(a.categorias.map((c) => ({ valor: c.id, rotulo: c.nome })), f.categoria, 'Todas as categorias')}</select>
+        <select class="inp" data-f="doc" aria-label="Documento" style="width:210px"><option value="">Com ou sem documento</option><option value="sem"${f.doc === 'sem' ? ' selected' : ''}>Só sem documento anexado</option></select>
         <label class="mini">De<input class="inp" type="date" data-f="de" value="${esc(f.de)}"${f.mes ? ' disabled title="Escolha Todos os meses para usar um período"' : ''}></label>
         <label class="mini">Até<input class="inp" type="date" data-f="ate" value="${esc(f.ate)}"${f.mes ? ' disabled' : ''}></label>
         <select class="inp" data-f="ordenar" aria-label="Ordenar por" style="width:190px">${[['data', 'Competência'], ['vencimento', 'Vencimento'], ['valor', 'Valor'], ['criado', 'Inclusão'], ['atualizado', 'Alteração']].map(([v, r]) => `<option value="${v}"${f.ordenar === v ? ' selected' : ''}>Ordenar por ${esc(r.toLowerCase())}</option>`).join('')}</select>

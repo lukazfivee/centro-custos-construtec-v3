@@ -33,6 +33,7 @@ function createApp({ orcamentosApp } = {}) {
     next();
   });
   app.use(observability);
+  app.use(require('./lib/auditContext').auditContext);
   app.use(express.json({
     limit:process.env.JSON_BODY_LIMIT || '110mb',
     strict:true,

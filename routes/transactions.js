@@ -11,6 +11,7 @@ const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pag
 const { validDate, todaySql, todayIso } = require('../lib/dates');
 const { csvLine, decimalBr } = require('../lib/csv');
 const { recordAudit } = require('../services/audit');
+const { marcarOrigem } = require('../lib/auditContext');
 const { recordExpenseAllocation } = require('../services/budgets/budgetAllocations');
 const { readClientId, findReplay, isClientIdConflict, ensureCreatedAudit } = require('../lib/transactionIdempotency');
 const { transactionOrder, validatePayload, validateRelations } = require('../lib/transactionPayload');
@@ -96,7 +97,9 @@ router.get('/:id', asyncRoute(async (req, res) => {
 router.post('/', exigirPermissao('p2'), asyncRoute(async (req, res) => {
   const data = validatePayload(req.body);
   await assertObra(req, data.costCenterId);
-  const clientId = readClientId(req.body), replay = await findReplay(getDb(), req.usuario.id, clientId, data);
+  const clientId = readClientId(req.body);
+  if (clientId) marcarOrigem('fila'); // o celular manda o client_id da fila offline
+  const replay = await findReplay(getDb(), req.usuario.id, clientId, data);
   if (replay && !replay.excluido) { await ensureCreatedAudit(replay.public_id, data, req.usuario); await maybeAutoAllocateExpense(data, replay.id); }
   if (replay) return res.status(200).json(replay);
   if (await isMonthClosed(data.date)) {
@@ -196,6 +199,16 @@ router.post('/:id/estornar', exigirPermissao('p4'), asyncRoute(async (req, res) 
   });
 }));
 
+// O registro como estava antes da edição, nas mesmas chaves do payload novo (para o antes → depois do Histórico).
+function payloadAnterior(row) {
+  return {
+    type:row.type,costCenterId:row.cost_center_id,categoryId:row.category_id,description:row.description,
+    counterparty:row.counterparty,amount:Number(row.amount),date:row.data,notes:row.notes,dueDate:row.due_date,
+    settlementDate:row.settlement_date,financialStatus:row.financial_status,documentNumber:row.document_number,
+    paymentMethod:row.payment_method,
+  };
+}
+
 router.put('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const data = validatePayload(req.body);
   const id = positiveId(req.params.id);
@@ -204,7 +217,9 @@ router.put('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
     throw httpError(400, 'Revisão do lançamento inválida. Atualize a lista e tente novamente.');
   }
   const existingResult = await getDb().query(
-    `SELECT public_id,cost_center_id,description,transaction_date::text AS data,revision,deleted_at,reversal_of,reversed_at,accounting_sign
+    `SELECT public_id,type,cost_center_id,category_id,description,counterparty,amount,transaction_date::text AS data,notes,
+       due_date::text AS due_date,settlement_date::text AS settlement_date,financial_status,document_number,payment_method,
+       revision,deleted_at,reversal_of,reversed_at,accounting_sign
      FROM transactions WHERE id=$1`, [id]
   );
   const existing = existingResult.rows[0];
@@ -246,7 +261,7 @@ router.put('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   }
   await recordAudit({
     entityType:'lancamento',entityId:existing.public_id,action:'atualizado',
-    summary:`Lançamento atualizado: ${data.description}`,data,user:req.usuario,
+    summary:`Lançamento atualizado: ${data.description}`,data,before:payloadAnterior(existing),user:req.usuario,
   });
   await maybeAutoAllocateExpense(data, id);
   res.json({ ok:true, revisao:result.rows[0].revision });
