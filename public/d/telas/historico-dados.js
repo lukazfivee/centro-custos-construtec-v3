@@ -62,7 +62,7 @@
     const m = H.mudancas(item);
     if (!m.length) return '';
     if (item.antes) {
-      const dois = m.slice(0, 2).map((x) => `${x.campo}: ${x.antes} → ${x.depois}`).join(' · ');
+      const dois = m.slice(0, 2).map((x) => `${x.campo}: ${x.antes} para ${x.depois}`).join(' · ');
       return m.length > 2 ? `${dois} · +${m.length - 2}` : dois;
     }
     const motivo = m.find((x) => x.chave === 'motivo');
