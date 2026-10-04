@@ -104,4 +104,20 @@ test('descartar e recuperar obra vinda de orcamento aprovado, sem movimento', as
   assert.deepEqual(await counts(), before);
   // Continua imutavel depois de restaurado.
   await assert.rejects(db.query('UPDATE transactions SET description=$2 WHERE id=$1', [tx.data.id, 'x']));
+
+  // Medicoes (mao de obra e contratual nao faturada) nao impedem: vao guardadas com a obra e voltam.
+  const labor = await call('POST', `/centros-custo/${costCenterId}/medicoes`, admin, { type: 'labor', periodStart: '2026-09-01', periodEnd: '2026-09-07', teamHours: 10, notes: 'semana 1' });
+  assert.ok([200, 201].includes(labor.status), JSON.stringify(labor.data));
+  const contractM = await call('POST', `/centros-custo/${costCenterId}/medicoes`, admin, { type: 'contract', measurementNumber: 1, periodStart: '2026-09-01', periodEnd: '2026-09-15', measuredAmount: 100, notes: 'm1' });
+  assert.ok([200, 201].includes(contractM.status), JSON.stringify(contractM.data));
+  const measures = async () => (await db.query('SELECT (SELECT COUNT(*) FROM labor_measurements WHERE cost_center_id=$1)::int + (SELECT COUNT(*) FROM contract_measurements WHERE cost_center_id=$1)::int + (SELECT COUNT(*) FROM cost_recognitions WHERE cost_center_id=$1)::int AS n', [costCenterId])).rows[0].n;
+  const measuredBefore = await measures();
+  assert.ok(measuredBefore >= 2);
+  assert.equal((await call('GET', `/centros-custo/${costCenterId}/impedimentos`, admin)).data.medicoes, 0);
+  const withMeasures = await call('POST', `/centros-custo/${costCenterId}/descartar`, admin, { confirmar: code });
+  assert.equal(withMeasures.status, 200, JSON.stringify(withMeasures.data));
+  assert.equal(await measures(), 0);
+  const pendingM = (await call('GET', '/centros-custo/descartadas', admin)).data.find((row) => !row.restored_at);
+  assert.equal((await call('POST', `/centros-custo/descartadas/${pendingM.id}/restaurar`, admin)).status, 200);
+  assert.equal(await measures(), measuredBefore, 'medicoes voltam com a obra');
 });

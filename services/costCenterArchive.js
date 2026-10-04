@@ -1,6 +1,6 @@
 // Descarte e recuperacao de obra (centro de custos) sem movimento financeiro.
 // Uma obra vinda de orcamento aprovado tem contrato e base de custo selada; isso nao impede o descarte
-// por um administrador, desde que nao haja lancamento, rateio, recorrencia, medicao nem nota fiscal.
+// por um administrador, desde que nao haja lancamento ativo, rateio, recorrencia nem nota fiscal (medicoes vao guardadas com a obra).
 // O conteudo e guardado em JSON (discarded_cost_centers) e a obra pode ser restaurada.
 const { httpError } = require('../lib/http');
 
@@ -15,9 +15,10 @@ const MOVEMENT = [
   ['transaction_allocations', 'rateios de lançamentos', LIVE_TX],
   ['recurring_templates', 'recorrências'],
   ['expense_allocations', 'apropriações de despesas', LIVE_TX],
-  ['cost_recognitions', 'reconhecimentos de custos'],
-  ['labor_measurements', 'medições de mão de obra'],
-  ['contract_measurements', 'medições contratuais'],
+  // Medicoes e reconhecimentos de custo vao guardados com a obra (decisao do Lucas, 03/10/2026). So impedem
+  // quando presos a dinheiro ativo: reconhecimento de uma apropriacao de lancamento ativo, medicao faturada em lancamento ativo.
+  ['cost_recognitions', 'reconhecimentos de custos de lançamentos ativos', `allocation_id IN (SELECT id FROM expense_allocations WHERE ${LIVE_TX})`],
+  ['contract_measurements', 'medições contratuais já faturadas', 'billed_transaction_id IN (SELECT id FROM transactions WHERE deleted_at IS NULL)'],
   ['cost_center_invoices', 'notas fiscais vinculadas'],
   ['cost_center_invoices_ledger', 'notas fiscais'],
 ];
@@ -49,6 +50,11 @@ const STRUCTURE = [
   ['transaction_attachments', `transaction_id IN (${DELETED_TX})`],
   ['transaction_allocations', `cost_center_id=$1 OR transaction_id IN (${DELETED_TX})`],
   ['expense_allocations', `cost_center_id=$1 OR transaction_id IN (${DELETED_TX})`],
+  // Medicoes e reconhecimentos de custo da obra.
+  ['labor_measurements', 'cost_center_id=$1'],
+  ['labor_measurement_lines', 'measurement_id IN (SELECT id FROM labor_measurements WHERE cost_center_id=$1)'],
+  ['contract_measurements', 'cost_center_id=$1'],
+  ['cost_recognitions', 'cost_center_id=$1'],
 ];
 // Linhas de base de custo selada e lancamentos excluidos tem gatilhos contra alteracao;
 // so o descarte e a restauracao os desligam, dentro da transacao.
@@ -85,7 +91,9 @@ async function movementSummary(db, id) {
   for (const [key, tables] of GROUPS) {
     out[key] = 0;
     for (const table of tables) {
-      const extra = (MOVEMENT.find((m) => m[0] === table) || [])[2];
+      const rule = MOVEMENT.find((m) => m[0] === table);
+      if (!rule) continue; // nao impede (vai guardado com a obra)
+      const extra = rule[2];
       out[key] += (await db.query(`SELECT COUNT(*)::int AS n FROM ${table} WHERE ${movementWhere(extra)}`, [id])).rows[0].n;
     }
   }

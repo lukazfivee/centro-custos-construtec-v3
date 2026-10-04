@@ -10,7 +10,7 @@
     const ctl = await D.painel.abrir({
       icone: 'trash', titulo: 'Descartar obra',
       sub: `${obra.codigo} · ${obra.nome}`,
-      corpo: `${U.faixa('warn', 'warning', 'A obra sai da carteira, com o contrato e a base de custo. Só vale para obra sem lançamento, nota fiscal, medição nem recorrência. Fica guardada em "Obras descartadas" e pode ser recuperada.')}
+      corpo: `${U.faixa('warn', 'warning', 'A obra sai da carteira, com o contrato, a base de custo e as medições. Só vale para obra sem lançamento ativo, nota fiscal nem recorrência. Fica guardada em "Obras descartadas" e pode ser recuperada.')}
         ${U.faixa('info', 'info', 'Se a obra veio do Orçamentos, a proposta de origem volta a "Aprovada sem Centro de Custo" no Orçamentos e volta a apontar para a obra se ela for recuperada.')}
         <div data-limpar></div>
         <form class="form-lanc" novalidate>
