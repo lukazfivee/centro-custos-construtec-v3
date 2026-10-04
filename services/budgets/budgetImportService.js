@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { freeServiceCode } = require('../servicos/codigoProposta');
 const { validateProposalEnvelope, computeSha256, canonicalJsonStringify } = require('./budgetCanonical');
 const { previewImport } = require('./budgetImportPreview');
 const { recordAudit } = require('../audit');
@@ -111,8 +112,8 @@ async function confirmImport(db, params, userId) {
         resolvedCostCenterId = costCenterId;
       } else {
         const baseCode = `CC-${proposal.number}`;
-        let code = baseCode;
-        const checkCode = await tx.query('SELECT id FROM cost_centers WHERE LOWER(code) = LOWER($1)', [code]);
+        let code = costCenterKind === 'servico' ? await freeServiceCode(tx, proposal.number) : baseCode;
+        const checkCode = costCenterKind === 'servico' ? { rows: [] } : await tx.query('SELECT id FROM cost_centers WHERE LOWER(code) = LOWER($1)', [code]);
         if (checkCode.rows[0]) {
           code = `${baseCode}-${String(Date.now()).slice(-4)}`;
         }

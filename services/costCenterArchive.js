@@ -45,6 +45,9 @@ const STRUCTURE = [
   ['budget_labor_lines', `baseline_id IN (${BASELINES})`],
   ['cost_center_proposals', 'cost_center_id=$1'],
   ['user_cost_centers', 'cost_center_id=$1'],
+  // Servico curto: situacao, checklist, aceite, faturamento e fotos.
+  ['service_jobs', 'cost_center_id=$1'],
+  ['service_photos', 'cost_center_id=$1'],
   // Lancamentos excluidos da obra (historico) e o que pende deles.
   ['transactions', `id IN (${DELETED_TX})`],
   ['transaction_attachments', `transaction_id IN (${DELETED_TX})`],

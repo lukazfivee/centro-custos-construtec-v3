@@ -108,11 +108,16 @@ test('Obra ou servico: tipo do centro de custo na API, no CSV e na importacao do
     await request('/integracao/orcamentos/sync-direto', 'POST', { ...envelope, costCenterKind: 'tipo-errado' }, 400, KEY);
     const result = await request('/integracao/orcamentos/sync-direto', 'POST', { ...envelope, costCenterKind: 'servico' }, 201, KEY);
     assert.equal(await kindOf(result.costCenterId), 'servico');
+    // Codigo SV- a partir do numero da proposta (PA-1001 -> SV-1001) e valor cobrado = valor final da proposta.
+    const cc = (await db.query('SELECT code,contract_amount FROM cost_centers WHERE id=$1', [result.costCenterId])).rows[0];
+    assert.equal(cc.code, 'SV-1001');
+    assert.equal(Number(cc.contract_amount), 3450);
   });
 
   await context.test('costCenterKind em options vale; sem o campo cria obra', async () => {
     const result = await request('/integracao/orcamentos/sync-direto', 'POST', { envelope: fixture('opt'), options: { costCenterKind: 'servico' } }, 201, KEY);
     assert.equal(await kindOf(result.costCenterId), 'servico');
+    assert.equal((await db.query('SELECT code FROM cost_centers WHERE id=$1', [result.costCenterId])).rows[0].code, 'SV-1001-2');
     const plain = await request('/integracao/orcamentos/sync-direto', 'POST', fixture(), 201, KEY);
     assert.equal(await kindOf(plain.costCenterId), 'obra');
   });
