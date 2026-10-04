@@ -7,7 +7,7 @@ const { autenticar } = require('../middleware/auth');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
-const { listarCopias, caminhoDaCopia, gravarCopia } = require('../services/backupCopies');
+const { listarCopias, caminhoDaCopia, gravarCopia, lerSha } = require('../services/backupCopies');
 
 const router = express.Router();
 router.use(autenticar, exigirPermissao('p9'));
@@ -107,11 +107,13 @@ router.post('/restaurar', asyncRoute(async (req, res) => {
   }
   let filename;
   let buffer;
+  let shaGuardado = null;
   if (req.body.copia) {
     // Cópia guardada neste computador (tabela das Configurações): lê direto da pasta de cópias.
     const arquivo = caminhoDaCopia(req.body.copia);
     filename = path.basename(arquivo);
     buffer = fs.readFileSync(arquivo);
+    shaGuardado = lerSha(arquivo);
   } else {
     filename = String(req.body.nomeArquivo || '').slice(0, 240);
     if (!/\.tar\.gz$/i.test(filename)) throw httpError(400, 'Selecione um backup .tar.gz gerado pelo sistema.');
@@ -124,6 +126,9 @@ router.post('/restaurar', asyncRoute(async (req, res) => {
     throw httpError(400, 'O arquivo não parece ser um backup compactado válido.');
   }
   const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+  if (shaGuardado && shaGuardado.toLowerCase() !== sha256) {
+    throw httpError(400, 'A cópia guardada não confere com o checksum registrado (.sha256). Ela pode estar corrompida ou ter sido alterada.');
+  }
   const expectedSha = String(req.body.sha256 || '').trim().toLowerCase();
   if (expectedSha && !/^[a-f0-9]{64}$/.test(expectedSha)) {
     throw httpError(400, 'O checksum SHA-256 informado é inválido.');

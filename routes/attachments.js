@@ -6,6 +6,7 @@ const { assertObra } = require('../services/obraScope');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError, positiveId } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
+const { isMonthClosed } = require('../services/financialPolicy');
 
 const router = express.Router();
 router.use(autenticar);
@@ -26,7 +27,7 @@ router.get('/lancamento/:transactionId', asyncRoute(async (req, res) => {
   res.json(rows);
 }));
 
-router.post('/lancamento/:transactionId', asyncRoute(async (req, res) => {
+router.post('/lancamento/:transactionId', exigirPermissao('p2', 'p3'), asyncRoute(async (req, res) => {
   const transactionId = positiveId(req.params.transactionId);
   const transaction = await ensureTransaction(transactionId, req);
   const name = safeName(req.body.nome);
@@ -67,10 +68,11 @@ router.get('/:id/arquivo', asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const { rows } = await getDb().query(`
     SELECT original_name,mime_type,size_bytes,content,
-      (SELECT t.cost_center_id FROM transactions t WHERE t.id=transaction_attachments.transaction_id) AS cost_center_id
+      (SELECT t.cost_center_id FROM transactions t WHERE t.id=transaction_attachments.transaction_id) AS cost_center_id,
+      (SELECT t.deleted_at FROM transactions t WHERE t.id=transaction_attachments.transaction_id) AS transaction_deleted_at
     FROM transaction_attachments WHERE id=$1`, [id]);
   const file = rows[0];
-  if (!file) throw httpError(404, 'Documento não encontrado.');
+  if (!file || file.transaction_deleted_at) throw httpError(404, 'Documento não encontrado.');
   await assertObra(req, file.cost_center_id);
   res.setHeader('Content-Type', file.mime_type);
   res.setHeader('Content-Length', String(file.size_bytes));
@@ -82,12 +84,15 @@ router.get('/:id/arquivo', asyncRoute(async (req, res) => {
 router.delete('/:id', exigirPermissao('p3'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const { rows } = await getDb().query(`
-    SELECT a.id,a.public_id,a.original_name,a.sha256,t.public_id AS transaction_public_id,t.cost_center_id
+    SELECT a.id,a.public_id,a.original_name,a.sha256,t.public_id AS transaction_public_id,t.cost_center_id,t.transaction_date,t.deleted_at AS transaction_deleted_at
     FROM transaction_attachments a JOIN transactions t ON t.id=a.transaction_id
     WHERE a.id=$1`, [id]);
   const item = rows[0];
-  if (!item) throw httpError(404, 'Documento não encontrado.');
+  if (!item || item.transaction_deleted_at) throw httpError(404, 'Documento não encontrado.');
   await assertObra(req, item.cost_center_id);
+  if (await isMonthClosed(item.transaction_date)) {
+    throw httpError(403, 'Esta competência está fechada. Reabra o período antes de remover o documento.');
+  }
   await getDb().query('DELETE FROM transaction_attachments WHERE id=$1', [id]);
   await recordAudit({
     entityType:'lancamento',entityId:item.transaction_public_id,action:'anexo_removido',
