@@ -11,6 +11,7 @@ const cloudAuth = require('../services/cloudAuth');
 const { mirrorCloudUser } = require('../services/cloudUserMirror');
 const logger = require('../lib/logger');
 const { decodeProfilePhoto } = require('../lib/profilePhoto');
+const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 const LOGIN_MAX_FAILURES = 5;
@@ -252,6 +253,7 @@ router.post('/alterar-senha', autenticar, asyncRoute(async (req, res) => {
   const currentPassword = String(req.body.senhaAtual || '');
   const newPassword = String(req.body.novaSenha || '');
   if (newPassword.length < 10) throw httpError(400, 'A nova senha precisa ter pelo menos 10 caracteres.');
+  let newToken = null;
 
   if (req.usuario.cloud_managed) {
     if (!req.usuario.cloud_session_token) throw httpError(401,'Entre novamente para alterar a senha corporativa.');
@@ -270,17 +272,22 @@ router.post('/alterar-senha', autenticar, asyncRoute(async (req, res) => {
     if (!(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
       throw httpError(401, 'Senha atual incorreta.');
     }
+    // Modo local: as sessões emitidas antes da troca deixam de valer; esta recebe um token novo.
+    const validFrom = (Math.floor(Date.now() / 1000) + 1) * 1000;
     await getDb().query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
-      [await bcrypt.hash(newPassword, 12), req.usuario.id]
+      'UPDATE users SET password_hash = $1, sessions_valid_from = $2, updated_at = NOW() WHERE id = $3',
+      [await bcrypt.hash(newPassword, 12), new Date(validFrom).toISOString(), req.usuario.id]
     );
+    newToken = jwt.sign({ iat: validFrom / 1000 }, process.env.JWT_SECRET, { subject: String(req.usuario.id), expiresIn: '8h' });
   }
+  await recordAudit({ entityType:'usuario', entityId:req.usuario.id, action:'senha_alterada',
+    summary:`${req.usuario.name} alterou a própria senha.`, user:req.usuario });
 
   for (const filePath of [process.env.BOOTSTRAP_CREDENTIAL_PATH, process.env.FIRST_ACCESS_FILE_PATH]) {
     if (!filePath) continue;
     try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
   }
-  res.json({ ok: true });
+  res.json(newToken ? { ok: true, token: newToken } : { ok: true });
 }));
 
 router.decodeProfilePhoto = decodeProfilePhoto;

@@ -141,12 +141,25 @@
     bt.title = bt.getAttribute('aria-label');
   }
 
+  // Foto { mime, contentBase64 } no menu lateral; sem foto, volta para as iniciais. Usado tambem pelas Configuracoes.
+  D.pintarAvatar = (foto) => {
+    const alvo = CC.$('[data-avatar]');
+    if (!alvo) return;
+    const ok = foto && foto.mime && foto.contentBase64 && /^image\/(png|jpe?g|webp)$/.test(foto.mime);
+    alvo.innerHTML = ok ? `<img src="data:${foto.mime};base64,${foto.contentBase64.replace(/[^A-Za-z0-9+/=]/g, '')}" alt="">`
+      : esc(D.iniciais(D.usuario().nome || D.usuario().name || D.usuario().email));
+  };
+  D.pintarNome = (nome) => {
+    const alvo = CC.$('.quem .nome b');
+    if (alvo) alvo.textContent = nome;
+    const u = CC.session.user() || {};
+    try { localStorage.setItem('cc_usuario', JSON.stringify({ ...u, nome })); } catch { /* segue sem guardar */ }
+  };
+
   async function carregarFoto() {
     try {
       const { data } = await CC.api('/auth/foto-perfil');
-      if (!data || !data.mime || !data.contentBase64 || !/^image\/(png|jpe?g|webp)$/.test(data.mime)) return;
-      const alvo = CC.$('[data-avatar]');
-      if (alvo) alvo.innerHTML = `<img src="data:${data.mime};base64,${data.contentBase64.replace(/[^A-Za-z0-9+/=]/g, '')}" alt="">`;
+      if (data && data.mime && data.contentBase64) D.pintarAvatar(data);
     } catch { /* fica com as iniciais */ }
   }
 
