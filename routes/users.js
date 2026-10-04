@@ -207,7 +207,7 @@ router.put('/:id', asyncRoute(async (req, res) => {
     'UPDATE users SET name=$1, email=$2, role=$3, updated_at=NOW() WHERE id=$4 RETURNING id,name,email,role,active',
     [name.slice(0, 120), email.slice(0, 180), role, id]
   );
-  await recordAudit({entityType:'usuario',entityId:id,action:'atualizado',summary:`Usuário ${result.rows[0].name} atualizado.`,data:result.rows[0],user:req.usuario});
+  await recordAudit({entityType:'usuario',entityId:id,action:'atualizado',summary:`Usuário ${result.rows[0].name} atualizado.`,data:result.rows[0],before:{id:target.id,name:target.name,email:target.email,role:target.role,active:target.active},user:req.usuario});
   res.json(result.rows[0]);
 }));
 

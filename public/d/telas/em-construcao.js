@@ -11,7 +11,6 @@
     recorrentes: ['D5', ['Modelos com frequência, dia e parcelas', 'Botão "Gerar lançamentos do mês" com prévia', 'Mês já gerado não duplica']],
     usuarios: ['D6', ['Seis papéis e matriz de permissões', 'Convite por e-mail e obras que cada pessoa vê', '"Ver o sistema como" para o administrador']],
     fechamento: ['D7', ['Checklist antes de fechar o mês', 'Fechar com pendências e reabrir com motivo', 'Meses fechados bloqueiam a edição']],
-    historico: ['D7', ['Filtros por pessoa, tipo e período', 'Antes e depois de cada alteração, com a origem', 'Exportar CSV']],
     reports: ['D7', ['Lista com a entrega de cada report', 'Novo report com diagnóstico', 'Fila quando estiver sem internet']],
     config: ['D7', ['Perfil com foto e telefone', 'Senha que encerra as outras sessões', 'Backup, restauração e versão do sistema']],
   };

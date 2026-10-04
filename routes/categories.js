@@ -66,12 +66,13 @@ router.put('/:id', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
   const data = validate(req.body);
   await assertNomeLivre(data.name, id);
+  const before = (await getDb().query('SELECT id,name,type,active FROM categories WHERE id=$1', [id])).rows[0];
   const result = await getDb().query(
     'UPDATE categories SET name=$1,type=$2,active=$3,color=$4,description=$5,revision=revision+1,updated_at=NOW() WHERE id=$6 RETURNING id,name,type,active,revision',
     [data.name, data.type, req.body.ativo !== false, data.color, data.description, id]
   );
   if (!result.rowCount) throw httpError(404, 'Categoria não encontrada.');
-  await recordAudit({entityType:'categoria',entityId:result.rows[0].id,action:'atualizado',summary:`Categoria ${data.name} atualizada.`,data:result.rows[0],user:req.usuario});
+  await recordAudit({entityType:'categoria',entityId:result.rows[0].id,action:'atualizado',summary:`Categoria ${data.name} atualizada.`,data:result.rows[0],before,user:req.usuario});
   res.json({ ok: true, revisao:result.rows[0].revision });
 }));
 
