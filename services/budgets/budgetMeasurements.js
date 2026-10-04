@@ -1,4 +1,14 @@
 const crypto = require('crypto');
+const { httpError } = require('../../lib/http');
+
+// O contrato precisa ser da obra da rota (M5): um contractId de outra obra nao pode receber medicao.
+async function assertContractOfCenter(pool, contractId, costCenterId) {
+  const { rows } = await pool.query(
+    'SELECT 1 FROM project_contracts WHERE id::text = $1 AND cost_center_id = $2',
+    [String(contractId), Number(costCenterId)]
+  );
+  if (!rows.length) throw httpError(404, 'Contrato não encontrado nesta obra.');
+}
 
 /**
  * Registra medição periódica de avanço de mão de obra
@@ -20,6 +30,7 @@ async function recordLaborMeasurement(pool, params) {
     throw new Error('PARAMETROS_INVALIDOS: contractId, costCenterId, periodStart e periodEnd são obrigatórios');
   }
 
+  await assertContractOfCenter(pool, contractId, costCenterId);
   const measurementId = crypto.randomUUID();
 
   await pool.query(`
@@ -90,6 +101,7 @@ async function recordContractMeasurement(pool, params) {
     throw new Error('PARAMETROS_INVALIDOS: Dados incompletos para registro da medição contratual');
   }
 
+  await assertContractOfCenter(pool, contractId, costCenterId);
   const id = crypto.randomUUID();
 
   await pool.query(`
@@ -128,6 +140,7 @@ async function listContractMeasurements(pool, contractId) {
 }
 
 module.exports = {
+  assertContractOfCenter,
   recordLaborMeasurement,
   listLaborMeasurements,
   recordContractMeasurement,
