@@ -5,7 +5,8 @@
 // - 401 derruba a sessao e fica guardado: uma falha posterior do diretorio
 //   nao a ressuscita.
 // - Falha transitoria (rede, 429, 5xx) so e tolerada para sessao ja
-//   confirmada antes, e nao e guardada; sem historico, nega.
+//   confirmada antes, e nao e guardada; sem historico, nega. Vale tambem
+//   para a checagem por hash (sessao de app), que guarda o positivo por 60s.
 const cloudAuth = require('./cloudAuth');
 const logger = require('../lib/logger');
 
@@ -24,10 +25,18 @@ async function cloudSessionAlive(sessionToken, options = {}) {
   if (!sessionToken) return false;
   if (options.hashed) {
     if (!options.userId) return false;
-    try { await cloudAuth.sessionHash(sessionToken, options.userId); return true; }
-    catch (error) {
-      if (error.status !== 401) logger.warn('cloud_session_hash_check_unavailable', { status:error.status || null });
-      return false;
+    const hashKey = `h:${options.userId}:${sessionToken}`;
+    const hashed = cache.get(hashKey);
+    if (hashed && !hashed.alive) return false;
+    if (hashed && hashed.until > Date.now()) return true;
+    try {
+      await cloudAuth.sessionHash(sessionToken, options.userId);
+      remember(hashKey, true);
+      return true;
+    } catch (error) {
+      if (error.status === 401) { remember(hashKey, false); return false; }
+      logger.warn('cloud_session_hash_check_unavailable', { status:error.status || null });
+      return Boolean(hashed?.confirmed);
     }
   }
   const cached = cache.get(sessionToken);
@@ -47,4 +56,6 @@ async function cloudSessionAlive(sessionToken, options = {}) {
   }
 }
 
-module.exports = { cloudSessionAlive };
+function resetCloudSessionCache() { cache.clear(); }
+
+module.exports = { cloudSessionAlive, resetCloudSessionCache };

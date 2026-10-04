@@ -55,4 +55,4 @@ async function gravarCopia(db, prefixo) {
   return { nome: path.basename(arquivo), bytes: buffer.length, sha256 };
 }
 
-module.exports = { listarCopias, caminhoDaCopia, gravarCopia, tipoDe };
+module.exports = { listarCopias, caminhoDaCopia, gravarCopia, tipoDe, lerSha };

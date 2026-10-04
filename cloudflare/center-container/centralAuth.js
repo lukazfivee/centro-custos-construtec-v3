@@ -76,6 +76,11 @@ export function validateProfilePhoto(body) {
   return { mime, contentBase64: bytesToBase64(bytes) };
 }
 
+// Segredo colado com BOM (U+FEFF) ou espacos nas pontas: compara e repassa sem eles.
+export function cleanSyncKey(env) {
+  return String(env?.SYNC_SHARED_KEY || '').replace(/^\uFEFF/, '').trim();
+}
+
 export function timingSafeEqual(a, b) {
   const left = String(a || '');
   const right = String(b || '');
@@ -95,7 +100,7 @@ export async function sessionTokenHash(request, env) {
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
   if (!token) return null;
   if (!token.startsWith('hash:')) return sha256Text(token);
-  const expected = String(env.SYNC_SHARED_KEY || '');
+  const expected = cleanSyncKey(env);
   const hash = token.slice(5);
   if (expected.length < 32 || !timingSafeEqual(request.headers.get('x-sync-key'), expected)) return null;
   return /^[a-f0-9]{64}$/.test(hash) ? hash : null;

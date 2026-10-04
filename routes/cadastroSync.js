@@ -6,13 +6,15 @@ const { getDb, getInstanceIdentity } = require('../db');
 const { parseCsv, csvLine } = require('../lib/csv');
 const { httpError } = require('../lib/http');
 const { recordAudit } = require('../services/audit');
+const { exigirPermissao } = require('../services/permissions');
+const { bloquearEscopado } = require('../services/obraScope');
 
 const router = express.Router();
 router.use(autenticar);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-router.get('/exportar.csv', asyncRoute(async (req, res) => {
+router.get('/exportar.csv', exigirPermissao('p5'), bloquearEscopado, asyncRoute(async (req, res) => {
   const db = getDb();
   const [suppliers, categories, centers] = await Promise.all([
     db.query(`SELECT public_id,name,document,contact_name,email,phone,notes,active,revision,updated_at FROM suppliers ORDER BY name`),
@@ -46,7 +48,7 @@ router.get('/exportar.csv', asyncRoute(async (req, res) => {
   res.send(`\uFEFF${lines.join('\r\n')}`);
 }));
 
-router.post('/importar', asyncRoute(async (req, res) => {
+router.post('/importar', exigirPermissao('p5'), bloquearEscopado, asyncRoute(async (req, res) => {
   const content = String(req.body.conteudo || '');
   const filename = String(req.body.nomeArquivo || 'cadastros.csv');
   if (!content.trim()) throw httpError(400, 'Selecione um arquivo CSV válido.');

@@ -1,6 +1,8 @@
 const express = require('express');
 const { getDb } = require('../db');
 const { asyncRoute } = require('../lib/http');
+const { autenticar } = require('../middleware/auth');
+const { exigirPermissao } = require('../services/permissions');
 
 const router = express.Router();
 // Preferencia de tema da instalacao. Fica no banco (app_settings), e nao em
@@ -28,7 +30,7 @@ router.get('/', asyncRoute(async (req, res) => {
   res.json({ darkMode: prefs.darkMode === true, configured:typeof prefs.darkMode === 'boolean' });
 }));
 
-router.post('/', asyncRoute(async (req, res) => {
+router.post('/', autenticar, exigirPermissao('p9'), asyncRoute(async (req, res) => {
   const prefs = await loadPrefs();
   if (typeof req.body.darkMode === 'boolean') prefs.darkMode = req.body.darkMode;
   await savePrefs(prefs);

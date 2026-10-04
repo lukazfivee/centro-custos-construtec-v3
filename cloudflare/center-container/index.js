@@ -1,6 +1,6 @@
 import { Container } from '@cloudflare/containers';
 import { env } from 'cloudflare:workers';
-import { handleCentralAuth } from './centralAuth.js';
+import { handleCentralAuth, cleanSyncKey } from './centralAuth.js';
 import { handleCommercialSync } from './commercialSync.js';
 import { handleNotifications, isNotificationRoute, runDailyNotices } from './notifications.js';
 import { handleSignup, invitePage, isSignupRoute } from './signup.js';
@@ -34,7 +34,7 @@ export class CentroCustosApi extends Container {
     REPORT_API_URL: env.REPORT_API_URL,
     REPORT_INGEST_KEY: env.REPORT_INGEST_KEY,
     SYNC_API_URL: env.SYNC_API_URL,
-    SYNC_SHARED_KEY: env.SYNC_SHARED_KEY,
+    SYNC_SHARED_KEY: env.SYNC_SHARED_KEY === undefined ? undefined : cleanSyncKey(env),
     CONSTRUTEC_INTEGRATION_KEY: env.CONSTRUTEC_INTEGRATION_KEY,
     MOBILE_APP_URL: env.MOBILE_APP_URL,
     NODE_ENV: env.NODE_ENV,

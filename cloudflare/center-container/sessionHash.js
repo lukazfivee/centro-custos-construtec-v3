@@ -1,8 +1,8 @@
-import { json, timingSafeEqual } from './centralAuth.js';
+import { json, timingSafeEqual, cleanSyncKey } from './centralAuth.js';
 
 // Consulta usada apenas pelo Container para validar uma sessão web criada no D1.
 export async function checkSessionHash(request, env) {
-  const expected = String(env.SYNC_SHARED_KEY || '');
+  const expected = cleanSyncKey(env);
   if (expected.length < 32 || !timingSafeEqual(request.headers.get('x-sync-key'), expected)) {
     return json({ ok: false, code: 'SESSION_INVALID', error: 'Sessão inválida.' }, 401);
   }

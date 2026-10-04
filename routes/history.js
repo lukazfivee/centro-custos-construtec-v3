@@ -2,6 +2,7 @@ const express = require('express');
 const { getDb } = require('../db');
 const { autenticar } = require('../middleware/auth');
 const { bloquearEscopado } = require('../services/obraScope');
+const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const { parsePagination, wantsPagination, paginationMeta } = require('../lib/pagination');
 const { validDate } = require('../lib/dates');
@@ -9,6 +10,7 @@ const { csvLine } = require('../lib/csv');
 
 const router=express.Router();
 router.use(autenticar);
+router.use(exigirPermissao('p9'));
 router.use(bloquearEscopado);
 
 const HISTORY_COLUMNS = `id,entity_type AS tipo,entity_id,action AS acao,summary AS resumo,data,before AS antes,

@@ -74,5 +74,6 @@ maybe('ponte emite JWT web válido e a revogação no D1 corta o acesso', async 
   const webSession = env.DB.raw.prepare("SELECT token_hash FROM cloud_sessions WHERE instance_name='Centro de Custos web'").get();
   assert.match(webSession.token_hash,/^[a-f0-9]{64}$/);
   env.DB.raw.prepare('DELETE FROM cloud_sessions WHERE token_hash=?').run(webSession.token_hash);
+  require('../services/cloudSessionCheck').resetCloudSessionCache(); // o positivo fica 60 s em cache
   assert.equal((await me()).status,401);
 });
