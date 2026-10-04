@@ -74,7 +74,7 @@ maybe('aviso para todos não repete, respeita preferência e marca como lido', a
     const muted = await call('POST', '/v1/internal/notify', { headers: sync, body: { ...event, type: 'acima_orcado', dedupeKey: 'orcado:1:x' } });
     assert.equal(muted.data.created, 0);
     assert.deepEqual((await call('GET', '/v1/notifications/prefs', { token })).data.prefs,
-      { proposta_aprovada: true, acima_orcado: false, conta_vencer: true, novo_acesso: true, pedido_acesso: true });
+      { proposta_aprovada: true, acima_orcado: false, conta_vencer: true, novo_acesso: true, pedido_acesso: true, cliente_aprovou: true, cliente_ajuste: true });
     const listed = await call('GET', '/v1/notifications', { token });
     assert.equal(listed.data.items[0].link, 'centro-custos');
     const read = await call('POST', '/v1/internal/notifications', { headers: sync, body: { action: 'read', userId, all: true } });
@@ -83,6 +83,22 @@ maybe('aviso para todos não repete, respeita preferência e marca como lido', a
     assert.equal(badLink.data.created, 1);
     assert.equal((await call('GET', '/v1/notifications', { token })).data.items[0].link, null);
   } finally { firebase.restore(); }
+});
+
+maybe('resposta do cliente ao link avisa admins e responsável, só com a chave de serviço', async () => {
+  const { call, env, userId } = await context();
+  const key = 'k'.repeat(40);
+  env.CONSTRUTEC_IDENTITY_KEY = key;
+  const body = { event: 'approved', proposalId: '4f1c9a0e-1111-4222-8333-444455556666', proposalNumber: 'PA-1001', responsibleCentroUserId: userId };
+  assert.equal((await call('POST', '/v1/internal/orcamentos-notify', { body })).status, 403);
+  assert.equal((await call('POST', '/v1/internal/orcamentos-notify', { headers: { 'x-construtec-identity-key': 'curta' }, body })).status, 403);
+  const headers = { 'x-construtec-identity-key': key };
+  assert.equal((await call('POST', '/v1/internal/orcamentos-notify', { headers, body: { ...body, event: 'x' } })).status, 400);
+  assert.equal((await call('POST', '/v1/internal/orcamentos-notify', { headers, body })).status, 200);
+  const rows = env.DB.raw.prepare("SELECT type,title,link FROM notifications WHERE type='cliente_aprovou'").all();
+  assert.equal(rows.length, 1, 'admin que também é o responsável recebe uma vez');
+  assert.equal(rows[0].title, 'Cliente aprovou a proposta PA-1001');
+  assert.equal(rows[0].link, `orcamentos?proposta=${body.proposalId}`);
 });
 
 maybe('novo aparelho avisa o dono; Sair desliga o push do aparelho', async () => {
