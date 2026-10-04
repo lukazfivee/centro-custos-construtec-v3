@@ -28,9 +28,10 @@
 - CSV: células de texto que começam com = + - @ (ou tab/CR) ganham apóstrofo; números, inclusive negativos, não são alterados.
 - Aviso de resposta do cliente (Orçamentos): a chave de deduplicação passa a usar o minuto, e não o instante, para que um reenvio não duplique o aviso.
 
-Pendências registradas (exigem decisão de produto ou de desenho, fora desta correção):
+## 2026-10-04 — Pendências da revisão de segurança resolvidas (A4, M1, M4, M5, M8)
 
-- A4: limite de tentativas de login do Worker conta pelo IP do Container; precisa definir o que contar (IP do cliente repassado ou limite por conta).
-- M1: aplicar a lista `apps` (quem pode entrar em qual app) nas rotas.
-- M4: fornecedores por obra (hoje o cadastro é global; escopo de obra não se aplica).
-- M5 e M8: itens da revisão independente que dependem de decisão de produto; detalhar antes de implementar.
+- A4: o Express do Centro repassa o IP real do cliente ao Worker (`X-Construtec-Client-IP`, vindo de `CF-Connecting-IP` na nuvem) junto com `X-Construtec-Identity-Key` e `X-Construtec-App: centro`, só no login. O Container passa a receber `CONSTRUTEC_IDENTITY_KEY` (mesmo valor do Orçamentos). O Worker limita o login a 60 por hora por IP real (o cabeçalho só vale com a chave de serviço válida e formato de IP) e a 10 falhas por hora por e-mail; só falha conta no limite por e-mail. Sem a chave no Container, tudo segue como antes (limite pelo IP de saída).
+- M1: `apps` vale no login do Centro (Worker e Express), em cada requisição autenticada do Express, na ponte do handoff e no handoff do Worker (emissão e troca: `centro-custos` exige `centro`; `orcamentos` exige `orcamentos`). Ausência de `apps` = todos. O login com a chave de serviço sem `X-Construtec-App` é tratado como Orçamentos e não é barrado no Worker (o Orçamentos aplica o próprio app).
+- M4: lista de fornecedores (gasto e quantidade do mês) e `/:id/resumo` somam e listam só as obras permitidas ao usuário escopado; sem obra, zeros e lista vazia. O cadastro de fornecedores continua global.
+- M5: medição só entra em contrato da obra da rota (`project_contracts.cost_center_id`); caso contrário, 404.
+- M8: bloqueio de login por e-mail + IP (5 falhas = 15 min) e limite global por e-mail (30 falhas = 15 min), em memória, com janela, varredura a cada 5 minutos e teto de 5000 chaves por controle.

@@ -16,6 +16,11 @@ import { issueHandoff, consumeHandoff } from './sessionHandoff.js';
 import { checkSessionHash } from './sessionHash.js';
 import { noteLogin } from './notifications.js';
 import { effectiveSuiteRole, parseApps } from './suiteRoles.js';
+import {
+  consumeRate, LOGIN_IP_LIMIT, loginClientIp, loginEmailBlocked, noteLoginFailure, loginApp, appAllowed, appDenied,
+} from './loginGuard.js';
+
+export { consumeRate };
 
 const PASSWORD_ITERATIONS = 10000;
 export const ORG_ID = 'rcconstrutec.com.br';
@@ -133,25 +138,6 @@ export async function makePasswordRecord(password) {
   };
 }
 
-export async function consumeRate(db, ip, scope = 'api', limit = 5000) {
-  const now = Math.floor(Date.now() / 1000);
-  const hour = Math.floor(now / 3600);
-  const bucket = `${scope}:${ip || 'unknown'}:${hour}`;
-  const current = await db.prepare('SELECT count FROM sync_rate_limits WHERE bucket=?').bind(bucket).first();
-  if (!current) {
-    await db.prepare('INSERT INTO sync_rate_limits(bucket,count,expires_at) VALUES(?,?,?)')
-      .bind(bucket, 1, (hour + 2) * 3600).run();
-    return true;
-  }
-  if (Number(current.count) >= limit) return false;
-  await db.prepare('UPDATE sync_rate_limits SET count=count+1 WHERE bucket=?').bind(bucket).run();
-  if (Math.random() < 0.03) {
-    await db.prepare('DELETE FROM sync_rate_limits WHERE expires_at < ?').bind(now).run();
-    await db.prepare('DELETE FROM cloud_sessions WHERE expires_at < ?').bind(now).run();
-  }
-  return true;
-}
-
 export function publicUser(row) {
   return {
     id: row.id,
@@ -205,20 +191,23 @@ export async function requireSession(request, env, roles = []) {
   return { user };
 }
 
-async function handleLogin(request, env) {
+async function handleLogin(request, env, app) {
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, error: 'JSON invalido.' }, 400); }
   const email = text(body?.email).toLowerCase();
   const password = String(body?.password || '');
   if (!validEmail(email) || !password) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
+  if (await loginEmailBlocked(env.DB, email)) return json({ ok: false, code: 'RATE_LIMITED', error: 'Muitas tentativas para este e-mail. Tente novamente em uma hora.' }, 429);
+  const failed = async () => { await noteLoginFailure(env.DB, email); return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401); };
   const count = await env.DB.prepare('SELECT COUNT(*) AS total FROM cloud_users WHERE org_id=?').bind(ORG_ID).first();
   if (Number(count?.total || 0) === 0) return json({ ok: false, error: 'Diretorio corporativo ainda nao inicializado.', code: 'DIRECTORY_EMPTY' }, 409);
   const user = await env.DB.prepare('SELECT * FROM cloud_users WHERE org_id=? AND email=? AND deleted_at IS NULL').bind(ORG_ID, email).first();
-  if (!user || !user.active) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
+  if (!user || !user.active) return failed();
   const iterations = Number(user.password_iterations || PASSWORD_ITERATIONS);
   if (iterations > PASSWORD_ITERATIONS) return json({ ok: false, error: 'Credencial central precisa ser reinicializada para o Workers Free.', code: 'PASSWORD_PROFILE_LEGACY' }, 409);
   const hash = await passwordHash(password, user.password_salt, iterations);
-  if (!timingSafeEqual(hash, user.password_hash)) return json({ ok: false, error: 'E-mail ou senha invalidos.' }, 401);
+  if (!timingSafeEqual(hash, user.password_hash)) return failed();
+  if (!appAllowed(user, app)) return json(appDenied(app), 403);
   const now = new Date().toISOString();
   await env.DB.prepare('UPDATE cloud_users SET last_login_at=? WHERE id=?').bind(now, user.id).run();
   user.last_login_at = now;
@@ -334,14 +323,13 @@ export async function handleCentralAuth(request, env) {
   // Chamadas do servidor do Orcamentos chegam todas do mesmo IP de saida;
   // com a chave de servico valida, o limite usa o IP real repassado por ele.
   const service = await serviceKeyValid(request, env);
-  const forwarded = service ? text(request.headers.get('x-construtec-client-ip')) : '';
-  const ip = forwarded || request.headers.get('cf-connecting-ip') || 'unknown';
+  const ip = loginClientIp(request, service);
   const isLogin = request.method === 'POST' && url.pathname === '/v1/auth/login';
   const scope = isLogin ? 'login' : (service ? 'service' : 'api');
-  const allowed = await consumeRate(env.DB, service && !isLogin ? 'orcamentos' : ip, scope, isLogin ? 60 : (service ? 50000 : 5000));
+  const allowed = await consumeRate(env.DB, service && !isLogin ? 'orcamentos' : ip, scope, isLogin ? LOGIN_IP_LIMIT : (service ? 50000 : 5000));
   if (!allowed) return json({ ok: false, error: 'Limite temporario de requisicoes atingido.' }, 429);
 
-  if (request.method === 'POST' && url.pathname === '/v1/auth/login') return handleLogin(request, env);
+  if (request.method === 'POST' && url.pathname === '/v1/auth/login') return handleLogin(request, env, loginApp(request, service));
   if (request.method === 'POST' && url.pathname === '/v1/auth/bootstrap') return handleBootstrap(request, env);
   if (request.method === 'POST' && url.pathname === '/v1/auth/change-password') return handleChangePassword(request, env);
   if (['GET', 'POST', 'DELETE'].includes(request.method) && url.pathname === '/v1/auth/profile-photo') return handleProfilePhoto(request, env);

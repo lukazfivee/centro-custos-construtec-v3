@@ -6,7 +6,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
-const RETURNING = 'id,name,email,role,suite_role,all_cost_centers,active,cloud_managed,cloud_session_token,cloud_user_id';
+const RETURNING = 'id,name,email,role,suite_role,apps,all_cost_centers,active,cloud_managed,cloud_session_token,cloud_user_id';
 
 // Papel novo e apps vindos do diretorio; Worker antigo nao os envia (fica NULL).
 function suiteFields(remote) {

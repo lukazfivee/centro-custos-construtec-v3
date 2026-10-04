@@ -57,10 +57,23 @@ function instanceHeaders() {
   };
 }
 
-async function login(email, password) {
+// Chave de servico (a mesma do Orcamentos): com ela o Worker conta o limite de login pelo IP real do
+// cliente (repassado em X-Construtec-Client-IP) e nao pelo IP de saida do Container, que e um so.
+function serviceKey() {
+  const key = String(process.env.CONSTRUTEC_IDENTITY_KEY || '').replace(/^\uFEFF/, '').trim();
+  return key.length >= 32 ? key : '';
+}
+
+function loginHeaders(ip) {
+  const key = serviceKey();
+  if (!key || !ip) return {};
+  return { 'x-construtec-identity-key':key, 'x-construtec-client-ip':String(ip), 'x-construtec-app':'centro' };
+}
+
+async function login(email, password, { ip } = {}) {
   return request('/v1/auth/login', {
     method:'POST',
-    headers:instanceHeaders(),
+    headers:{ ...instanceHeaders(), ...loginHeaders(ip) },
     body:JSON.stringify({ email, password }),
   });
 }

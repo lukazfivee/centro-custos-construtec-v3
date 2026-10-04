@@ -36,6 +36,7 @@ export class CentroCustosApi extends Container {
     SYNC_API_URL: env.SYNC_API_URL,
     SYNC_SHARED_KEY: env.SYNC_SHARED_KEY === undefined ? undefined : cleanSyncKey(env),
     CONSTRUTEC_INTEGRATION_KEY: env.CONSTRUTEC_INTEGRATION_KEY,
+    CONSTRUTEC_IDENTITY_KEY: env.CONSTRUTEC_IDENTITY_KEY,
     MOBILE_APP_URL: env.MOBILE_APP_URL,
     NODE_ENV: env.NODE_ENV,
   });
