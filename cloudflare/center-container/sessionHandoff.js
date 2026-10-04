@@ -1,5 +1,6 @@
-import { json, publicUser, requireSession, sha256Text } from './centralAuth.js';
+import { json, publicUser, requireSession, sha256Text, cleanSyncKey } from './centralAuth.js';
 import { serviceKeyValid } from './identityAdmin.js';
+import { effectiveSuiteRole, parseApps } from './suiteRoles.js';
 
 // Destinos do handoff (contrato §6). O código só vale no destino para o qual
 // foi emitido; o do Orçamentos só é trocado pelo servidor do Orçamentos
@@ -40,14 +41,14 @@ export async function consumeHandoff(request, env) {
   }
   const hash = await sha256Text(value);
   const now = Math.floor(Date.now() / 1000);
-  const row = await env.DB.prepare(`SELECT h.code_hash,u.id,u.name,u.email,u.role,u.active,u.created_at,u.updated_at,u.last_login_at
+  const row = await env.DB.prepare(`SELECT h.code_hash,u.id,u.name,u.email,u.role,u.suite_role,u.apps,u.active,u.created_at,u.updated_at,u.last_login_at
     FROM session_handoffs h
     JOIN cloud_sessions s ON s.token_hash=h.session_hash AND s.user_id=h.user_id
     JOIN cloud_users u ON u.id=h.user_id AND u.active=1 AND u.deleted_at IS NULL
     WHERE h.code_hash=? AND h.target=? AND h.used_at IS NULL AND h.expires_at>? AND s.expires_at>?`)
     .bind(hash, target, now, now).first();
   if (!row) return invalid();
-  if (target === 'centro-custos' && (String(env.SYNC_SHARED_KEY || '').length < 32 || !env.API)) {
+  if (target === 'centro-custos' && (cleanSyncKey(env).length < 32 || !env.API)) {
     return json({ ok: false, code: 'SERVER_ERROR', error: 'Handoff web indisponível.' }, 503);
   }
   const claimed = await env.DB.prepare(`UPDATE session_handoffs SET used_at=?
@@ -69,8 +70,11 @@ export async function consumeHandoff(request, env) {
   try {
     const bridge = await env.API.getByName('production').fetch(new Request('https://container.internal/api/auth/handoff-bridge', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-sync-key': env.SYNC_SHARED_KEY },
-      body: JSON.stringify({ user: { id: row.id, name: row.name, email: row.email, role: row.role, active: true }, sessionHash }),
+      headers: { 'content-type': 'application/json', 'x-sync-key': cleanSyncKey(env) },
+      body: JSON.stringify({
+        user: { id: row.id, name: row.name, email: row.email, role: row.role, suiteRole: effectiveSuiteRole(row), apps: parseApps(row.apps), active: true },
+        sessionHash,
+      }),
     }));
     const data = await bridge.json().catch(() => null);
     if (bridge.ok && data?.token && data?.usuario && data?.instancia) return json(data);

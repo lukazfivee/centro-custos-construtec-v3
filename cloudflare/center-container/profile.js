@@ -1,4 +1,4 @@
-import { json, text, timingSafeEqual, validateProfilePhoto, ORG_ID } from './centralAuth.js';
+import { json, text, timingSafeEqual, cleanSyncKey, validateProfilePhoto, ORG_ID } from './centralAuth.js';
 
 // Perfil da conta central (nome, celular e foto) para o site do celular. Só a rota
 // interna, chamada pelo Container com SYNC_SHARED_KEY e o id da conta central: a
@@ -25,7 +25,7 @@ async function load(env, id) {
 }
 
 export async function handleProfile(request, env) {
-  const expected = String(env.SYNC_SHARED_KEY || '');
+  const expected = cleanSyncKey(env);
   if (request.method !== 'POST' || expected.length < 32 || !timingSafeEqual(request.headers.get('x-sync-key') || '', expected)) return fail('Sem permissão.', 403);
   let body;
   try { body = (await request.json()) || {}; } catch { body = {}; }

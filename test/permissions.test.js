@@ -63,10 +63,12 @@ test('espelho grava o papel novo sem tocar no legado e escopa engenharia e tecni
   });
   const db = getDb();
 
-  // Conta antiga (sem papel novo): mantem todas as obras.
+  // Conta nova sem papel da Suite (Worker antigo ou handoff sem suiteRole): falha fechada, sem todas as obras.
   const old = await mirrorCloudUser(db, { id: 'c1', name: 'Sup', email: 'sup@rcconstrutec.com.br', role: 'supervisor' });
   assert.equal(old.suite_role, null);
-  assert.equal(old.all_cost_centers, true);
+  assert.equal(old.all_cost_centers, false);
+  // Conta antiga (anterior a D6): o administrador ja a deixou com todas as obras; espelhar nao muda isso.
+  await db.query('UPDATE users SET all_cost_centers=TRUE WHERE id=$1', [old.id]);
 
   // Worker novo promove a conta: papel novo entra, legado segue o do diretorio, obras nao mudam.
   const promoted = await mirrorCloudUser(db, { id: 'c1', name: 'Sup', email: 'sup@rcconstrutec.com.br', role: 'supervisor', suiteRole: 'financeiro', apps: ['centro'] });
@@ -85,7 +87,9 @@ test('espelho grava o papel novo sem tocar no legado e escopa engenharia e tecni
   assert.equal(eng.all_cost_centers, false);
   const comercial = await mirrorCloudUser(db, { id: 'c4', name: 'Com', email: 'com@rcconstrutec.com.br', role: 'supervisor', suiteRole: 'comercial' });
   assert.equal(comercial.all_cost_centers, true);
-  // Tecnico novo que ainda nao tem papel novo no Worker (legado) tambem nasce sem obras? Nao: sem suite_role vale TRUE.
+  // Supervisor novo sem papel novo no Worker (legado) vale como tecnico: nasce sem obras. Gestor/admin mantem todas.
   const legacyNew = await mirrorCloudUser(db, { id: 'c5', name: 'Leg', email: 'leg@rcconstrutec.com.br', role: 'supervisor' });
-  assert.equal(legacyNew.all_cost_centers, true);
+  assert.equal(legacyNew.all_cost_centers, false);
+  const legacyGestor = await mirrorCloudUser(db, { id: 'c6', name: 'Ges', email: 'ges@rcconstrutec.com.br', role: 'gestor' });
+  assert.equal(legacyGestor.all_cost_centers, true);
 });

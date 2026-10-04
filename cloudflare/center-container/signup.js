@@ -1,4 +1,4 @@
-import { json, makePasswordRecord, requireSession, sha256Text, text, timingSafeEqual, validEmail, validRole, ORG_ID } from './centralAuth.js';
+import { json, makePasswordRecord, requireSession, sha256Text, text, timingSafeEqual, cleanSyncKey, validEmail, validRole, ORG_ID } from './centralAuth.js';
 import { rateAllowed, strongPassword } from './passwordReset.js';
 import { deliver } from './notifications.js';
 import { validSuiteRole, legacyRoleFor, suiteFromLegacy, normalizeApps } from './suiteRoles.js';
@@ -169,7 +169,7 @@ export async function handleSignup(request, env, url) {
     if (request.method !== 'GET') { try { body = (await request.json()) || {}; } catch { body = {}; } }
     let admin;
     if (url.pathname === '/v1/internal/signup') {
-      const expected = String(env.SYNC_SHARED_KEY || '');
+      const expected = cleanSyncKey(env);
       if (expected.length < 32 || !timingSafeEqual(request.headers.get('x-sync-key') || '', expected)) return fail('FORBIDDEN', 'Sem permissão.', 403);
       admin = await env.DB.prepare("SELECT id,name FROM cloud_users WHERE id=? AND org_id=? AND role='admin' AND active=1 AND deleted_at IS NULL").bind(String(body.actorId || ''), ORG_ID).first();
       if (!admin) return fail('FORBIDDEN', 'Apenas administradores gerenciam pedidos de acesso.', 403);

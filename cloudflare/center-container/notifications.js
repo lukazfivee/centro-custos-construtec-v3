@@ -1,4 +1,4 @@
-import { json, requireSession, timingSafeEqual, ORG_ID } from './centralAuth.js';
+import { json, requireSession, timingSafeEqual, cleanSyncKey, ORG_ID } from './centralAuth.js';
 import { sendPush } from './fcm.js';
 
 // Fase 4 da Suíte mobile: central de notificações, preferências e push (FCM).
@@ -14,13 +14,13 @@ export function isNotificationRoute(pathname) {
 }
 
 function syncKeyValid(request, env) {
-  const expected = String(env.SYNC_SHARED_KEY || '');
+  const expected = cleanSyncKey(env);
   return expected.length >= 32 && timingSafeEqual(request.headers.get('x-sync-key') || '', expected);
 }
 
 // Chave de serviço do Orçamentos (a mesma da identidade compartilhada), normalizada como em identityAdmin.js.
 function identityKeyValid(request, env) {
-  const clean = (value) => String(value || '').replace(/^﻿/, '').trim();
+  const clean = (value) => String(value || '').replace(/^\uFEFF/, '').trim();
   const expected = clean(env.CONSTRUTEC_IDENTITY_KEY);
   return expected.length >= 32 && timingSafeEqual(clean(request.headers.get('x-construtec-identity-key')), expected);
 }
@@ -36,7 +36,8 @@ async function clientReply(env, body) {
     type: approved ? 'cliente_aprovou' : 'cliente_ajuste', app: 'orcamentos', link: `orcamentos?proposta=${proposalId}`,
     title: approved ? `Cliente aprovou a proposta ${number}` : `Cliente pediu ajuste na proposta ${number}`,
     body: approved ? 'Abra a proposta e confirme a aprovação para ela virar Aprovada.' : 'A proposta voltou para edição como nova revisão. Veja o pedido do cliente.',
-    dedupeKey: `${body.event}:${proposalId}:${Date.now().toString(36)}`,
+    // Mesmo evento da mesma proposta dentro de 1 minuto conta como um so (reenvio do Orcamentos).
+    dedupeKey: `${body.event}:${proposalId}:${Math.floor(Date.now() / 60000).toString(36)}`,
   };
   const admins = await deliver(env, { ...event, audience: 'admins' });
   const owner = String(body.responsibleCentroUserId || '');
@@ -205,9 +206,9 @@ export async function handleNotifications(request, env, url) {
 
 // Cron diário: o Container calcula as contas a vencer e os itens acima do orçado.
 export async function runDailyNotices(env) {
-  if (!env.API || String(env.SYNC_SHARED_KEY || '').length < 32) return { events: 0 };
+  if (!env.API || cleanSyncKey(env).length < 32) return { events: 0 };
   const response = await env.API.getByName('production').fetch(new Request('https://container.internal/api/interno/avisos-diarios', {
-    method: 'POST', headers: { 'x-sync-key': env.SYNC_SHARED_KEY, 'content-type': 'application/json' }, body: '{}',
+    method: 'POST', headers: { 'x-sync-key': cleanSyncKey(env), 'content-type': 'application/json' }, body: '{}',
   }));
   const data = await response.json().catch(() => ({}));
   const events = Array.isArray(data.events) ? data.events.slice(0, 50) : [];

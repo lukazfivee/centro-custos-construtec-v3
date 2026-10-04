@@ -41,6 +41,13 @@ async function mirrorCloudUser(db, remote, options = {}) {
   }
 }
 
+// Papel efetivo de uma conta nova: o suiteRole do diretorio ou, sem ele, o mapeamento do papel antigo
+// (supervisor vira tecnico). Usado so para decidir o escopo de obras: na duvida, falha fechada.
+function escopavel(suiteRole, legacyRole) {
+  const efetivo = suiteRole || (legacyRole === 'admin' || legacyRole === 'gestor' ? legacyRole : 'tecnico');
+  return ['engenharia', 'tecnico'].includes(efetivo);
+}
+
 async function mirrorOnce(db, remote, { sessionToken } = {}) {
   const email = String(remote.email || '').trim().toLowerCase();
   const name = String(remote.name || email).slice(0, 120);
@@ -67,8 +74,9 @@ async function mirrorOnce(db, remote, { sessionToken } = {}) {
     INSERT INTO users (name,email,password_hash,role,active,cloud_managed,cloud_user_id,cloud_session_token,suite_role,apps,all_cost_centers)
     VALUES ($1,$2,$3,$4,$5,TRUE,$6,$7,$8,$9,$10) RETURNING ${RETURNING}
   `, [name, email, unusablePassword, remote.role, active, cloudId, sessionToken || null, suiteRole, apps,
-    // Engenharia e tecnico novos comecam sem obras ate o admin atribuir.
-    !['engenharia', 'tecnico'].includes(suiteRole)]);
+    // Engenharia e tecnico novos (inclusive quando o diretorio nao enviou o papel) comecam sem obras
+    // ate o admin atribuir; as contas antigas ficam como estao.
+    !escopavel(suiteRole, remote.role)]);
   return inserted.rows[0];
 }
 
