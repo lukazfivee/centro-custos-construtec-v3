@@ -28,7 +28,7 @@ test('E2E login: senha incorreta exibe mensagem de erro e não entra no app', as
   const ctx = await startServer();
   const driver = await buildDriver();
   try {
-    await driver.get(ctx.baseUrl);
+    await driver.get(`${ctx.baseUrl}/?antiga=1`);
     await driver.wait(until.elementLocated(By.css('#form-login input[type=email]')), 10000);
     await driver.findElement(By.css('#form-login input[type=email]')).sendKeys(ADMIN_EMAIL);
     await driver.findElement(By.css('#form-login input[type=password]')).sendKeys(`${ADMIN_PASSWORD}-errada`);
