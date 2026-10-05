@@ -3,8 +3,8 @@
 (function (CC) {
   const D = CC.d;
 
-  // Sem sessao, volta para o login do sistema atual.
-  const paraLogin = () => location.replace('/');
+  // Sem sessao, limpa o que sobrou e vai para a tela de entrada (pagina de login em /?entrar=1).
+  const paraLogin = () => { try { CC.session.clear(); } catch { /* sem armazenamento */ } location.replace('/?entrar=1'); };
   CC.onUnauthorized = paraLogin;
 
   async function consumirHandoff(code) {

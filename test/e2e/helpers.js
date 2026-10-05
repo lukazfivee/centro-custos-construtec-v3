@@ -72,7 +72,7 @@ async function stopDriver(driver) {
 // preferido a chamar a API diretamente, ja que o objetivo do E2E e validar
 // o fluxo completo pelo navegador.
 async function login(driver, baseUrl, email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
-  await driver.get(baseUrl);
+  await driver.get(`${baseUrl}/?antiga=1`);
   await driver.wait(until.elementLocated({ css: '#form-login input[type=email]' }), 10000);
   await driver.findElement({ css: '#form-login input[type=email]' }).sendKeys(email);
   await driver.findElement({ css: '#form-login input[type=password]' }).sendKeys(password);
