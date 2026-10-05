@@ -1,6 +1,9 @@
 // Compatibility markers retained for interface checks: URLSearchParams(location.hash.slice(1)).get('obra'); markStatusMessages($('#modal-corpo')); classList.add('theme-changing'); showView('centros');await openCenterDetail(centerId); matchMedia('(hover:hover) and (pointer:fine)');
 const API = '/api';
 let token = localStorage.getItem('cc_token');
+// Desktop novo e o padrao: depois de entrar aqui vai para /d/. ?antiga=1 mantem o sistema antigo.
+const abrirAntiga = new URLSearchParams(location.search).has('antiga');
+const irParaDesktopNovo = () => { location.replace('/d/'); };
 let usuario = JSON.parse(localStorage.getItem('cc_usuario') || 'null');
 let instancia = JSON.parse(localStorage.getItem('cc_instancia') || 'null');
 let centros = [];
@@ -91,6 +94,7 @@ $('#form-login').addEventListener('submit',async (event) => {
     const data=await api('/auth/login',{method:'POST',body:JSON.stringify({email:$('#login-email').value,senha:$('#login-senha').value})});
     token=data.token; usuario=data.usuario; instancia=data.instancia;
     localStorage.setItem('cc_token',token); localStorage.setItem('cc_usuario',JSON.stringify(usuario)); localStorage.setItem('cc_instancia',JSON.stringify(instancia));
+    if (!abrirAntiga) return irParaDesktopNovo();
     await startApp();
   } catch (error) { $('#login-erro').textContent=error.message; }
 });
@@ -1069,12 +1073,13 @@ async function consumeMobileHandoff(code) {
     localStorage.setItem('cc_token',token);
     localStorage.setItem('cc_usuario',JSON.stringify(usuario));
     localStorage.setItem('cc_instancia',JSON.stringify(instancia));
+    if (!abrirAntiga) return irParaDesktopNovo();
     await startApp();
   } catch (error) { $('#login-erro').textContent=error.message; }
 }
 const handoffCode = new URLSearchParams(location.hash.slice(1)).get('handoff');
 if (handoffCode) consumeMobileHandoff(handoffCode);
-else if(token&&usuario) startApp();
+else if(token&&usuario&&abrirAntiga) startApp();
 
 
 

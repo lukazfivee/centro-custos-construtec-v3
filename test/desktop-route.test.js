@@ -41,7 +41,20 @@ test('rota /d/ entrega o desktop novo e os arquivos que ele usa', async (context
     assert.equal(resposta.status, 200, arquivo);
   }
 
-  // O sistema atual continua em /.
-  const atual = await (await fetch(`${base}/`)).text();
-  assert.doesNotMatch(atual, /d-core\.js/);
+  // A raiz abre o desktop novo; celular vai para /m/; a pagina antiga so com ?entrar=1 ou ?antiga=1.
+  const raiz = await fetch(`${base}/`, { redirect: 'manual' });
+  assert.equal(raiz.status, 302);
+  assert.equal(raiz.headers.get('location'), '/d/');
+  const celular = await fetch(`${base}/`, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0 (Linux; Android 14; SM-A175F) Mobile Safari/537.36' } });
+  assert.equal(celular.headers.get('location'), '/m/');
+  for (const consulta of ['?entrar=1', '?antiga=1']) {
+    const entrada = await fetch(`${base}/${consulta}`, { redirect: 'manual' });
+    assert.equal(entrada.status, 200, consulta);
+    assert.doesNotMatch(await entrada.text(), /d-core\.js/);
+  }
+  // Sem sessao o desktop novo manda para a tela de entrada, e depois de entrar a pagina antiga volta para /d/.
+  const appD = fs.readFileSync(path.join(__dirname, '..', 'public', 'd', 'app.js'), 'utf8');
+  assert.match(appD, /location\.replace\('\/\?entrar=1'\)/);
+  const appAntigo = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.js'), 'utf8');
+  assert.match(appAntigo, /irParaDesktopNovo\(\)/);
 });
