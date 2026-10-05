@@ -37,6 +37,19 @@
   --c-muted-soft: #eef1f3;
   --c-muted: #3f5a66;
   --c-tab: #031f29;
+  /* Contraste (WCAG 2.2 AA): borda de campo 3:1, foco 3:1, texto de apoio 4.5:1, marca sob texto claro. */
+  --color-field: #6f8f9b;
+  --color-focus: #0a7896;
+  --color-placeholder: #5d7480;
+  --color-brand: #0a7896;
+  --color-switch-on: #0a7896;
+  --on-brand: #fefefe;
+  --graf-rec: #0d86a8;
+  --graf-desp: #b85d1f;
+  --graf-ok: #0f8a5a;
+  --graf-warn: #9a6200;
+  --graf-err: #b8452c;
+  --graf-prev: #5d7480;
   --side-bg: #031f29;
   --side-w: 236px;
   --top-h: 64px;
@@ -71,4 +84,14 @@
   --c-muted-soft: rgba(185, 212, 221, .12);
   --c-muted: #b9d4dd;
   --c-tab: #021820;
+  --color-field: #5a8493;
+  --color-focus: #5fd0ee;
+  --color-switch-on: #12a9d1;
+  --color-placeholder: #86a6b2;
+  --graf-rec: #12a9d1;
+  --graf-desp: #e0803a;
+  --graf-ok: #3ccf8e;
+  --graf-warn: #e0a33a;
+  --graf-err: #ee7a62;
+  --graf-prev: #8fa6b0;
 }

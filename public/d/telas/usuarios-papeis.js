@@ -9,7 +9,7 @@
     const fixo = papel.valor === 'admin';
     const rotulo = `${U.nomePermissao(id)} · ${papel.rotulo}`;
     if (fixo) return `<td class="usu-mx"><span class="usu-tk trava" title="O administrador fica sempre com tudo" aria-label="${esc(rotulo)}: sempre liberado">${D.ic('lock-simple')}</span></td>`;
-    return `<td class="usu-mx"><button type="button" class="usu-tk${ligado ? ' on' : ''}" data-perm="${esc(id)}" data-papel="${esc(papel.valor)}" data-liga="${ligado ? '0' : '1'}" role="switch" aria-checked="${ligado}" aria-label="${esc(rotulo)}"${somenteLeitura ? ' disabled' : ''}>${ligado ? D.ic('check-bold') : '<span aria-hidden="true">—</span>'}</button></td>`;
+    return `<td class="usu-mx"><button type="button" class="usu-tk${ligado ? ' on' : ''}" data-perm="${esc(id)}" data-papel="${esc(papel.valor)}" data-liga="${ligado ? '0' : '1'}" role="switch" aria-checked="${ligado}" aria-label="${esc(rotulo)}"${somenteLeitura ? ' disabled' : ''}>${ligado ? D.ic('check') : '<span aria-hidden="true">—</span>'}</button></td>`;
   }
 
   function tabela(dados, contagem) {

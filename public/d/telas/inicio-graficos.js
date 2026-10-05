@@ -47,8 +47,8 @@
       const h1 = (r / max) * alto;
       const h2 = (d / max) * alto;
       const nome = MES_CURTO[Number(String(m.mes).slice(5, 7)) - 1] || '';
-      barras.push(`<rect x="${x}" y="${base - h1}" width="${larg}" height="${h1}" rx="3" fill="#12a9d1"><title>${esc(`${nome} · receitas ${CC.money(r)}`)}</title></rect>`);
-      barras.push(`<rect x="${x + larg + 2}" y="${base - h2}" width="${larg}" height="${h2}" rx="3" fill="#e0803a"><title>${esc(`${nome} · despesas ${CC.money(d)}`)}</title></rect>`);
+      barras.push(`<rect x="${x}" y="${base - h1}" width="${larg}" height="${h1}" rx="3" fill="var(--graf-rec)"><title>${esc(`${nome} · receitas ${CC.money(r)}`)}</title></rect>`);
+      barras.push(`<rect x="${x + larg + 2}" y="${base - h2}" width="${larg}" height="${h2}" rx="3" fill="var(--graf-desp)"><title>${esc(`${nome} · despesas ${CC.money(d)}`)}</title></rect>`);
       rotulosX.push(`<span class="eixo-x" style="left:${(((x + larg + 1) / W) * 100).toFixed(2)}%">${esc(nome)}</span>`);
     });
     return `<div class="grafico">
