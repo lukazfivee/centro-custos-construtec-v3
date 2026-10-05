@@ -16,7 +16,7 @@
 .netbar .msg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .netbar.off { background: var(--warn-soft); color: var(--warn-text); box-shadow: inset 0 -1px 0 var(--warn-bar); }
 .netbar.sync { background: var(--accent-900); color: var(--accent-300); box-shadow: inset 0 -1px 0 var(--accent); }
-.netbar button { min-height: 36px; padding: 0 10px; border: 0; background: transparent; font-size: 12.5px; font-weight: 600; text-decoration: underline; }
+.netbar button { min-height: 44px; padding: 0 10px; border: 0; background: transparent; font-size: 12.5px; font-weight: 600; text-decoration: underline; }
 body.has-netbar .screen { padding-top: 12px; }
 .spin { width: 15px; height: 15px; flex: none; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg) } }

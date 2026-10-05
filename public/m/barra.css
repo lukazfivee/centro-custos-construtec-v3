@@ -1,0 +1,42 @@
+/* Barra de abas, bordas seguras e acabamentos (QA visual do celular).
+   Regra: nada aparece atras da barra inferior; html e body ja usam --bg (m.css). */
+:root { --tabs-h: 64px; --tabs-gap: 12px; --side: max(20px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)); }
+
+/* Faixa opaca atras da barra e do home indicator, com esmaecido em cima: o conteudo some antes de chegar nela. */
+body::after { content: ''; position: fixed; left: 0; right: 0; bottom: 0; z-index: 19; pointer-events: none;
+  height: calc(var(--tabs-gap) + var(--tabs-h) + var(--sab) + 28px);
+  background: linear-gradient(to top, var(--bg) 0, var(--bg) calc(var(--tabs-gap) + var(--tabs-h) + var(--sab) + 6px), transparent 100%); }
+body.no-tabs::after { display: none; }
+.tabs { left: max(14px, env(safe-area-inset-left, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); }
+.tabs-refraction { overflow: hidden; }
+
+/* Laterais seguras (iPhone na horizontal com notch) */
+.screen { padding-left: var(--side); padding-right: var(--side); }
+.actions { margin-left: calc(-1 * var(--side)); margin-right: calc(-1 * var(--side)); padding-left: var(--side); padding-right: var(--side); }
+.chips { margin-left: calc(-1 * var(--side)); margin-right: calc(-1 * var(--side)); padding-left: var(--side); padding-right: var(--side); }
+.toast { left: var(--side); right: var(--side); }
+body.no-tabs .toast { bottom: calc(24px + var(--sab)); }
+
+/* Aviso rapido legivel nos dois temas: no escuro o fundo dele era igual ao da tela */
+.toast { box-shadow: 0 0 0 1px rgba(182, 232, 245, .22), 0 8px 24px rgba(0, 8, 13, .35); max-width: 560px; margin: 0 auto; }
+.toast span { min-width: 0; overflow-wrap: anywhere; }
+
+/* Folhas: borda no topo para separar da tela escurecida */
+.sheet { box-shadow: 0 -1px 0 var(--divider), 0 -8px 24px rgba(0, 8, 13, .25); overscroll-behavior: contain; }
+.ia-note a { position: relative; }
+.ia-note a::after { content: ''; position: absolute; inset: -15px -8px; } /* area de toque de 44 px sem aumentar o texto */
+
+/* Botoes: texto nunca estoura nem quebra feio */
+.btn, .btn2, .chip-act, .suite-pill, .seg button { text-align: center; line-height: 1.2; }
+.btn, .btn2 { padding: 0 16px; }
+.btn > span, .btn2 > span { min-width: 0; overflow-wrap: anywhere; }
+.chip-act { white-space: nowrap; }
+
+/* Telas estreitas (360 px): cabecalho cabe inteiro */
+@media (max-width: 380px) {
+  .top { gap: 6px; }
+  .top .brand { gap: 6px; letter-spacing: .02em; }
+  .suite-pill { padding: 0 12px; }
+  .task { gap: 10px; padding: 12px; }
+  .summary { padding: 8px 12px; gap: 6px; }
+}
