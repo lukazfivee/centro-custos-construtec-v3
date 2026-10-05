@@ -154,3 +154,15 @@ test('D4 Cobranças: regras, "Enviar" salva antes e a autorização é refeita',
   assert.match(src('telas/cobranca-painel.js'), /const pode = D\.pode\('cadastrar'\)/);
   assert.match(src('app.js'), /D\.cobr\.atualizarContador/);
 });
+
+test('desktop novo: tokens de contraste e rodapes opacos (QA visual)', () => {
+  const tokens = src('css/tokens.css');
+  for (const t of ['--color-field', '--color-focus', '--color-placeholder', '--color-brand', '--graf-rec', '--graf-desp']) {
+    assert.ok((tokens.match(new RegExp(`${t}:`, 'g')) || []).length >= 1, `${t} sumiu dos tokens`);
+  }
+  assert.match(tokens, /\[data-theme="escuro"\][\s\S]*--color-field:/);
+  assert.match(src('css/base.css'), /box-shadow: inset 0 0 0 1px var\(--color-field\)/);
+  assert.match(src('css/robustez.css'), /\.drawer \.drod \{ background: var\(--color-surface\)/);
+  // Texto branco so sobre a cor de marca solida, nunca sobre accent-300 (claro no tema escuro).
+  assert.doesNotMatch(src('css/usuarios.css'), /accent-300\); color: #fff/);
+});

@@ -15,21 +15,21 @@
 
 /* Categorias: bolinha de cor e paleta do painel. */
 .cat-nome { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
-.cat-nome .cor { flex: none; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--color-neutral-500); }
+.cat-nome .cor { flex: none; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--color-field); }
 .paleta { display: flex; gap: 8px; flex-wrap: wrap; }
 .paleta button { width: 32px; height: 32px; border: 0; border-radius: 9px; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
 .paleta button:hover { transform: scale(1.06); }
 .paleta button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--cor-atual, #12a9d1); }
-.paleta button:focus-visible { outline: 2px solid #12a9d1; outline-offset: 3px; }
+.paleta button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
 
 /* Interruptor "ativa" dos paineis. */
 .troca { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--color-bg); box-shadow: inset 0 0 0 1px var(--color-divider); color: var(--color-text); text-align: left; cursor: pointer; font-family: var(--font-body); }
 .troca > span:first-child { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .troca b { font-size: 13.5px; font-weight: 600; }
 .troca small { font-size: 12px; color: var(--color-neutral-300); }
-.troca .chave { flex: none; width: 40px; height: 22px; border-radius: 11px; background: var(--color-neutral-600); position: relative; transition: background-color .15s ease; }
+.troca .chave { flex: none; width: 40px; height: 22px; border-radius: 11px; background: var(--color-field); position: relative; transition: background-color .15s ease; }
 .troca .chave::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fefefe; transition: transform .15s ease; }
-.troca[aria-checked="true"] .chave { background: #12a9d1; }
+.troca[aria-checked="true"] .chave { background: var(--color-switch-on); }
 .troca[aria-checked="true"] .chave::after { transform: translateX(18px); }
 
 /* Fornecedores: dica e lancamentos do mes no painel. */
@@ -45,7 +45,7 @@
 /* Recorrentes: tabela com barra de parcelas e coluna "Proximas geracoes". */
 .rec-grade { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 .parcelas { display: flex; flex-direction: column; gap: 6px; min-width: 110px; font-size: 12.5px; }
-.parcelas .bar > span { background: #12a9d1; }
+.parcelas .bar > span { background: var(--graf-rec); }
 .prox { padding: 16px; display: flex; flex-direction: column; gap: 4px; }
 .prox .topo { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 8px; }
 .prox .topo b { font-size: 15px; }

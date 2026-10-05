@@ -1,0 +1,25 @@
+/* Robustez de layout (QA visual): respiro entre blocos, tabelas que rolam, KPI alinhado e barras opacas. */
+[data-faixa]:not(:empty) + [data-filtros], [data-faixa]:not(:empty) + [data-tabela], [data-filtros]:not(:empty) + [data-tabela] { margin-top: 14px; }
+.cad-barra + .cad-tabela, .fech-kpis + .fech-grade, .usu-kpis + .usu-barra { margin-top: 14px; }
+.tabela, .cad-tabela, .fech-tabela { overflow-x: auto; overflow-y: hidden; }
+.kpi .topo { min-height: 36px; }
+.kpi .lbl { min-width: 0; }
+.kpi .val[data-ajustado] { text-overflow: clip; }
+
+/* Textos que nao podem quebrar no meio. */
+.rec-grade .tbl td:nth-child(2), .tbl td.num, .tbl .nowrap { white-space: nowrap; }
+.fech-tabela .tbl th, .fech-tabela .tbl td { padding-left: 10px; padding-right: 10px; }
+.fech-tabela .tbl td:first-child { min-width: 150px; }
+.cab .acoes { flex-wrap: wrap; justify-content: flex-end; }
+.cab .tit h1 { overflow-wrap: anywhere; }
+
+/* Barras fixas e rodapes com fundo do tema, para o conteudo nunca aparecer por tras. */
+.drawer, .drawer .dcab, .drawer .dabas, .drawer .drod { background: var(--color-surface); }
+.drawer .drod { flex-wrap: wrap; position: relative; z-index: 1; }
+.dialogo { background: var(--color-surface); }
+.imp-barra { background: var(--color-surface); }
+.toast { max-width: min(560px, calc(100vw - 48px)); box-shadow: 0 0 0 1px var(--color-divider), 0 14px 34px rgba(3, 31, 41, .3); }
+.pop { background: var(--color-surface); }
+.conteudo { background: var(--color-bg); overscroll-behavior: contain; }
+.camada, .dialogo-camada, .impressao { overscroll-behavior: contain; }
+.ibtn.vago { pointer-events: none; }

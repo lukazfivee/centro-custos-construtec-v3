@@ -12,7 +12,7 @@
 .uso-linha { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--color-neutral-300); }
 .uso-linha .topo b { color: var(--color-text); }
 .uso-linha .topo b.err { color: var(--c-err); }
-.bar > .medido { background: #3ccf8e; }
+.bar > .medido { background: var(--graf-ok); }
 .cartao-obra .valores { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 10px; border-top: 1px solid var(--color-divider); }
 .cartao-obra .valores > span { display: flex; flex-direction: column; gap: 2px; }
 .cartao-obra .valores b { font-size: 14px; font-weight: 600; }

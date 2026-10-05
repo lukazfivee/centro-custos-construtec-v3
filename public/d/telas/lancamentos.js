@@ -20,7 +20,7 @@
     const qtd = Number(l.qtd_anexos) || 0;
     const acoes = [
       `<button type="button" class="ibtn" data-acao="docs" aria-label="Documentos${qtd ? ` (${qtd})` : ''}" title="Documentos">${D.ic('paperclip', 18)}${qtd ? `<span class="cont">${qtd}</span>` : ''}</button>`,
-      L.podeEstornar(l) ? `<button type="button" class="ibtn" data-acao="estornar" aria-label="Estornar" title="Estornar">${D.ic('arrow-u-up-left', 18)}</button>` : '',
+      L.podeEstornar(l) ? `<button type="button" class="ibtn" data-acao="estornar" aria-label="Estornar" title="Estornar">${D.ic('arrow-u-up-left', 18)}</button>` : '<span class="ibtn vago" aria-hidden="true"></span>',
       L.podeExcluir(l) ? `<button type="button" class="ibtn" data-acao="excluir" aria-label="Excluir" title="Excluir">${D.ic('trash', 18)}</button>` : '',
     ].join('');
     const sub = [l.categoria, l.favorecido].filter(Boolean).join(' · ');

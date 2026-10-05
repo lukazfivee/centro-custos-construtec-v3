@@ -10,10 +10,10 @@
 .andamento li:last-child { padding-bottom: 0; }
 .andamento li::before { content: ""; position: absolute; left: 10px; top: 22px; bottom: 0; width: 2px; background: var(--color-divider); }
 .andamento li:last-child::before { display: none; }
-.andamento li.feito::before { background: var(--color-accent-500); }
-.andamento .bolinha { width: 22px; height: 22px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--color-neutral-800); color: #fff; z-index: 1; }
-.andamento li.feito .bolinha { background: var(--color-accent-500); }
-.andamento li.atual .bolinha { background: var(--color-surface); box-shadow: inset 0 0 0 2px var(--color-accent-500); }
+.andamento li.feito::before { background: var(--color-brand); }
+.andamento .bolinha { width: 22px; height: 22px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--color-neutral-800); color: var(--color-neutral-300); z-index: 1; }
+.andamento li.feito .bolinha { background: var(--color-brand); color: var(--on-brand); }
+.andamento li.atual .bolinha { background: var(--color-surface); box-shadow: inset 0 0 0 2px var(--color-brand); }
 .andamento li.vencido .bolinha { box-shadow: inset 0 0 0 2px var(--c-err); }
 .andamento .tx { display: flex; flex-direction: column; min-width: 0; }
 .andamento .tx b { font-size: 14px; font-weight: 600; }

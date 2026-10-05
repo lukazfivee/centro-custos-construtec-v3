@@ -9,8 +9,8 @@
 .legenda { display: flex; gap: 14px; font-size: 12px; color: var(--color-neutral-300); }
 .legenda > span { display: flex; align-items: center; gap: 6px; }
 .legenda .q { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-.legenda .q.rec { background: #12a9d1; }
-.legenda .q.desp { background: #e0803a; }
+.legenda .q.rec { background: var(--graf-rec); }
+.legenda .q.desp { background: var(--graf-desp); }
 
 .grafico { position: relative; height: 292px; }
 .grafico svg { display: block; }
@@ -22,8 +22,7 @@
 .media > span { font-size: 12px; color: var(--color-neutral-300); }
 .media b { font-size: 16px; font-weight: 600; }
 .media b.rec { color: var(--color-accent-300); }
-.media b.desp { color: #c2692a; }
-[data-theme="escuro"] .media b.desp { color: #f2a26a; }
+.media b.desp { color: var(--c-out); }
 
 .lista-rec { display: flex; flex-direction: column; gap: 2px; }
 .linha-rec { display: flex; align-items: center; gap: 12px; padding: 8px 6px; border: 0; border-radius: 10px; background: transparent; color: var(--color-text); text-align: left; cursor: pointer; font-family: var(--font-body); width: 100%; }
@@ -38,16 +37,16 @@
 .linha-rec .v.entrada { color: var(--c-ok); }
 
 .lista-obras { display: flex; flex-direction: column; }
-.linha-obra { display: grid; grid-template-columns: minmax(0, 1fr) 220px 150px; align-items: center; gap: 18px; padding: 10px 6px; border-top: 1px solid var(--color-divider); color: var(--color-text); text-decoration: none; }
+.linha-obra { display: grid; grid-template-columns: minmax(0, 1fr) 200px max-content; align-items: center; gap: 18px; padding: 10px 6px; border-top: 1px solid var(--color-divider); color: var(--color-text); text-decoration: none; }
 .linha-obra:hover { background: var(--color-accent-900); }
 .linha-obra .tx { display: flex; flex-direction: column; min-width: 0; }
 .linha-obra .tx b { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .linha-obra .tx span { font-size: 11.5px; color: var(--color-neutral-300); }
 .linha-obra .uso { display: flex; flex-direction: column; gap: 5px; }
-.linha-obra .num { font-size: 13px; }
-.bar > .normal { background: #12a9d1; }
-.bar > .alerta { background: #e0a33a; }
-.bar > .estourado { background: #b8452c; }
+.linha-obra .num { font-size: 13px; white-space: nowrap; }
+.bar > .normal { background: var(--graf-rec); }
+.bar > .alerta { background: var(--graf-warn); }
+.bar > .estourado { background: var(--graf-err); }
 .pct { font-size: 11.5px; font-weight: 600; }
 .pct.alerta { color: var(--c-warn); }
 .pct.estourado { color: var(--c-err); }
@@ -56,8 +55,7 @@
 .linha-cat { display: flex; flex-direction: column; gap: 5px; }
 .linha-cat .topo { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; }
 .linha-cat .topo b { font-weight: 600; white-space: nowrap; }
-.linha-cat .bar > span { background: #0a7896; }
-[data-theme="escuro"] .linha-cat .bar > span { background: #12a9d1; }
+.linha-cat .bar > span { background: var(--graf-rec); }
 
 .primeiro-uso { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
 .pu-cab { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -66,7 +64,7 @@
 .pu-cab .muted { font-size: 13px; }
 .pu-passos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .pu-passo { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--color-bg); font-size: 12px; }
-.pu-passo > .ph, .pu-passo > .ph-fill { font-size: 17px; color: var(--color-neutral-500); flex: none; }
+.pu-passo > .ph, .pu-passo > .ph-fill { font-size: 17px; color: var(--color-field); flex: none; }
 .pu-passo.feito > .ph-fill { color: var(--c-ok); }
 .pu-passo .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pu-passo .tx b { font-size: 12.5px; font-weight: 600; }
@@ -88,5 +86,5 @@
 @media (max-width: 1379px) {
   .kpis.seis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .pu-passos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .linha-obra { grid-template-columns: minmax(0, 1fr) 160px 130px; gap: 12px; }
+  .linha-obra { grid-template-columns: minmax(0, 1fr) 130px max-content; gap: 12px; }
 }

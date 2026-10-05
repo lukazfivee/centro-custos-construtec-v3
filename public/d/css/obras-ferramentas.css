@@ -10,13 +10,13 @@
 
 .grafico.curva { height: 250px; }
 .grafico.curva .grade { stroke: var(--color-divider); stroke-width: 1; }
-.grafico.curva .previsto { stroke: #8fa6b0; stroke-width: 2; stroke-dasharray: 6 5; }
-.grafico.curva .realizado { stroke: #e0803a; stroke-width: 2.5; }
-.grafico.curva .medido { stroke: #3ccf8e; stroke-width: 2.5; }
-.grafico.curva .ponto { fill: #e0803a; }
-.legenda .q.l-prev { background: #8fa6b0; height: 3px; }
-.legenda .q.l-real { background: #e0803a; height: 3px; }
-.legenda .q.l-med { background: #3ccf8e; height: 3px; }
+.grafico.curva .previsto { stroke: var(--graf-prev); stroke-width: 2; stroke-dasharray: 6 5; }
+.grafico.curva .realizado { stroke: var(--graf-desp); stroke-width: 2.5; }
+.grafico.curva .medido { stroke: var(--graf-ok); stroke-width: 2.5; }
+.grafico.curva .ponto { fill: var(--graf-desp); }
+.legenda .q.l-prev { background: var(--graf-prev); height: 3px; }
+.legenda .q.l-real { background: var(--graf-desp); height: 3px; }
+.legenda .q.l-med { background: var(--graf-ok); height: 3px; }
 .como-ler { font-size: 13px; color: var(--color-neutral-300); }
 .como-ler b { color: var(--color-text); }
 .premissas { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--color-neutral-300); }
@@ -61,6 +61,6 @@
   .grade-med { grid-template-columns: minmax(0, 1fr); }
   .folha-id { grid-template-columns: 120px minmax(0, 1fr); }
 }
-.grafico.curva .ponto-medido { fill: #3ccf8e; }
-.grafico.curva .ponto-realizado { fill: #e0803a; }
-.grafico.curva .ponto-previsto { fill: #8fa6b0; }
+.grafico.curva .ponto-medido { fill: var(--graf-ok); }
+.grafico.curva .ponto-realizado { fill: var(--graf-desp); }
+.grafico.curva .ponto-previsto { fill: var(--graf-prev); }
