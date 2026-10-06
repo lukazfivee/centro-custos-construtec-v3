@@ -41,6 +41,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
     private AuthWebView authView;
     private AuthBridge bridge;
     private AuthController auth;
+    private AppUpdater updater;
     private ValueCallback<Uri[]> fileCallback;
     private SharedPreferences preferences;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -73,6 +74,11 @@ public final class MainActivity extends Activity implements AuthController.Shell
         });
         setContentView(root);
         auth = new AuthController(new SessionVault(this), new CentralApi(this));
+        updater = new AppUpdater(this, new AppUpdater.Host() {
+            @Override public boolean canShowDialog() { return auth.unlocked() && !authVisible(); }
+            @Override public void suppressLock() { suppressLock = true; }
+            @Override public void toast(String message) { MainActivity.this.toast(message); }
+        });
         String saved = preferences.getString(SERVER_URL, "");
         centralMode = !"local".equals(preferences.getString(MODE, saved.isEmpty() ? "central" : "local"));
         String linkReason = handleLink(getIntent());
@@ -134,7 +140,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
 
     /** Abre (ou so mostra, sem recarregar) o app da Suite, no destino (proposta=/obra=) se houver; a 1a abertura entra pelo handoff. */
     private void openApp(String app, String notice, String fragment) {
-        if (views.has(app)) { views.show(app); views.go(app, fragment); hideAuth(); toast(notice); return; }
+        if (views.has(app)) { views.show(app); views.go(app, fragment); hideAuth(); toast(notice); updater.autoCheck(); return; }
         String start = SuiteViews.start(app);
         io.execute(() -> {
             String url = start + (fragment == null ? "" : "#" + fragment);
@@ -148,7 +154,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
             } catch (IOException noNetwork) { offline = true; }
             auth.markEnteredOffline(offline);
             String target = url;
-            runOnUiThread(() -> { showWebApp(app, target, true); hideAuth(); toast(notice); });
+            runOnUiThread(() -> { showWebApp(app, target, true); hideAuth(); toast(notice); updater.autoCheck(); });
         });
     }
 
@@ -162,7 +168,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
     }
 
     @Override public void closeOverlay() {
-        if (!views.isEmpty()) hideAuth();
+        if (!views.isEmpty()) { hideAuth(); updater.flush(); }
         else if (auth.unlocked()) enterApp(null);
     }
 
@@ -264,15 +270,17 @@ public final class MainActivity extends Activity implements AuthController.Shell
             }
             @Override public void message(String message) { toast(message); }
             @Override public void suiteLink(String action) {
+                if (updater.handleLink(action, central && auth.unlocked())) return; // suite://atualizacao/instalar
                 String[] other = action.startsWith("app/") ? SuiteViews.parse(action.substring(4)) : null; // suite://app/<id>?destino
                 if (central && other != null && SuiteViews.known(other[0]) && auth.unlocked()) openApp(other[0], null, other[1]);
                 else if (central && other == null && bridge != null) bridge.webAction(action);
             }
         });
-        if (central) settings.setUserAgentString(settings.getUserAgentString() + " SuiteConstrutec/" + BuildConfig.VERSION_NAME);
+        if (central) settings.setUserAgentString(settings.getUserAgentString() + " SuiteConstrutec/" + BuildConfig.VERSION_NAME + " SuiteBuild/" + BuildConfig.VERSION_CODE);
         webView.loadUrl(url);
     }
 
+    @Override protected void onResume() { super.onResume(); updater.resume(); }
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != FILE_CHOOSER_REQUEST || fileCallback == null) return;
@@ -335,6 +343,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         if (authView != null) authView.destroy();
         if (bridge != null) bridge.shutdown();
         io.shutdownNow();
+        updater.destroy();
         super.onDestroy();
     }
 }

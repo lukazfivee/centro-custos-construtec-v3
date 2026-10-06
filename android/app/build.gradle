@@ -9,6 +9,10 @@ def centralApiBase = (project.findProperty('centralApiBase') ?: 'https://centro-
 def centralWebBase = (project.findProperty('centralWebBase') ?: centralApiBase).toString().replaceAll('/+$', '')
 def centralHost = new URI(centralApiBase).host
 // Orcamentos dentro do app (Fase 3): -PorcWebBase=...
+// Versao do app (atualizacao por dentro do app): a CI de publicacao passa -PappVersionName/-PappVersionCode
+// (3.1.0-rc.N -> codigo 31000+N); sem eles vale o padrao abaixo.
+def appVersionName = (project.findProperty('appVersionName') ?: '3.1.0-rc.20').toString()
+def appVersionCode = (project.findProperty('appVersionCode') ?: '31020').toString().toInteger()
 def orcWebBase = (project.findProperty('orcWebBase') ?: 'https://construtec-orcamentos-cloud.construtec-reports.workers.dev').toString().replaceAll('/+$', '')
 
 android {
@@ -19,8 +23,8 @@ android {
         applicationId 'br.com.rcconstrutec.centrocustos'
         minSdk 28
         targetSdk 35
-        versionCode 31019
-        versionName '3.1.0-rc.19'
+        versionCode appVersionCode
+        versionName appVersionName
         buildConfigField 'String', 'CENTRAL_API_BASE', "\"${centralApiBase}\""
         buildConfigField 'String', 'CENTRAL_WEB_BASE', "\"${centralWebBase}\""
         buildConfigField 'String', 'ORC_WEB_BASE', "\"${orcWebBase}\""
