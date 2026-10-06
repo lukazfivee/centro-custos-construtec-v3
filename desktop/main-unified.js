@@ -9,6 +9,8 @@ let tray = null;
 let isQuitting = false;
 let childProcesses = [];
 let budgetsRuntime = null;
+let centroServer = null;
+let encerrado = false;
 
 const TRAY_ICON = path.join(__dirname, 'icon.png');
 const PRELOAD = path.join(__dirname, 'preload.js');
@@ -79,6 +81,12 @@ if (!gotLock) {
     ipcMain.handle('open-webmail', () => shell.openExternal('https://webmailpro.uol.com.br/'));
   }
 
+  function initUpdater() {
+    try {
+      require(path.join(APP_ROOT, 'services', 'updater')).setBeforeInstall(encerrarServicos);
+    } catch (error) { console.error('[updater]', error.message); }
+  }
+
   function createWindow() {
     mainWindow = new BrowserWindow({
       width: 1400, height: 900, minWidth: 1000, minHeight: 600,
@@ -106,11 +114,7 @@ if (!gotLock) {
     mainWindow.on('close', (event) => {
       if (isQuitting) return;
       event.preventDefault();
-      isQuitting = true;
-      Promise.resolve(budgetsRuntime?.close()).catch(() => {}).finally(() => {
-        for (const p of childProcesses) { try { p.kill(); } catch {} }
-        app.quit();
-      });
+      app.quit();
     });
     mainWindow.on('closed', () => { mainWindow = null; });
   }
@@ -125,6 +129,18 @@ if (!gotLock) {
       { label: 'Sair', click: () => { isQuitting = true; app.quit(); } },
     ]));
     tray.on('click', () => mainWindow?.show());
+  }
+
+  // Encerra tudo o que o app abriu (Express do Centro, banco, Orcamentos, ChamadoPro) antes de sair
+  // ou de rodar o instalador de uma atualizacao. Idempotente; nao mata o processo.
+  async function encerrarServicos() {
+    if (encerrado) return;
+    encerrado = true;
+    await Promise.allSettled([
+      Promise.resolve(budgetsRuntime?.close()),
+      Promise.resolve(centroServer?.shutdownGracefully?.('desktop_quit')),
+    ]);
+    for (const p of childProcesses) { try { p.kill(); } catch {} }
   }
 
   function startChild(name, scriptPath, args, cwd, env) {
@@ -153,7 +169,7 @@ if (!gotLock) {
     console.log('[suite] Starting Centro de Custos...');
     process.env.PORT = String(MODULES.centro.port);
     const { start } = require(path.join(APP_ROOT, 'server.js'));
-    await start({ orcamentosApp: budgetsRuntime.app });
+    centroServer = await start({ orcamentosApp: budgetsRuntime.app });
 
     console.log('[suite] All servers started.');
   }
@@ -163,6 +179,7 @@ if (!gotLock) {
       Menu.setApplicationMenu(null);
       loadEnv();
       initIPC();
+      initUpdater();
       createWindow();
       createTray();
       await startAllServers();
@@ -175,5 +192,10 @@ if (!gotLock) {
 
   app.on('window-all-closed', () => { app.quit(); });
   app.on('activate', () => { if (mainWindow) mainWindow.show(); });
-  app.on('before-quit', () => { isQuitting = true; });
+  app.on('before-quit', (event) => {
+    isQuitting = true;
+    if (encerrado) return;
+    event.preventDefault();
+    Promise.race([encerrarServicos(), new Promise((resolve) => setTimeout(resolve, 9000))]).finally(() => { encerrado = true; app.quit(); });
+  });
 }

@@ -64,6 +64,7 @@
         <header class="top">
           <div class="busca" role="search"></div>
           <span class="espaco"></span>
+          <button type="button" class="upd-aviso" data-upd-aviso hidden></button>
           <button type="button" class="selo local" data-selo aria-live="polite"><span class="ponto"></span><span data-selo-txt>Dados neste computador</span></button>
           <div class="suite"></div>
           <button type="button" class="ibtn" data-tema></button>

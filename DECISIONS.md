@@ -35,3 +35,10 @@
 - M4: lista de fornecedores (gasto e quantidade do mês) e `/:id/resumo` somam e listam só as obras permitidas ao usuário escopado; sem obra, zeros e lista vazia. O cadastro de fornecedores continua global.
 - M5: medição só entra em contrato da obra da rota (`project_contracts.cost_center_id`); caso contrário, 404.
 - M8: bloqueio de login por e-mail + IP (5 falhas = 15 min) e limite global por e-mail (30 falhas = 15 min), em memória, com janela, varredura a cada 5 minutos e teto de 5000 chaves por controle.
+
+## 2026-10-06 — Atualização do app Windows por dentro do app
+
+- O repositório é público e as releases saem como pré-lançamento (v3.1.0-rc.N). O provedor "github" do electron-updater segue o canal "rc" do app instalado e nunca enxerga a versão final (3.1.0) depois do último rc. Por isso o app lê a lista pública de releases (releases.atom, sem token e sem limite de API), escolhe a mais recente que tem latest.yml e aponta o provedor "generic" para a pasta de downloads dessa release. Não há segredo embutido e o Worker não entra no caminho. `UPDATE_FEED_URL` (https) troca o feed por outro endereço, caso o repositório um dia vire privado (um proxy no Worker com secret próprio serviria latest.yml e instalador).
+- Instalação silenciosa (`quitAndInstall(true, true)`): antes de rodar o instalador o app encerra o Express do Centro, o banco (PGlite), o Orçamentos e o ChamadoPro (`encerrarServicos`, também usado no before-quit). Sem isso o instalador encontrava arquivos do banco em uso.
+- O instalador NSIS não é assinado e o app não define `publisherName`, então o electron-updater não exige assinatura. Se um dia houver certificado, defina `build.win.publisherName`. A versão portátil não se atualiza.
+- Verificação em segundo plano no desktop novo: só no Electron, só para quem tem p9, no máximo uma vez a cada 6 horas.
