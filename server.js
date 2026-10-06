@@ -167,7 +167,14 @@ function createApp({ orcamentosApp } = {}) {
     res.sendFile(indexPath);
   };
 
-  app.get('/', sendIndex);
+  // A raiz abre o desktop novo (/d/). A pagina antiga fica so como tela de entrada (?entrar=1, o /d/ manda para la sem sessao)
+  // e como acesso de emergencia ao sistema antigo (?antiga=1). Celular vai para /m/.
+  app.get('/', (req, res) => {
+    if (req.query.entrar !== undefined || req.query.antiga !== undefined) return sendIndex(req, res);
+    res.setHeader('Cache-Control', 'no-cache');
+    if (/Android|iPhone|iPad|iPod|Mobile/i.test(req.get('user-agent') || '')) return res.redirect(302, '/m/');
+    return res.redirect(302, '/d/');
+  });
   // Centro de Custos no celular (Fase 2 mobile): public/m/.
   app.get(['/m', '/m/'], (req, res) => {
     if (req.path === '/m') return res.redirect(301, '/m/');
