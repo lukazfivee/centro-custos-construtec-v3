@@ -166,3 +166,23 @@ test('desktop novo: tokens de contraste e rodapes opacos (QA visual)', () => {
   // Texto branco so sobre a cor de marca solida, nunca sobre accent-300 (claro no tema escuro).
   assert.doesNotMatch(src('css/usuarios.css'), /accent-300\); color: #fff/);
 });
+
+test('Cobranças: excluir reversível (lixeira, seleção, aba Excluídas) só com p6, em arquivo próprio', () => {
+  const excluir = src('telas/cobranca-excluir.js');
+  assert.ok(src('index.html').indexOf('telas/cobranca-excluir.js') < src('index.html').indexOf('telas/cobrancas.js'), 'script carregado antes da tela');
+  assert.match(excluir, /podeExcluir = \(\) => D\.tem\('p6'\)/);
+  assert.match(excluir, /aria-label="Excluir cobrança"/);
+  assert.match(excluir, /D\.ic\('trash'/);
+  assert.match(excluir, /D\.confirmar\(/);
+  assert.match(excluir, /NÃO são apagados/, 'o diálogo explica que obra e lançamentos ficam');
+  assert.match(excluir, /\['pago', 'enviada'\]\.includes\(i\.financialStatus\)/, 'paga ou enviada pede segunda confirmação');
+  assert.match(excluir, /Excluir \$\{n\} \$\{plural\(n, 'selecionada', 'selecionadas'\)\}/);
+  assert.match(excluir, /cobrancas\?excluidas=1/);
+  assert.match(excluir, /url\(item, 'restaurar'\)/);
+  assert.match(excluir, /url\(item, 'excluir'\)/);
+  const tela = src('telas/cobrancas.js');
+  assert.match(tela, /'Excluídas'/);
+  assert.match(tela, /if \(B\.podeExcluir\(\)\) B\.ligarSelecao/, 'sem p6 não há seleção nem lixeira');
+  assert.match(tela, /pode \? B\.botaoExcluir\(i\) : ''/);
+  for (const f of ['telas/cobrancas.js', 'telas/cobranca-excluir.js']) assert.ok(src(f).split('\n').length <= 350, `${f} passou de 350 linhas`);
+});
