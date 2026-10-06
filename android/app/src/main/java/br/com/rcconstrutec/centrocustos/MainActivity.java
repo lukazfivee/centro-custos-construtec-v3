@@ -281,7 +281,6 @@ public final class MainActivity extends Activity implements AuthController.Shell
     }
 
     @Override protected void onResume() { super.onResume(); updater.resume(); }
-
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != FILE_CHOOSER_REQUEST || fileCallback == null) return;

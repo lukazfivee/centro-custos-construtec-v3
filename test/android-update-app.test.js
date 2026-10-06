@@ -52,7 +52,7 @@ test('app: fluxo consulta, confere o hash e instala so com permissao', () => {
   assert.match(updater, /Sem conexão com a internet/);
   assert.doesNotMatch(updater + api, /GITHUB_RELEASES_TOKEN|ghp_|Bearer/, 'o app nunca conhece o token');
   for (const name of ['AppUpdater', 'UpdateApi', 'UpdateDialogs', 'UpdateFileProvider', 'UpdatePolicy', 'MainActivity']) {
-    assert.ok(java(name).trimEnd().split('\n').length <= 350, `${name} passa de 350 linhas`);
+    assert.ok(java(name).split('\n').length <= 350, `${name} passa de 350 linhas`);
   }
 });
 
