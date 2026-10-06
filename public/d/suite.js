@@ -4,7 +4,6 @@
   const { esc } = CC;
 
   const ITENS = [
-    ['squares-four', 'Portal Hub', 'Launcher e esteira de trabalho', 'https://hub-sistemas-construtec.lucas-coelho5923.workers.dev/'],
     ['file-text', 'Orçamentos', 'Etapa 01 · propostas e BDI', 'https://construtec-orcamentos-cloud.construtec-reports.workers.dev/'],
     ['chart-bar', 'Centro de Custos', 'Etapa 02 · gestão das obras', null],
     ['wrench', 'Chamados e O.S.', 'Etapa 03 · ChamadoPro', 'https://chamadopro-app.lucas-coelho5923.workers.dev/'],
