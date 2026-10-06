@@ -12,7 +12,7 @@ function padrao(o) {
 }
 
 async function iniciar({ obras = [], clientes = [] } = {}) {
-  const estado = { followups: new Map(), drafts: new Map(), enviados: [], clientes: clientes.slice() };
+  const estado = { followups: new Map(), excluidas: new Map(), drafts: new Map(), enviados: [], clientes: clientes.slice() };
   const linha = (o) => ({ publicId: o.publicId, code: o.code, name: o.name, client: o.client, ...padrao(o), ...(estado.followups.get(o.publicId) || {}), updatedByEmail: null, updatedAt: null });
   const draftPadrao = (o) => { const f = linha(o); return { to: f.clientEmails, cc: [], subject: `Acompanhamento financeiro — ${o.code} ${o.name}`.trim(), bodyText: `Prezados,
 
@@ -36,8 +36,22 @@ Construtec Engenharia`, status: 'draft' }; };
       const obra = (id) => obras.find((o) => o.publicId === id);
       const p = url.pathname;
       if (req.method === 'GET' && p === '/v1/client-followups') {
-        const items = obras.map(linha);
+        const so = url.searchParams.get('excluidas') === '1';
+        const items = obras.filter((o) => estado.excluidas.has(o.publicId) === so).map((o) => ({ ...linha(o), ...(estado.excluidas.get(o.publicId) || {}) }));
         return enviar(200, { ok: true, items, summary: { finalizadas: items.filter((i) => i.operationalStatus === 'finalizada').length, totalReceber: items.filter((i) => i.financialStatus !== 'pago').reduce((s, i) => s + i.receivableAmount, 0) } });
+      }
+      const ex = p.match(/^\/v1\/client-followups\/([^/]+)\/(delete|restore)$/);
+      if (req.method === 'POST' && ex) {
+        if (!obra(ex[1])) return enviar(404, { ok: false, error: 'Centro de custo nao encontrado.' });
+        const ja = estado.excluidas.has(ex[1]);
+        if (ex[2] === 'delete') {
+          if (ja) return enviar(409, { ok: false, error: 'Esta cobranca ja foi excluida.' });
+          estado.excluidas.set(ex[1], { deletedAt: new Date().toISOString(), deletedByEmail: 'gestor@rcconstrutec.com.br', deletedReason: String(body.motivo || '') });
+          return enviar(200, { ok: true, deletedAt: estado.excluidas.get(ex[1]).deletedAt });
+        }
+        if (!ja) return enviar(409, { ok: false, error: 'Esta cobranca nao esta excluida.' });
+        estado.excluidas.delete(ex[1]);
+        return enviar(200, { ok: true });
       }
       let m = p.match(/^\/v1\/client-followups\/([^/]+)$/);
       if (req.method === 'PUT' && m) {

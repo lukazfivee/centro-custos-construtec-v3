@@ -47,10 +47,10 @@
     return `<label class="fld" for="${id}"><span>${esc(rotulo)}</span>${input}${ajuda ? `<small class="muted">${esc(ajuda)}</small>` : ''}<span class="erro" role="alert"></span></label>`;
   };
 
-  // Tabela: colunas [{ rotulo, num }], linhas [{ id, celulas: [html], clicavel }]. Celulas ja vem escapadas.
+  // Tabela: colunas [{ rotulo, num, html (cabecalho ja escapado, ex.: caixa de selecao) }], linhas [{ id, celulas: [html], clicavel }]. Celulas ja vem escapadas.
   U.tabela = ({ colunas, linhas, vazio }) => {
     if (!linhas.length) return U.vazio('magnifying-glass', vazio || 'Nada por aqui ainda.');
-    const th = colunas.map((c) => `<th${c.num ? ' class="num"' : ''} scope="col">${esc(c.rotulo)}</th>`).join('');
+    const th = colunas.map((c) => `<th${c.num ? ' class="num"' : ''} scope="col">${c.html || esc(c.rotulo)}</th>`).join('');
     const tr = linhas.map((l) => `<tr${l.clicavel ? ` class="rw" tabindex="0" data-id="${esc(l.id)}"` : ''}>${l.celulas.map((c, i) => `<td${colunas[i] && colunas[i].num ? ' class="num"' : ''}>${c}</td>`).join('')}</tr>`).join('');
     return `<table class="tbl"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
   };

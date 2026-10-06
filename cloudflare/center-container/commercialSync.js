@@ -328,17 +328,20 @@ async function centerByPublicId(env, orgId, publicId) {
 
 function followupPublic(row, center) {
   const base = defaultFollowup(center);
-  return { publicId: center.publicId, code: center.code || '', name: center.name || '', client: center.client || '', clientName: row?.client_name ?? base.clientName, clientEmails: row ? parseJson(row.client_emails, []) : base.clientEmails, responsible: row?.responsible ?? base.responsible, operationalStatus: row?.operational_status ?? base.operationalStatus, financialStatus: row?.financial_status ?? base.financialStatus, invoiceNumber: row?.invoice_number ?? '', contractAmount: Number(row?.contract_amount ?? base.contractAmount), receivableAmount: Number(row?.receivable_amount ?? base.receivableAmount), completionDate: row?.completion_date ?? base.completionDate, dueDate: row?.due_date ?? null, notes: row?.notes ?? '', updatedByEmail: row?.updated_by_email || null, updatedAt: row?.updated_at || null };
+  return { publicId: center.publicId, code: center.code || '', name: center.name || '', client: center.client || '', clientName: row?.client_name ?? base.clientName, clientEmails: row ? parseJson(row.client_emails, []) : base.clientEmails, responsible: row?.responsible ?? base.responsible, operationalStatus: row?.operational_status ?? base.operationalStatus, financialStatus: row?.financial_status ?? base.financialStatus, invoiceNumber: row?.invoice_number ?? '', contractAmount: Number(row?.contract_amount ?? base.contractAmount), receivableAmount: Number(row?.receivable_amount ?? base.receivableAmount), completionDate: row?.completion_date ?? base.completionDate, dueDate: row?.due_date ?? null, notes: row?.notes ?? '', updatedByEmail: row?.updated_by_email || null, updatedAt: row?.updated_at || null, deletedAt: row?.deleted_at || null, deletedByEmail: row?.deleted_by_email || null, deletedReason: row?.deleted_reason || '' };
 }
 
 async function handleListFollowups(request, env) {
   const auth = await requireSession(request, env);
   if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
+  // Exclusao reversivel: por padrao as excluidas ficam de fora; ?excluidas=1 lista so elas (para restaurar).
+  const onlyDeleted = new URL(request.url).searchParams.get('excluidas') === '1';
   const centers = (await env.DB.prepare("SELECT public_id,payload FROM sync_entities WHERE org_id=? AND entity_type='obra' ORDER BY server_updated_at DESC").bind(auth.user.org_id).all()).results || [];
   const items = [];
   for (const row of centers) {
     const center = parseJson(row.payload, {});
     const f = await env.DB.prepare('SELECT * FROM client_followups WHERE org_id=? AND cost_center_public_id=?').bind(auth.user.org_id, row.public_id).first();
+    if (Boolean(f?.deleted_at) !== onlyDeleted) continue;
     items.push(followupPublic(f, { ...center, publicId: row.public_id }));
   }
   const summary = { finalizadas: items.filter((i) => i.operationalStatus === 'finalizada').length, aguardandoPagamento: items.filter((i) => i.financialStatus === 'aguardando_pagamento').length, cobrancasPendentes: items.filter((i) => ['finalizada', 'entregue'].includes(i.operationalStatus) && i.financialStatus !== 'pago').length, totalReceber: items.filter((i) => i.financialStatus !== 'pago').reduce((a, i) => a + Number(i.receivableAmount || 0), 0) };
@@ -369,6 +372,35 @@ async function handleSaveFollowup(request, env, publicId) {
     ON CONFLICT(org_id,cost_center_public_id) DO UPDATE SET client_name=excluded.client_name,client_emails=excluded.client_emails,responsible=excluded.responsible,operational_status=excluded.operational_status,financial_status=excluded.financial_status,invoice_number=excluded.invoice_number,contract_amount=excluded.contract_amount,receivable_amount=excluded.receivable_amount,completion_date=excluded.completion_date,due_date=excluded.due_date,notes=excluded.notes,updated_by_email=excluded.updated_by_email,updated_at=excluded.updated_at
   `).bind(auth.user.org_id, publicId, text(body.clientName).slice(0, 180), JSON.stringify(emails), text(body.responsible).slice(0, 140), op, fin, text(body.invoiceNumber).slice(0, 100), contractAmount, receivableAmount, body.completionDate || null, body.dueDate || null, text(body.notes).slice(0, 3000), auth.user.email, now).run();
   return json({ ok: true, updatedAt: now, updatedByEmail: auth.user.email });
+}
+
+// Exclusao reversivel: so marca deleted_at/deleted_by_email/deleted_reason. A obra (sync_entities), os
+// lancamentos, as medicoes e a NF nao sao tocados. Quem e quando ficam nas proprias colunas.
+async function handleSetFollowupDeleted(request, env, publicId, deleting) {
+  const auth = await requireSession(request, env, ['admin', 'gestor']);
+  if (auth.error) return json({ ok: false, error: auth.error }, auth.status);
+  if (!validUuid(publicId)) return json({ ok: false, error: 'Centro de custo invalido.' }, 400);
+  const center = await centerByPublicId(env, auth.user.org_id, publicId);
+  if (!center) return json({ ok: false, error: 'Centro de custo nao encontrado.' }, 404);
+  const now = new Date().toISOString();
+  if (!deleting) {
+    const done = await env.DB.prepare('UPDATE client_followups SET deleted_at=NULL,deleted_by_email=NULL,deleted_reason=NULL WHERE org_id=? AND cost_center_public_id=? AND deleted_at IS NOT NULL').bind(auth.user.org_id, publicId).run();
+    if (!done.meta?.changes) return json({ ok: false, error: 'Esta cobranca nao esta excluida.' }, 409);
+    return json({ ok: true, restoredAt: now, restoredByEmail: auth.user.email });
+  }
+  let body = {};
+  try { body = await request.json(); } catch { body = {}; }
+  const reason = text(body?.motivo).slice(0, 300);
+  const base = defaultFollowup({ ...center, publicId });
+  const done = await env.DB.prepare(`INSERT INTO client_followups
+    (org_id,cost_center_public_id,client_name,client_emails,responsible,operational_status,financial_status,invoice_number,contract_amount,receivable_amount,completion_date,due_date,notes,updated_by_email,updated_at,deleted_at,deleted_by_email,deleted_reason)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(org_id,cost_center_public_id) DO UPDATE SET deleted_at=excluded.deleted_at,deleted_by_email=excluded.deleted_by_email,deleted_reason=excluded.deleted_reason
+    WHERE client_followups.deleted_at IS NULL`)
+    .bind(auth.user.org_id, publicId, base.clientName, JSON.stringify(base.clientEmails), base.responsible, base.operationalStatus, base.financialStatus,
+      base.invoiceNumber, base.contractAmount, base.receivableAmount, base.completionDate, base.dueDate, base.notes, auth.user.email, now, now, auth.user.email, reason).run();
+  if (!done.meta?.changes) return json({ ok: false, error: 'Esta cobranca ja foi excluida.' }, 409);
+  return json({ ok: true, deletedAt: now, deletedByEmail: auth.user.email });
 }
 
 function defaultDraft(center, followup) {
@@ -544,6 +576,8 @@ export async function handleCommercialSync(request, env) {
   if (request.method === 'PUT' && /^\/v1\/clients\/[^/]+$/.test(url.pathname)) return handleUpdateClient(request, env, decodeURIComponent(url.pathname.split('/').pop()));
   if (request.method === 'POST' && /^\/v1\/clients\/[^/]+\/status$/.test(url.pathname)) return handleClientStatus(request, env, decodeURIComponent(url.pathname.split('/')[3]));
   if (request.method === 'GET' && url.pathname === '/v1/client-followups') return handleListFollowups(request, env);
+  const exclusao = url.pathname.match(/^\/v1\/client-followups\/([^/]+)\/(delete|restore)$/);
+  if (request.method === 'POST' && exclusao) return handleSetFollowupDeleted(request, env, decodeURIComponent(exclusao[1]), exclusao[2] === 'delete');
   if (request.method === 'PUT' && url.pathname.startsWith('/v1/client-followups/')) return handleSaveFollowup(request, env, decodeURIComponent(url.pathname.split('/').pop()));
   if (request.method === 'GET' && url.pathname === '/v1/client-email-draft') return handleGetDraft(request, env);
   if (request.method === 'PUT' && url.pathname === '/v1/client-email-draft') return handleSaveDraft(request, env);
