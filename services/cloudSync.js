@@ -170,8 +170,17 @@ async function setClientStatus(user, id, active) {
   return request(`/v1/clients/${encodeURIComponent(id)}/status`, { method:'POST', body:JSON.stringify({ active:Boolean(active) }) }, user);
 }
 
-async function listClientFollowups(user) {
-  return request('/v1/client-followups', { method:'GET' }, user);
+async function listClientFollowups(user, { excluidas = false } = {}) {
+  return request(`/v1/client-followups${excluidas ? '?excluidas=1' : ''}`, { method:'GET' }, user);
+}
+
+// Exclusao reversivel: so marca a cobranca como excluida no Worker; obra, lancamentos e NF ficam como estao.
+async function deleteClientFollowup(user, publicId, motivo) {
+  return request(`/v1/client-followups/${encodeURIComponent(publicId)}/delete`, { method:'POST', body:JSON.stringify({ motivo:String(motivo || '').slice(0, 300) }) }, user);
+}
+
+async function restoreClientFollowup(user, publicId) {
+  return request(`/v1/client-followups/${encodeURIComponent(publicId)}/restore`, { method:'POST', body:'{}' }, user);
 }
 
 async function saveClientFollowup(user, publicId, payload) {
@@ -206,6 +215,8 @@ module.exports = {
   setClientStatus,
   listClientFollowups,
   saveClientFollowup,
+  deleteClientFollowup,
+  restoreClientFollowup,
   getClientDraft,
   saveClientDraft,
   authorizeClientDraft,

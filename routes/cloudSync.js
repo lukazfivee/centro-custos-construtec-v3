@@ -4,6 +4,7 @@ const { autenticar } = require('../middleware/auth');
 const { exigirPermissao } = require('../services/permissions');
 const { asyncRoute, httpError } = require('../lib/http');
 const cloud = require('../services/cloudSync');
+const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(autenticar);
@@ -100,7 +101,33 @@ router.post('/clientes/:id/status', exigirPermissao('p6'), asyncRoute(async (req
 }));
 
 router.get('/cobrancas', exigirPermissao('p6'), asyncRoute(async (req, res) => {
-  res.json(await cloud.listClientFollowups(req.usuario));
+  res.json(await cloud.listClientFollowups(req.usuario, { excluidas:req.query.excluidas === '1' }));
+}));
+
+// Exclusao reversivel: a cobranca some da lista, dos indicadores e do contador; a obra, os lancamentos e a NF ficam.
+function dadosCobranca(publicId, body) {
+  const id = String(publicId || '').trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) throw httpError(400,'Cobrança inválida.');
+  const motivo = String(body?.motivo || '').trim();
+  if (motivo.length > 300) throw httpError(400,'O motivo pode ter no máximo 300 caracteres.');
+  return { id, motivo };
+}
+
+router.post('/cobrancas/:publicId/excluir', exigirPermissao('p6'), asyncRoute(async (req, res) => {
+  const { id, motivo } = dadosCobranca(req.params.publicId, req.body);
+  const resposta = await cloud.deleteClientFollowup(req.usuario, id, motivo);
+  await recordAudit({
+    entityType:'cobranca',entityId:id,action:'cobranca_excluida',
+    summary:`Cobrança excluída (reversível)${motivo ? `: ${motivo}` : ''}`,data:{ motivo:motivo || null },user:req.usuario,
+  });
+  res.json(resposta);
+}));
+
+router.post('/cobrancas/:publicId/restaurar', exigirPermissao('p6'), asyncRoute(async (req, res) => {
+  const { id } = dadosCobranca(req.params.publicId, null);
+  const resposta = await cloud.restoreClientFollowup(req.usuario, id);
+  await recordAudit({ entityType:'cobranca',entityId:id,action:'cobranca_restaurada',summary:'Cobrança restaurada',user:req.usuario });
+  res.json(resposta);
 }));
 
 router.put('/cobrancas/:publicId', exigirPermissao('p6'), asyncRoute(async (req, res) => {
