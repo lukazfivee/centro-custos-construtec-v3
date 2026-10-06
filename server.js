@@ -284,20 +284,26 @@ async function start(options = {}) {
   console.log(`Reports: ${process.env.REPORT_API_URL ? 'entrega central habilitada' : 'fila local aguardando configuração central'}.`);
   console.log(`Cloud Sync: ${process.env.SYNC_API_URL ? 'API corporativa configurada' : 'aguardando configuração'}.\n`);
 
-  let shuttingDown = false;
-  async function shutdown(reason = 'manual') {
-    if (shuttingDown) return;
-    shuttingDown = true;
+  let shutdownPromise = null;
+  // exit=false: usado pelo app desktop ao atualizar/sair; encerra servidor e banco sem matar o processo.
+  function shutdown(reason = 'manual', { exit = true } = {}) {
+    if (shutdownPromise) return shutdownPromise;
     stopAutoBackup();
     stopReportDelivery();
     logger.info('application_shutdown_started', { reason });
-    const forceTimer = setTimeout(() => { logger.error('application_shutdown_forced', { reason }); process.exit(1); }, positiveEnv('SHUTDOWN_TIMEOUT_MS', 10000));
-    forceTimer.unref();
-    server.close(async () => {
-      try { await closeDatabase(); clearTimeout(forceTimer); logger.info('application_shutdown_completed', { reason }); process.exit(0); }
-      catch (error) { logger.error('application_shutdown_failed', { reason, error }); process.exit(1); }
+    shutdownPromise = new Promise((resolve) => {
+      const forceTimer = setTimeout(() => { logger.error('application_shutdown_forced', { reason }); if (exit) process.exit(1); else resolve(); }, positiveEnv('SHUTDOWN_TIMEOUT_MS', 10000));
+      forceTimer.unref();
+      server.close(async () => {
+        try { await closeDatabase(); clearTimeout(forceTimer); logger.info('application_shutdown_completed', { reason }); if (exit) process.exit(0); }
+        catch (error) { logger.error('application_shutdown_failed', { reason, error }); if (exit) process.exit(1); }
+        resolve();
+      });
+      if (!exit && typeof server.closeAllConnections === 'function') setTimeout(() => server.closeAllConnections(), 1500).unref();
     });
+    return shutdownPromise;
   }
+  server.shutdownGracefully = (reason = 'desktop_quit') => shutdown(reason, { exit: false });
   app.locals.requestShutdown = () => shutdown('requested_by_application');
   await require('./lib/localControl').registerControl('centro-custos', app.locals.requestShutdown);
   process.once('SIGINT', () => shutdown('SIGINT'));
