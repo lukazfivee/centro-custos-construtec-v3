@@ -40,6 +40,7 @@
     D.montarBusca();
     D.montarSuite();
     D.iniciarSelo();
+    D.upd.iniciar();
     if (D.cobr && D.cobr.atualizarContador) D.cobr.atualizarContador();
     D.tema.sincronizar();
     D.iniciarRotas();

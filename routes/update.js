@@ -4,12 +4,17 @@ const { autenticar } = require('../middleware/auth');
 const { exigirPermissao } = require('../services/permissions');
 const updater = require('../services/updater');
 
+function falha(res, error) {
+  res.status(error.statusCode || 500).json({ erro: error.message || 'Não foi possível concluir agora.' });
+}
+
+// A verificacao pode demorar (rede): responde logo e o app acompanha por /status.
 router.get('/check', autenticar, exigirPermissao('p9'), (req, res) => {
   try {
-    updater.check();
+    Promise.resolve(updater.check()).catch(() => {});
     res.json({ ok: true });
   } catch (error) {
-    res.status(500).json({ erro: error.message });
+    falha(res, error);
   }
 });
 
@@ -22,16 +27,21 @@ router.post('/download', autenticar, exigirPermissao('p9'), (req, res) => {
     updater.download();
     res.json({ ok: true });
   } catch (error) {
-    res.status(500).json({ erro: error.message });
+    falha(res, error);
   }
 });
 
 router.post('/install', autenticar, exigirPermissao('p9'), (req, res) => {
   try {
-    res.json({ ok: true, mensagem: 'Instalando atualização...' });
-    setTimeout(() => updater.install(), 500);
+    const estado = updater.getState();
+    if (estado.status !== 'downloaded') {
+      res.status(409).json({ erro: 'A atualização ainda não foi baixada.' });
+      return;
+    }
+    res.json({ ok: true, mensagem: 'Instalando atualização. O aplicativo vai fechar e abrir de novo.' });
+    setTimeout(() => { updater.install().catch(() => {}); }, 500);
   } catch (error) {
-    res.status(500).json({ erro: error.message });
+    falha(res, error);
   }
 });
 

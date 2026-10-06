@@ -18,30 +18,6 @@
   const barra = (rotulo, bytes, total, alt) => `<div class="cfg-uso${alt ? ' alt' : ''}"><div class="l"><span>${esc(rotulo)}</span><b>${esc(C.bytes(bytes))}</b></div>
     <div class="barra" role="img" aria-label="${esc(rotulo)}: ${esc(C.bytes(bytes))}"><i style="width:${total ? Math.max(2, Math.round((bytes / total) * 100)) : 0}%"></i></div></div>`;
 
-  const TEXTO_ATUALIZACAO = {
-    'not-available': 'Você já usa a versão mais recente.',
-    unavailable: 'As atualizações automáticas só existem no aplicativo instalado no Windows.',
-  };
-  async function verificarAtualizacao(destino, botao) {
-    const solto = U.ocupar(botao, 'Verificando…');
-    const dizer = (tom, icone, texto) => { destino.innerHTML = U.faixa(tom, icone, texto); };
-    // No navegador (sem o app do Windows) nao ha atualizador: evita chamar a rota so para receber erro.
-    if (!window.electronAPI) { dizer('info', 'info', TEXTO_ATUALIZACAO.unavailable); solto(); return; }
-    try {
-      await CC.api('/update/check');
-      let estado = {};
-      for (let i = 0; i < 8; i += 1) {
-        await new Promise((r) => setTimeout(r, 1200));
-        estado = (await CC.api('/update/status')).data;
-        if (!['idle', 'checking'].includes(estado.status)) break;
-      }
-      if (estado.status === 'available') dizer('warn', 'arrow-circle-up', `Há uma nova versão: ${estado.info && estado.info.version ? estado.info.version : 'disponível'}. Instale pelo aplicativo do Windows.`);
-      else if (estado.status === 'error') dizer('err', 'warning-circle', estado.error || 'Não foi possível verificar agora.');
-      else dizer('info', 'check-circle', TEXTO_ATUALIZACAO[estado.status] || 'A verificação ainda está em andamento. Tente de novo em instantes.');
-    } catch (error) { dizer('info', 'info', error.message); }
-    solto();
-  }
-
   async function acessoCelular(cartao) {
     const api = window.electronAPI;
     cartao.hidden = false;
@@ -87,9 +63,8 @@
           ${linha('Usuários ativos', num(r.activeUsers))}${linha('Obras e fornecedores', `${num(r.costCenters)} obras · ${num(r.suppliers)} fornecedores`)}
           ${linha('Fuso e moeda', `${s.regional.timezone} · ${s.regional.currency}`)}
           ${linha('Última migração', s.database.migrations.latest ? s.database.migrations.latest.filename.replace(/\.sql$/, '') : 'Nenhuma')}</div>
-        <div data-atualizacao></div>
-        <div class="cfg-rodape"><span class="cfg-nota">A versão é lida do próprio sistema, não de um texto fixo.</span>
-          <button type="button" class="btn btn-s" data-verificar>${D.ic('arrows-clockwise')}Verificar atualização</button></div></section></div>
+        <span class="cfg-nota">A versão é lida do próprio sistema, não de um texto fixo.</span></section>
+      ${window.electronAPI && C.atualizacaoCartao ? C.atualizacaoCartao() : ''}</div>
       <div class="cfg-col">
       <section class="card cfg-card" aria-labelledby="cfg-arm-t"><h2 id="cfg-arm-t">Armazenamento</h2>
         ${arm.kind === 'remote' ? '<span class="cfg-nota">O banco fica no servidor central. O tamanho não é medido por aqui.</span>' : barra('Banco de dados', bytesBanco, total)}
@@ -101,7 +76,8 @@
       <section class="card cfg-card" aria-labelledby="cfg-cel-t" data-cel hidden><div class="cfg-topo-sis"><h2 id="cfg-cel-t">Acesso pelo celular</h2>
         <label class="cfg-chave"><input type="checkbox" data-cel-chave aria-label="Permitir acesso pelo celular"><span>Permitir</span></label></div>
         <div data-cel-corpo>${U.carregando('Lendo os endereços…')}</div></section></div></div>`;
-    CC.$('[data-verificar]', corpo).addEventListener('click', (e) => verificarAtualizacao(CC.$('[data-atualizacao]', corpo), e.currentTarget));
+    const cartaoUpd = CC.$('[data-upd-cartao]', corpo);
+    if (cartaoUpd && C.atualizacao) C.atualizacao(cartaoUpd);
     if (window.electronAPI) acessoCelular(CC.$('[data-cel]', corpo)).catch((e) => { CC.$('[data-cel-corpo]', corpo).innerHTML = `<span class="cfg-nota">${esc(e.message)}</span>`; });
   };
 })(window.CC);
