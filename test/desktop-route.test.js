@@ -58,3 +58,9 @@ test('rota /d/ entrega o desktop novo e os arquivos que ele usa', async (context
   const appAntigo = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.js'), 'utf8');
   assert.match(appAntigo, /irParaDesktopNovo\(\)/);
 });
+
+test('menu Suite do Centro nao lista o Portal Hub (desktop novo e pagina antiga)', () => {
+  const novo = fs.readFileSync(path.join(__dirname, '..', 'public', 'd', 'suite.js'), 'utf8');
+  const antigo = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  for (const texto of [novo, antigo]) assert.doesNotMatch(texto, /Portal Hub|hub-sistemas-construtec/i);
+});
