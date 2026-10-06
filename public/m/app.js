@@ -7,7 +7,7 @@
     ['obras', 'Obras', 'buildings', ['obras', 'obra']],
     ['lancar', 'Lançar', 'plus-circle', ['lancar', 'ok']],
     ['lancamentos', 'Lançamentos', 'list-bullets', ['lancamentos']],
-    ['menu', 'Menu', 'list', ['menu', 'pedidos', 'perfil', 'descartadas', 'descartada']],
+    ['menu', 'Menu', 'list', ['menu', 'pedidos', 'perfil', 'descartadas', 'descartada', 'atualizacao']],
   ];
   let current = 'home', currentParams = {};
   let lensTimer;

@@ -16,6 +16,12 @@ jobs:
     name: Gerar Windows e Android
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      # Unico lugar que muda a cada pre-lancamento: o numero da RC. O versionCode do
+      # Android sai dele (3.1.0-rc.N -> 31000+N; ver versionCodeFor no Worker) e o app
+      # instalado so oferece a atualizacao quando o codigo da release for maior.
+      RC_NUMBER: '20'
+      APP_NOTES: 'Atualização do aplicativo direto de dentro do app: Menu > Atualização do aplicativo.'
     steps:
       - name: Baixar codigo
         uses: actions/checkout@v7
@@ -27,7 +33,11 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
       - name: Definir versao do pre-lancamento
-        run: npm version 3.1.0-rc.19 --no-git-tag-version
+        run: |
+          $version = "3.1.0-rc.$env:RC_NUMBER"
+          "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "APP_VERSION_CODE=$(31000 + [int]$env:RC_NUMBER)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          npm version $version --no-git-tag-version
       - name: Validar aplicacao
         run: npm run verify
       - name: Gerar instalador Windows
@@ -56,20 +66,32 @@ jobs:
           keytool -list -v -keystore (Join-Path $dir 'debug.keystore') -storepass android | Select-String 'SHA256:'
       - name: Gerar APK Android
         run: |
-          gradle -p android assembleDebug --no-daemon
-          Copy-Item android/app/build/outputs/apk/debug/app-debug.apk dist/Centro-de-Custos-Construtec-Android-3.1.0-rc.19.apk
+          gradle -p android assembleDebug --no-daemon "-PappVersionName=$env:APP_VERSION" "-PappVersionCode=$env:APP_VERSION_CODE"
+          Copy-Item android/app/build/outputs/apk/debug/app-debug.apk "dist/Centro-de-Custos-Construtec-Android-$env:APP_VERSION.apk"
+      # O app e o Worker usam estes dois arquivos para atualizar por dentro do app:
+      # hash SHA-256 do APK e um resumo da versao (latest-android.json, sem BOM).
+      - name: Gerar hash e resumo do APK
+        run: |
+          $apk = "dist/Centro-de-Custos-Construtec-Android-$env:APP_VERSION.apk"
+          $hash = (Get-FileHash $apk -Algorithm SHA256).Hash.ToLower()
+          $utf8 = New-Object System.Text.UTF8Encoding $false
+          [IO.File]::WriteAllText("$apk.sha256", "$hash  $(Split-Path $apk -Leaf)`n", $utf8)
+          $meta = [ordered]@{ versionName = $env:APP_VERSION; versionCode = [int]$env:APP_VERSION_CODE; sha256 = $hash; apk = (Split-Path $apk -Leaf); notes = $env:APP_NOTES; minVersionCode = 0 }
+          [IO.File]::WriteAllText("dist/latest-android.json", ($meta | ConvertTo-Json), $utf8)
+          Get-Content dist/latest-android.json
       - name: Publicar pre-lancamento no GitHub
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.0-rc.19
-          name: Centro de Custos Construtec V3.1.0 RC19
+          tag_name: v${{ env.APP_VERSION }}
+          name: Centro de Custos Construtec V3.1.0 RC${{ env.RC_NUMBER }}
           target_commitish: ${{ github.sha }}
           prerelease: true
           make_latest: false
           body: |
-            Pre-lancamento RC19 da V3.1 para validacao interna.
+            Pre-lancamento RC${{ env.RC_NUMBER }} da V3.1 para validacao interna.
 
             Melhorias desta versao:
+            - atualizacao do aplicativo por dentro do app (Menu > Atualizacao do aplicativo): o app avisa quando ha versao nova, baixa, confere o hash e abre o instalador do Android. Esta e a ultima vez que o APK precisa ser instalado a mao;
             - cadastro pelo app: nome, e-mail, celular, codigo da empresa e senha forte; o pedido chega para os administradores aprovarem (no celular em Menu > Pedidos de acesso e no Centro web em Usuarios);
             - convite por e-mail: o link abre o cadastro no app com o codigo preenchido e a conta ja sai aprovada;
             - tour de boas-vindas em quatro telas para quem acabou de criar a conta, que pode ser revisto pelo Menu;
@@ -85,6 +107,8 @@ jobs:
           files: |
             dist/*.exe
             dist/*.apk
+            dist/*.apk.sha256
+            dist/latest-android.json
             dist/latest.yml
             dist/*.blockmap
           fail_on_unmatched_files: false

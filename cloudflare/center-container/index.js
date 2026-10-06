@@ -5,6 +5,7 @@ import { handleCommercialSync } from './commercialSync.js';
 import { handleNotifications, isNotificationRoute, runDailyNotices } from './notifications.js';
 import { handleSignup, invitePage, isSignupRoute } from './signup.js';
 import { handleProfile, isProfileRoute } from './profile.js';
+import { handleAndroidUpdate, isAndroidUpdateRoute } from './androidUpdate.js';
 import { assetLinks, resetPage } from './resetPage.js';
 
 // O Container passa cada valor de envVars pelo ambiente do processo, que so
@@ -49,6 +50,7 @@ export default {
     if (request.method === 'GET' && url.pathname === '/cadastro') return invitePage();
     if (request.method === 'GET' && url.pathname === '/.well-known/assetlinks.json') return assetLinks(env);
     if (url.pathname === '/api/auth/handoff-bridge' || url.pathname.startsWith('/api/interno/')) return new Response(null, { status: 404 });
+    if (isAndroidUpdateRoute(url.pathname)) return handleAndroidUpdate(request, env, url);
     if (isSignupRoute(url.pathname)) return handleSignup(request, env, url);
     if (isProfileRoute(url.pathname)) return handleProfile(request, env);
     if (isNotificationRoute(url.pathname)) return handleNotifications(request, env, url);

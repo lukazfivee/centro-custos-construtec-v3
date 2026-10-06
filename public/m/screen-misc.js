@@ -64,6 +64,7 @@
         ${inApp ? `<button class="menu-item" type="button" id="m-seg">${icon('shield-check', 22)}<span>Segurança<small>PIN, digital, bloqueio automático e aparelhos</small></span></button>` : ''}
         ${CC.isAdmin && CC.isAdmin() ? `<button class="menu-item" type="button" id="m-pedidos">${icon('user-plus', 22)}<span>Pedidos de acesso<small>Aprovar cadastros, convidar por e-mail e código da empresa</small></span></button>` : ''}
         ${CC.isAdmin && CC.isAdmin() && CC.screens.descartadas ? `<button class="menu-item" type="button" id="m-desc">${icon('archive', 22)}<span>Obras descartadas<small id="m-desc-n">Recuperar obras guardadas</small></span></button>` : ''}
+        ${inApp && CC.screens.atualizacao ? `<button class="menu-item" type="button" id="m-upd">${icon('arrow-counter-clockwise', 22)}<span>Atualização do aplicativo<small>Ver a versão instalada e instalar a mais nova</small></span></button>` : ''}
         ${inApp ? `<button class="menu-item" type="button" id="m-tour">${icon('arrow-right', 22)}<span>Rever o tour<small>As quatro telas de boas-vindas da Suíte</small></span></button>` : ''}
         <a class="menu-item" href="/" id="m-web" style="color:inherit;text-decoration:none">${icon('desktop', 22)}<span>Versão completa<small>Todas as telas do Centro de Custos</small></span></a>
         <button class="menu-item danger" type="button" id="m-sair">${icon('sign-out', 22)}<span>Sair</span></button>
@@ -92,6 +93,8 @@
     }
     const seg = CC.$('#m-seg', el);
     if (seg) seg.addEventListener('click', () => { location.href = 'suite://seguranca'; });
+    const upd = CC.$('#m-upd', el);
+    if (upd) upd.addEventListener('click', () => CC.go('atualizacao'));
     const tour = CC.$('#m-tour', el);
     if (tour) tour.addEventListener('click', () => { location.href = 'suite://tour'; });
     CC.$('#m-sair', el).addEventListener('click', async () => {
