@@ -78,6 +78,13 @@
 .vazio-tela .ph { font-size: 32px; color: var(--color-accent-300); }
 .vazio-tela b { color: var(--color-text); font-size: 16px; }
 .carregando { display: flex; align-items: center; gap: 10px; padding: 24px 0; color: var(--color-neutral-300); font-size: 13.5px; }
+/* Tela de abertura: igual a do Orçamentos (logo, spinner e texto centralizados). */
+.abertura { display: grid; place-items: center; align-content: center; gap: 12px; min-height: 100vh; padding: 28px; color: var(--color-neutral-300); font-size: 13px; background: linear-gradient(135deg, rgba(13, 127, 159, .05), transparent 38%), var(--color-bg); }
+.abertura .spin { width: 26px; height: 26px; border-width: 3px; }
+.abertura-logo { height: 48px; width: auto; max-width: 210px; object-fit: contain; margin-bottom: 6px; }
+.abertura-logo-escuro { display: none; }
+[data-theme="escuro"] .abertura-logo-claro { display: none; }
+[data-theme="escuro"] .abertura-logo-escuro { display: block; }
 .spin { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
 
 @media (max-width: 1279px) {

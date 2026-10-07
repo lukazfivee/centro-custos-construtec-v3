@@ -30,7 +30,12 @@
   <link rel="stylesheet" href="css/anim.css">
 </head>
 <body>
-  <div id="app"><div class="carregando" style="padding:32px">Abrindo o Centro de Custos…</div></div>
+  <div id="app"><main class="abertura" aria-busy="true">
+    <img class="abertura-logo abertura-logo-claro" src="../assets/construtec-logo.png" alt="Construtec">
+    <img class="abertura-logo abertura-logo-escuro" src="logo-fundo-escuro.png" alt="Construtec">
+    <span class="spin" aria-hidden="true"></span>
+    <strong>Abrindo o Centro de Custos…</strong>
+  </main></div>
   <script src="../m/core.js"></script>
   <script src="../m/queue.js"></script>
   <script src="d-core.js"></script>
