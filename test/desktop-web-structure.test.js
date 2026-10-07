@@ -138,6 +138,7 @@ test('D3b Obras: medições, Curva S, relatório, importar e vincular', () => {
   assert.match(imp, /hash: previa\.hash/);
   assert.match(imp, /\/centros-custo\/\$\{obraId\}\/proposta/, 'o PDF da proposta vai para a obra depois de importar');
   assert.match(imp, /accept="\.pdf,application\/pdf"/);
+  assert.match(src('telas/obra-orcado.js'), /Baixar a proposta \(PDF\)/, 'PDF guardado aparece mesmo sem orçamento importado');
   assert.match(imp, /allocationId: card\.dataset\.gasto/);
   assert.match(src('css/obras-ferramentas.css'), /@media print/);
 });
