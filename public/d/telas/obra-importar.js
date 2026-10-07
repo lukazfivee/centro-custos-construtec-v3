@@ -9,6 +9,14 @@
   const amigavel = (m) => (/HASH_MISMATCH/.test(m) ? 'O arquivo foi alterado depois de exportado do Orçamentos: a assinatura não confere. Exporte a proposta de novo.'
     : (/CONFLICT/.test(m) ? 'Esta revisão já foi importada com conteúdo diferente. Confira no Orçamentos qual é a revisão certa.' : m));
   const rev = (p) => `${p.number} REV ${String(p.revision == null ? 0 : p.revision).padStart(2, '0')}`;
+  const MAX_PDF = 5 * 1024 * 1024; // mesmo limite do servidor (POST /centros-custo/:id/proposta)
+  const tamanho = (b) => (b >= 1048576 ? `${(b / 1048576).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+  const lerBase64 = (arquivo) => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result || '').split(',').pop() || '');
+    r.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+    r.readAsDataURL(arquivo);
+  });
 
   function previaHtml(p) {
     if (p.status === 'already_imported') return U.faixa('info', 'info', `${rev(p.proposal)} já foi importada antes. Nada a fazer.`);
@@ -25,22 +33,50 @@
   // costCenterId: obra de destino ("Atualizar revisão" no detalhe) ou null (carteira).
   O.importar = async function (costCenterId, aoConcluir) {
     let previa = null;
+    let pdf = null;
     let enviando = false;
     const ctl = await D.painel.abrir({
-      icone: 'file-arrow-up', titulo: costCenterId ? 'Atualizar revisão do orçamento' : 'Importar orçamento', sub: 'Arquivo .json exportado do Orçamentos',
-      corpo: `<label class="soltar" tabindex="0">${D.ic('upload-simple', 22)}<b>Escolha o arquivo do Orçamentos</b><span class="muted">Arquivo .json da proposta aprovada</span>
-        <input type="file" accept=".json,application/json" hidden></label><div data-previa></div>`,
+      icone: 'file-arrow-up', titulo: costCenterId ? 'Atualizar revisão do orçamento' : 'Importar orçamento', sub: 'Arquivo .json exportado do Orçamentos e, se quiser, o PDF da proposta',
+      corpo: `<label class="soltar" data-zona="json" tabindex="0">${D.ic('upload-simple', 22)}<b>Escolha o arquivo do Orçamentos</b><span class="muted">Arquivo .json da proposta aprovada</span>
+        <input type="file" accept=".json,application/json" hidden></label><div data-previa></div>
+        <label class="soltar pdf" data-zona="pdf" tabindex="0">${D.ic('file-pdf', 22)}<b data-pdf-nome>PDF da proposta (opcional)</b><span class="muted" data-pdf-sub>Fica guardado na obra, junto do contrato</span>
+        <input type="file" accept=".pdf,application/pdf" hidden></label>`,
       rodape: '<button type="button" class="btn btn-s" data-fechar>Cancelar</button><button type="button" class="btn btn-p" data-confirmar disabled>Confirmar importação</button>',
     });
     if (!ctl) return;
-    const input = CC.$('input[type=file]', ctl.corpo);
+    const input = CC.$('[data-zona="json"] input', ctl.corpo);
+    const inputPdf = CC.$('[data-zona="pdf"] input', ctl.corpo);
     const alvo = CC.$('[data-previa]', ctl.corpo);
     const confirmar = CC.$('[data-confirmar]', ctl.rodape);
-    CC.$('.soltar', ctl.corpo).addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+    // So o PDF, numa obra que ja existe, tambem vale: guarda ou troca a proposta sem reimportar.
+    const solta = () => !!pdf && !!costCenterId && !input.files[0];
+    const atualizarBotao = () => {
+      confirmar.disabled = enviando || !((previa && previa.status === 'ready') || solta());
+      confirmar.textContent = solta() ? 'Anexar PDF' : 'Confirmar importação';
+    };
+    CC.$$('.soltar', ctl.corpo).forEach((z) => z.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); CC.$('input', z).click(); } }));
+    inputPdf.addEventListener('change', () => {
+      ctl.erro('');
+      const arquivo = inputPdf.files[0];
+      pdf = null;
+      CC.$('[data-pdf-nome]', ctl.corpo).textContent = 'PDF da proposta (opcional)';
+      CC.$('[data-pdf-sub]', ctl.corpo).textContent = 'Fica guardado na obra, junto do contrato';
+      if (arquivo) {
+        if (!/\.pdf$/i.test(arquivo.name) || (arquivo.type && arquivo.type !== 'application/pdf')) { inputPdf.value = ''; ctl.erro('A proposta deve ser um arquivo PDF.'); }
+        else if (arquivo.size > MAX_PDF) { inputPdf.value = ''; ctl.erro('A proposta em PDF deve ter no máximo 5 MB.'); }
+        else {
+          pdf = arquivo;
+          CC.$('[data-pdf-nome]', ctl.corpo).textContent = arquivo.name;
+          CC.$('[data-pdf-sub]', ctl.corpo).textContent = `${tamanho(arquivo.size)} · clique para trocar`;
+        }
+      }
+      atualizarBotao();
+    });
     input.addEventListener('change', async () => {
       ctl.erro('');
       previa = null;
-      confirmar.disabled = true;
+      alvo.innerHTML = '';
+      atualizarBotao();
       const arquivo = input.files[0];
       if (!arquivo) return;
       let envelope;
@@ -49,28 +85,45 @@
       try {
         previa = (await CC.api('/integracao/orcamentos/previas', { method: 'POST', body: costCenterId ? { ...envelope, options: { costCenterId } } : envelope })).data;
         alvo.innerHTML = previaHtml(previa);
-        confirmar.disabled = previa.status !== 'ready';
+        atualizarBotao();
       } catch (error) {
         alvo.innerHTML = '';
         ctl.erro(error.status === 0 ? 'Sem internet. Importar precisa da conexão.' : amigavel(error.message));
       }
     });
     confirmar.addEventListener('click', async () => {
-      if (!previa || enviando) return;
+      if (enviando || !(previa || solta())) return;
       enviando = true;
       confirmar.disabled = true;
+      let importado = null;
       try {
-        const destino = costCenterId || (previa.targetCostCenter && previa.targetCostCenter.id) || null;
-        const { data } = await CC.api(`/integracao/orcamentos/previas/${previa.previewId}/confirmar`, { method: 'POST', body: { hash: previa.hash, costCenterId: destino } });
+        if (previa) {
+          const destino = costCenterId || (previa.targetCostCenter && previa.targetCostCenter.id) || null;
+          importado = (await CC.api(`/integracao/orcamentos/previas/${previa.previewId}/confirmar`, { method: 'POST', body: { hash: previa.hash, costCenterId: destino } })).data;
+        }
+        const obraId = (importado && importado.costCenterId) || costCenterId;
+        if (pdf && obraId) {
+          try {
+            await CC.api(`/centros-custo/${obraId}/proposta`, { method: 'POST', body: { nome: pdf.name, tipo: 'application/pdf', conteudoBase64: await lerBase64(pdf) } });
+          } catch (error) {
+            // O orcamento ja foi importado: nao desfaz. Se foi so o PDF, o painel continua aberto para tentar de novo.
+            if (!importado) throw error;
+            ctl.marcarSalvo();
+            ctl.fechar(true);
+            CC.toast(`Orçamento ${rev(previa.proposal)} importado, mas o PDF não foi guardado: ${error.message} Anexe-o em "Atualizar revisão".`);
+            if (aoConcluir) aoConcluir(importado);
+            return;
+          }
+        }
         ctl.marcarSalvo();
         ctl.fechar(true);
-        CC.toast(`Orçamento ${rev(previa.proposal)} importado`);
-        if (aoConcluir) aoConcluir(data);
+        CC.toast(importado ? `Orçamento ${rev(previa.proposal)} importado${pdf ? ' com o PDF da proposta' : ''}` : 'PDF da proposta guardado');
+        if (aoConcluir) aoConcluir(importado);
       } catch (error) {
-        confirmar.disabled = false;
         ctl.erro(error.status === 0 ? 'Sem internet. Importar precisa da conexão.' : amigavel(error.message));
       } finally {
         enviando = false;
+        atualizarBotao();
       }
     });
   };

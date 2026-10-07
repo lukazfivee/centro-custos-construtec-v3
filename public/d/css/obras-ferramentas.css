@@ -64,3 +64,8 @@
 .grafico.curva .ponto-medido { fill: var(--graf-ok); }
 .grafico.curva .ponto-realizado { fill: var(--graf-desp); }
 .grafico.curva .ponto-previsto { fill: var(--graf-prev); }
+
+/* Importar orcamento: segunda zona (PDF da proposta, opcional) mais baixa que a do .json. */
+.soltar.pdf { padding: 14px 16px; }
+.soltar.pdf b { overflow-wrap: anywhere; }
+.dcorpo [data-previa]:empty { display: none; }
