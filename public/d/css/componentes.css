@@ -78,9 +78,24 @@
 .vazio-tela .ph { font-size: 32px; color: var(--color-accent-300); }
 .vazio-tela b { color: var(--color-text); font-size: 16px; }
 .carregando { display: flex; align-items: center; gap: 10px; padding: 24px 0; color: var(--color-neutral-300); font-size: 13.5px; }
-/* Tela de abertura: igual a do Orçamentos (logo, spinner e texto centralizados). */
-.abertura { display: grid; place-items: center; align-content: center; gap: 12px; min-height: 100vh; padding: 28px; color: var(--color-neutral-300); font-size: 13px; background: linear-gradient(135deg, rgba(13, 127, 159, .05), transparent 38%), var(--color-bg); }
-.abertura .spin { width: 26px; height: 26px; border-width: 3px; }
+/* Tela de abertura animada: logo que respira sobre um brilho, barra de progresso e pontinhos no texto. */
+.abertura { position: relative; overflow: hidden; display: grid; place-items: center; align-content: center; gap: 14px; min-height: 100vh; padding: 28px; color: var(--color-neutral-300); font-size: 13.5px; background: linear-gradient(135deg, rgba(13, 127, 159, .06), transparent 40%), var(--color-bg); }
+.abertura::before { content: ""; position: absolute; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(13, 127, 159, .22), transparent 68%); animation: abertura-brilho 3.2s ease-in-out infinite; pointer-events: none; }
+.abertura > * { position: relative; }
+.abertura-logo { height: 52px; width: auto; max-width: 230px; object-fit: contain; margin-bottom: 8px; animation: abertura-entrada .7s ease-out both, abertura-respira 2.6s ease-in-out .7s infinite; }
+.abertura-logo-escuro { display: none; }
+[data-theme="escuro"] .abertura-logo-claro { display: none; }
+[data-theme="escuro"] .abertura-logo-escuro { display: block; }
+.abertura-barra { width: 180px; height: 3px; border-radius: 3px; overflow: hidden; background: rgba(13, 127, 159, .18); }
+.abertura-barra i { display: block; width: 40%; height: 100%; border-radius: 3px; background: linear-gradient(90deg, transparent, #0d7f9f, transparent); animation: abertura-barra 1.3s ease-in-out infinite; }
+.abertura strong { font-weight: 600; letter-spacing: .01em; }
+.abertura strong::after { content: ""; display: inline-block; width: 1.2em; text-align: left; animation: abertura-pontos 1.4s steps(1, end) infinite; }
+@keyframes abertura-entrada { from { opacity: 0; transform: translateY(8px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes abertura-respira { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.045); opacity: .82; } }
+@keyframes abertura-brilho { 0%, 100% { transform: scale(.85); opacity: .6; } 50% { transform: scale(1.1); opacity: 1; } }
+@keyframes abertura-barra { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@keyframes abertura-pontos { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+.spin { width: 26px; height: 26px; border-width: 3px; }
 .abertura-logo { height: 48px; width: auto; max-width: 210px; object-fit: contain; margin-bottom: 6px; }
 .abertura-logo-escuro { display: none; }
 [data-theme="escuro"] .abertura-logo-claro { display: none; }
@@ -92,3 +107,10 @@
   .cab { flex-wrap: wrap; align-items: flex-start; }
 }
 .dados .entrada { color: var(--c-ok); }
+/* A abertura é o aviso de que o app está carregando: mantém a animação mesmo com "reduzir movimento" (só sem o logo respirando). */
+@media (prefers-reduced-motion: reduce) {
+  .abertura::before { animation: abertura-brilho 3.2s ease-in-out infinite !important; }
+  .abertura-logo { animation: abertura-entrada .7s ease-out both !important; }
+  .abertura-barra i { animation: abertura-barra 1.3s ease-in-out infinite !important; }
+  .abertura strong::after { animation: abertura-pontos 1.4s steps(1, end) infinite !important; }
+}
