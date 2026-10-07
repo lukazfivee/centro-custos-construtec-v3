@@ -28,7 +28,6 @@
 .top { position: relative; z-index: 20; height: var(--top-h); flex: none; display: flex; align-items: center; gap: 16px; padding: 0 24px 0 32px; background: var(--color-surface); box-shadow: 0 1px 0 var(--color-divider); }
 .top .espaco { flex: 1; }
 .conteudo { flex: 1; min-height: 0; overflow: auto; padding: 28px 32px 40px; }
-.conteudo > * { animation: fadeUp .3s ease both; }
 
 .busca { position: relative; width: 440px; min-width: 220px; flex: 0 1 440px; }
 .busca > .ph { position: absolute; left: 12px; top: 11px; font-size: 18px; color: var(--color-neutral-300); pointer-events: none; }
