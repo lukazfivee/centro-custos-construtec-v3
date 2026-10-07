@@ -38,4 +38,4 @@
 .barra-selecao .grow { flex: 1; }
 .excl-quem span { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tbl .ibtn[data-acao="excluir"]:hover { background: var(--c-err-soft); color: var(--c-err); }
-@media (max-width: 1379px) { .kpis.quatro { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1099px) { .kpis.quatro { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
