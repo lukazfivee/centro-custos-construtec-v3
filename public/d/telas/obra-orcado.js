@@ -89,6 +89,16 @@
         <div class="kpis">${U.kpi({ rotulo: 'Realizado', valor: CC.money(obra.total_despesas || 0), icone: 'arrow-up-right', tom: 'saida' })}${U.kpi({ rotulo: 'Contrato', valor: CC.money(obra.valor_contrato || 0), icone: 'handshake' })}${U.kpi({ rotulo: 'Orçamento mensal', valor: CC.money(obra.orcamento || 0), icone: 'calendar-blank' })}</div>`;
       const bi = CC.$('[data-importar-obra]', corpo);
       if (bi) bi.addEventListener('click', () => O.importar(obra.id, recarregar));
+      // PDF da proposta guardado sem orcamento importado: aparece aqui, senao parece que o envio nao fez nada.
+      if (prop) {
+        const kb = Number(prop.tamanho) || 0;
+        const quando = prop.atualizadoEm ? D.data(String(prop.atualizadoEm).slice(0, 10)) : '';
+        const cartao = D.el(`<section class="card bloco"><b class="bt">${D.ic('file-pdf')}Proposta em PDF</b>
+          <span class="muted">${esc([prop.nome, kb >= 1048576 ? `${(kb / 1048576).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(kb / 1024))} KB`, quando, prop.enviadoPor].filter(Boolean).join(' · '))}</span>
+          <div><button type="button" class="btn btn-s" data-proposta>${D.ic('download-simple')}Baixar a proposta (PDF)</button></div></section>`);
+        CC.$('.kpis', corpo).before(cartao);
+        CC.$('[data-proposta]', cartao).addEventListener('click', () => baixar(`/centros-custo/${obra.id}/proposta/arquivo`, prop.nome || 'proposta.pdf'));
+      }
       return;
     }
     const s = cmp.summary;
