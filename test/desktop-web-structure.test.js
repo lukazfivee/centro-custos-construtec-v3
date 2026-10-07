@@ -196,3 +196,14 @@ test('desktop novo: barra de rolagem do tema (fina, com cores dos tokens), nao a
   assert.match(css, /\*::-webkit-scrollbar-thumb \{[^}]*var\(--color-neutral-500\)/);
   assert.match(css, /\*::-webkit-scrollbar-track \{[^}]*var\(--color-bg\)/);
 });
+
+test('desktop novo: transicao entre telas so quando a tela muda e continua com movimento reduzido (so esmaecer)', () => {
+  assert.match(src('index.html'), /css\/transicao\.css/);
+  const router = src('router.js');
+  assert.match(router, /modoDeEntrada/);
+  assert.match(router, /'entra-aba'/);
+  const css = src('css/transicao.css');
+  assert.match(css, /\.conteudo\.entra > \.pagina > \*[^}]*telaEntra/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{[^}]*telaFade[^}]*!important/);
+  assert.doesNotMatch(src('css/layout.css'), /\.conteudo > \* \{ animation/);
+});

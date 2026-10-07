@@ -1,0 +1,25 @@
+/* Transicao entre telas. O roteador (router.js) poe .entra no #conteudo so quando muda de tela
+   (e .entra-aba quando so muda a aba da mesma tela) e tira logo depois: filtros, buscas e
+   re-desenhos da mesma tela nao repetem a animacao. Os mesmos tempos e curvas do Orcamentos
+   (src/transicao-telas.css). So "from": o estado final e o natural, sem transform sobrando. */
+:root { --t-tela: .26s; --t-curva: cubic-bezier(.22, .61, .36, 1); }
+
+@keyframes telaEntra { from { opacity: 0; transform: translateY(10px); } }
+@keyframes telaFade { from { opacity: 0; } }
+
+.conteudo.entra > * { animation: telaFade .18s ease-out backwards; }
+.conteudo.entra > .pagina > * { animation: telaEntra var(--t-tela) var(--t-curva) backwards; }
+.conteudo.entra > .pagina > :nth-child(2) { animation-delay: 40ms; }
+.conteudo.entra > .pagina > :nth-child(3) { animation-delay: 80ms; }
+.conteudo.entra > .pagina > :nth-child(4) { animation-delay: 120ms; }
+.conteudo.entra > .pagina > :nth-child(5) { animation-delay: 150ms; }
+.conteudo.entra > .pagina > :nth-child(n+6) { animation-delay: 180ms; }
+
+/* Troca de aba dentro da mesma tela (ex.: abas da obra): so o corpo aparece, sem deslocar o cabecalho. */
+.conteudo.entra-aba > .pagina > * { animation: telaFade .18s ease-out backwards; }
+
+/* Quem pede menos movimento fica so com o esmaecer, sem deslocamento. O base.css desliga todas as
+   animacoes nesse modo (!important); a transicao volta so como esmaecer curto, como a tela de abertura. */
+@media (prefers-reduced-motion: reduce) {
+  .conteudo.entra > *, .conteudo.entra > .pagina > *, .conteudo.entra-aba > .pagina > * { animation: telaFade .18s ease-out backwards !important; }
+}

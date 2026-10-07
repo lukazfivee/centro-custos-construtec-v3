@@ -42,12 +42,34 @@
     const def = telas[rota.nome] || telas['em-construcao'];
     if (D.aoNavegar) D.aoNavegar(rota);
     el.scrollTop = 0;
+    const modo = modoDeEntrada(rota);
+    entrada(el, modo);
     try {
       await def.render(el, rota, vivo);
     } catch (error) {
       if (!vivo()) return;
       el.innerHTML = `<div class="pagina">${D.ui.faixa('err', 'warning-circle', error.message || 'Não foi possível abrir esta tela.')}</div>`;
     }
+    if (modo && vivo()) soltarEntrada(el, minha);
+  }
+
+  // Animacao de entrada so quando a tela (ou a aba) muda: filtro, busca e re-desenho nao repetem.
+  let rotaAnterior = null;
+  let fimEntrada = 0;
+  function modoDeEntrada(rota) {
+    const antes = rotaAnterior;
+    rotaAnterior = rota;
+    if (!antes || antes.nome !== rota.nome || antes.id !== rota.id) return 'entra';
+    return antes.aba !== rota.aba ? 'entra-aba' : '';
+  }
+  function entrada(el, modo) {
+    clearTimeout(fimEntrada);
+    el.classList.remove('entra', 'entra-aba');
+    if (modo) el.classList.add(modo);
+  }
+  // A classe fica ate a tela terminar de carregar (mais a duracao da animacao) e sai; o resto da tela nao anima.
+  function soltarEntrada(el, minha) {
+    fimEntrada = setTimeout(() => { if (minha === versao) el.classList.remove('entra', 'entra-aba'); }, 360);
   }
 
   D.iniciarRotas = () => {
