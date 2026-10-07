@@ -1,0 +1,10 @@
+/* Escala natural do desktop: a interface ja sai no tamanho de 75% de zoom do navegador, sem mexer na lupa.
+   So em janela larga (>= 1200 px). Com "zoom" na raiz as unidades vh/vw contam a janela antes da reducao,
+   entao o que depende delas divide por 0,75. */
+@media screen and (min-width: 1200px) {
+  html { zoom: .75; height: calc(100% / .75); }
+  .app { height: calc(100vh / .75); }
+  .abertura { min-height: calc(100vh / .75); }
+  .dialogo { max-width: calc((100vw - 32px) / .75); }
+  .toast { max-width: min(560px, calc((100vw - 48px) / .75)); }
+}
