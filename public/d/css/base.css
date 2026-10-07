@@ -68,3 +68,11 @@ input::placeholder, textarea::placeholder { color: var(--color-placeholder); opa
 .bar > span { display: block; height: 100%; border-radius: 4px; }
 .tab { height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--color-neutral-300); font: 600 13.5px var(--font-body); cursor: pointer; margin-bottom: -1px; white-space: nowrap; }
 .tab[aria-selected="true"] { color: var(--color-accent-300); box-shadow: inset 0 -2px 0 var(--color-focus); }
+
+/* Barra de rolagem do tema (mesma do Orcamentos): fina, com trilho na cor de fundo e pino arredondado. */
+* { scrollbar-width: thin; scrollbar-color: var(--color-neutral-500) var(--color-bg); }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: var(--color-bg); }
+*::-webkit-scrollbar-thumb { background: var(--color-neutral-500); border: 2px solid var(--color-bg); border-radius: 7px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-300); }
+*::-webkit-scrollbar-corner { background: var(--color-bg); }
