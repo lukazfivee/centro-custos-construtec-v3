@@ -186,3 +186,10 @@ test('Cobranças: excluir reversível (lixeira, seleção, aba Excluídas) só c
   assert.match(tela, /pode \? B\.botaoExcluir\(i\) : ''/);
   for (const f of ['telas/cobrancas.js', 'telas/cobranca-excluir.js']) assert.ok(src(f).split('\n').length <= 350, `${f} passou de 350 linhas`);
 });
+
+test('desktop novo: barra de rolagem do tema (fina, com cores dos tokens), nao a padrao do navegador', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'd', 'css', 'base.css'), 'utf8');
+  assert.match(css, /scrollbar-width: thin/);
+  assert.match(css, /\*::-webkit-scrollbar-thumb \{[^}]*var\(--color-neutral-500\)/);
+  assert.match(css, /\*::-webkit-scrollbar-track \{[^}]*var\(--color-bg\)/);
+});
