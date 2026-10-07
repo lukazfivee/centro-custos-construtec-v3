@@ -207,3 +207,10 @@ test('desktop novo: transicao entre telas so quando a tela muda e continua com m
   assert.match(css, /prefers-reduced-motion: reduce\) \{[^}]*telaFade[^}]*!important/);
   assert.doesNotMatch(src('css/layout.css'), /\.conteudo > \* \{ animation/);
 });
+
+test('desktop novo: com a escala de 75% o app fica preso a janela (sem segunda barra de rolagem do documento)', () => {
+  const css = src('css/escala.css');
+  assert.match(css, /\.app \{ position: fixed; inset: 0; height: auto; \}/);
+  assert.match(css, /\.abertura \{ position: fixed; inset: 0;/);
+  assert.doesNotMatch(css, /height: calc\(100(vh|%) \/ \.75\)/);
+});

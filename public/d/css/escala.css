@@ -1,10 +1,11 @@
 /* Escala natural do desktop: a interface ja sai no tamanho de 75% de zoom do navegador, sem mexer na lupa.
-   So em janela larga (>= 1200 px). Com "zoom" na raiz as unidades vh/vw contam a janela antes da reducao,
-   entao o que depende delas divide por 0,75. */
+   So em janela larga (>= 1200 px). O app e a abertura ficam presos a janela (fixed + inset), sem depender de vh:
+   cada versao do Chrome conta o vh de um jeito com "zoom" na raiz, e a conta errada deixava o documento
+   mais alto que a janela (segunda barra de rolagem). Assim so o .conteudo rola. */
 @media screen and (min-width: 1200px) {
-  html { zoom: .75; height: calc(100% / .75); }
-  .app { height: calc(100vh / .75); }
-  .abertura { min-height: calc(100vh / .75); }
+  html { zoom: .75; }
+  .app { position: fixed; inset: 0; height: auto; }
+  .abertura { position: fixed; inset: 0; min-height: 0; }
   .dialogo { max-width: calc((100vw - 32px) / .75); }
   .toast { max-width: min(560px, calc((100vw - 48px) / .75)); }
 }
