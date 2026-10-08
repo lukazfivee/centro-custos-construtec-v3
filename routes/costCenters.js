@@ -18,7 +18,7 @@ const router = express.Router();
 router.use(autenticar);
 
 router.get('/portfolio-summary', bloquearEscopado, asyncRoute(async (req, res) => {
-  res.json(await getPortfolioSummary(getDb()));
+  res.json(await getPortfolioSummary(getDb(), { kind: kindFilter(req.query.kind) }));
 }));
 
 router.get('/:id/curva-s', asyncRoute(async (req, res) => {
@@ -31,7 +31,7 @@ const COST_CENTERS_SELECT = `
     cc.client AS cliente, cc.contract_number AS contrato,
     cc.start_date::text AS data_inicio, cc.end_date::text AS data_fim,
     cc.contract_amount AS valor_contrato, cc.project_status AS situacao,
-    cc.monthly_budget AS orcamento, cc.active AS ativo, cc.description AS descricao,cc.revision,
+    cc.monthly_budget AS orcamento, cc.active AS ativo, cc.description AS descricao,cc.revision,cc.kind AS tipo,
     COALESCE(SUM(t.amount * t.accounting_sign) FILTER (WHERE t.type='despesa'
       AND t.transaction_date >= $1 AND t.transaction_date < $2),0) AS total_comprometido_mes,
     COALESCE(SUM(t.amount * t.accounting_sign) FILTER (WHERE t.type='despesa'),0) AS total_comprometido,
@@ -43,23 +43,33 @@ router.get('/', asyncRoute(async (req, res) => {
   const { month, range } = reportMonth(req.query);
   const orderBy = 'cc.active DESC, cc.name';
   const ids = await obrasPermitidas(req);
-  // Escopado: so as obras atribuidas ($1 e $2 sao o mes; a lista entra depois).
-  const scope = ids ? 'WHERE cc.id = ANY($3::int[])' : '';
+  const kind = kindFilter(req.query.kind);
+  // $1 e $2 sao o mes; depois vem o tipo (opcional) e a lista de obras do escopado.
+  const base = [range.start, range.end];
+  const where = (params) => {
+    const parts = [];
+    if (kind) { params.push(kind); parts.push(`cc.kind = $${params.length}`); }
+    if (ids) { params.push(ids); parts.push(`cc.id = ANY($${params.length}::int[])`); }
+    return parts.length ? `WHERE ${parts.join(' AND ')}` : '';
+  };
 
   if (!wantsPagination(req.query)) {
+    const params = [...base];
     const { rows } = await getDb().query(
-      `${COST_CENTERS_SELECT} ${scope} GROUP BY cc.id ORDER BY ${orderBy} LIMIT 500`, ids ? [range.start, range.end, ids] : [range.start, range.end]);
+      `${COST_CENTERS_SELECT} ${where(params)} GROUP BY cc.id ORDER BY ${orderBy} LIMIT 500`, params);
     res.setHeader('X-Result-Limit', '500');
     return res.json(rows.map(row => ({...row,mes_orcamento:month})));
   }
 
   const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
+  const params = [...base, limit, offset];
+  const countParams = [];
+  const countWhere = [];
+  if (kind) { countParams.push(kind); countWhere.push(`kind = $${countParams.length}`); }
+  if (ids) { countParams.push(ids); countWhere.push(`id = ANY($${countParams.length}::int[])`); }
   const [dataResult, countResult] = await Promise.all([
-    getDb().query(
-      `${COST_CENTERS_SELECT} ${ids ? 'WHERE cc.id = ANY($5::int[])' : ''} GROUP BY cc.id ORDER BY ${orderBy} LIMIT $3 OFFSET $4`,
-      ids ? [range.start, range.end, limit, offset, ids] : [range.start, range.end, limit, offset]),
-    ids ? getDb().query('SELECT COUNT(*)::int AS total FROM cost_centers WHERE id = ANY($1::int[])', [ids])
-      : getDb().query('SELECT COUNT(*)::int AS total FROM cost_centers'),
+    getDb().query(`${COST_CENTERS_SELECT} ${where(params)} GROUP BY cc.id ORDER BY ${orderBy} LIMIT $3 OFFSET $4`, params),
+    getDb().query(`SELECT COUNT(*)::int AS total FROM cost_centers ${countWhere.length ? 'WHERE ' + countWhere.join(' AND ') : ''}`, countParams),
   ]);
   const total = Number(countResult.rows[0]?.total || 0);
   res.setHeader('X-Total-Count', String(total));
@@ -79,7 +89,7 @@ router.get('/:id/detalhes', asyncRoute(async (req, res) => {
       cc.client AS cliente, cc.contract_number AS contrato, cc.description AS descricao,
       cc.start_date::text AS data_inicio, cc.end_date::text AS data_fim,
       cc.contract_amount AS valor_contrato, cc.project_status AS situacao,
-      cc.monthly_budget AS orcamento, cc.active AS ativo,cc.revision,
+      cc.monthly_budget AS orcamento, cc.active AS ativo,cc.revision,cc.kind AS tipo,
       COALESCE(SUM(t.amount * t.accounting_sign) FILTER (WHERE t.type='despesa'
         AND t.transaction_date >= $2 AND t.transaction_date < $3),0) AS total_comprometido_mes,
       COALESCE(SUM(t.amount * t.accounting_sign) FILTER (WHERE t.type='despesa'),0) AS total_comprometido,
@@ -138,12 +148,12 @@ router.post('/', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const publicId = crypto.randomUUID();
   const { rows } = await getDb().query(
     `INSERT INTO cost_centers
-      (public_id,code,name,responsible,monthly_budget,client,contract_number,start_date,end_date,contract_amount,project_status,description)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id,revision`,
+      (public_id,code,name,responsible,monthly_budget,client,contract_number,start_date,end_date,contract_amount,project_status,description,kind)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id,revision`,
     [publicId,data.code,data.name,data.responsible,data.budget,data.client,data.contractNumber,
-      data.startDate,data.endDate,data.contractAmount,data.projectStatus,data.description]
+      data.startDate,data.endDate,data.contractAmount,data.projectStatus,data.description,data.kind || 'obra']
   );
-  await recordAudit({entityType:'obra',entityId:rows[0].id,action:'criada',summary:'Obra / centro criado: '+data.name,data,user:req.usuario});
+  await recordAudit({entityType:'obra',entityId:rows[0].id,action:'criada',summary:(data.kind === 'servico' ? 'Serviço criado: ' : 'Obra / centro criado: ')+data.name,data,user:req.usuario});
   res.status(201).json(rows[0]);
 }));
 
@@ -156,11 +166,11 @@ router.put('/:id', exigirPermissao('p5'), asyncRoute(async (req, res) => {
   const result = await getDb().query(
     `UPDATE cost_centers SET code=$1,name=$2,responsible=$3,monthly_budget=$4,active=$5,
        client=$6,contract_number=$7,start_date=$8,end_date=$9,contract_amount=$10,
-       project_status=$11,description=$12,revision=revision+1,updated_at=NOW()
+       project_status=$11,description=$12,kind=COALESCE($15::text,kind),revision=revision+1,updated_at=NOW()
      WHERE id=$13 AND ($14::integer IS NULL OR revision=$14) RETURNING revision`,
     [data.code,data.name,data.responsible,data.budget,req.body.ativo !== false,data.client,
       data.contractNumber,data.startDate,data.endDate,data.contractAmount,data.projectStatus,
-      data.description,id,expected]
+      data.description,id,expected,data.kind]
   );
   if (!result.rowCount) {
     const exists = await getDb().query('SELECT 1 FROM cost_centers WHERE id=$1', [id]);
@@ -213,7 +223,21 @@ function reportMonth(query) {
   return {month,range:monthRange(month)};
 }
 
+// Aceita 'obra' ou 'servico' (tipo ou kind). Vazio devolve null: quem chama decide o padrao.
+function parseKind(value) {
+  if (value == null || value === '') return null;
+  const kind = String(value).trim().toLowerCase();
+  if (kind !== 'obra' && kind !== 'servico') throw httpError(400, 'Tipo inválido. Use obra ou servico.');
+  return kind;
+}
+
+function kindFilter(value) {
+  if (value == null || value === '' || value === 'todos') return null;
+  return parseKind(value);
+}
+
 function validate(body) {
+  const kind = parseKind(body.tipo ?? body.kind);
   const code = String(body.codigo || '').trim();
   const name = String(body.nome || '').trim();
   const responsible = String(body.responsavel || '').trim() || null;
@@ -234,7 +258,7 @@ function validate(body) {
   if (!['planejamento','execucao','pausado','concluido'].includes(projectStatus)) throw httpError(400, 'Situação da obra inválida.');
   return { code:code.slice(0,40),name:name.slice(0,140),responsible:responsible?.slice(0,120),budget,
     client:client?.slice(0,160),contractNumber:contractNumber?.slice(0,80),startDate,endDate,
-    contractAmount,projectStatus,description };
+    contractAmount,projectStatus,description,kind };
 }
 
 module.exports = router;

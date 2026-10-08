@@ -90,6 +90,8 @@ function createApp({ orcamentosApp } = {}) {
   app.use('/api/notas-fiscais-centro', require('./routes/costCenterInvoices'));
   app.use('/api/centros-custo', require('./routes/costCenterProposals'));
   app.use('/api/centros-custo', require('./routes/costCenterInvoicesLedger'));
+  app.use('/api/servicos', require('./routes/servicos'));
+  app.use('/api/servicos', require('./routes/servicosCampo'));
   app.use('/api/categorias', require('./routes/categories'));
   app.use('/api/fornecedores', require('./routes/suppliers'));
   app.use('/api/historico', require('./routes/history'));
@@ -212,7 +214,7 @@ function createApp({ orcamentosApp } = {}) {
     if (error instanceof SyntaxError && error.status === 400 && 'body' in error) return res.status(400).json({ ...payload, erro:'O conteúdo JSON enviado é inválido.' });
     if (error.statusCode) {
       if (error.statusCode >= 500) logger.error('request_failed', { requestId:req.requestId, method:req.method, path:req.originalUrl?.split('?')[0], error });
-      return res.status(error.statusCode).json({ ...payload, erro:error.publicMessage || error.message });
+      return res.status(error.statusCode).json({ ...payload, ...(error.extra || {}), erro:error.publicMessage || error.message });
     }
     if (error.code === '23505') return res.status(409).json({ ...payload, erro:'Já existe um cadastro com estes dados.' });
     if (error.code === '23503') return res.status(409).json({ ...payload, erro:'O registro está sendo usado e não pode ser removido.' });

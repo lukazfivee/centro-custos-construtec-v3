@@ -19,6 +19,9 @@
     }
   }
 
+  CC.shrink = shrink; // tambem usado nas fotos e recibos dos servicos
+
+
   function validate(d) {
     if (!d.obraId) return 'Escolha a obra.';
     if (!d.categoriaId) return 'Escolha a categoria.';

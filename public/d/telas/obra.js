@@ -37,6 +37,7 @@
     }
     if (!vivo()) return;
     const c = data.centro;
+    if (c.tipo === 'servico' && D.serv) { D.ir(`servicos/${c.id}`); return; }
     // A lista traz a revisao usada na edicao; /detalhes nao traz.
     const daLista = await CC.api('/centros-custo').then((r) => (r.data || []).find((x) => String(x.id) === String(c.id))).catch(() => null);
     if (!vivo()) return;

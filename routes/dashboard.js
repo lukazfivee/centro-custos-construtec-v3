@@ -58,7 +58,7 @@ router.get('/resumo', asyncRoute(async (req, res) => {
     `, [scopeIds]),
     db.query(`
       SELECT cc.id,cc.code AS codigo,cc.name AS nome,cc.client AS cliente,
-        cc.monthly_budget AS orcamento,cc.project_status AS situacao,
+        cc.monthly_budget AS orcamento,cc.project_status AS situacao,cc.kind AS tipo_centro,
         COALESCE(SUM(t.amount * t.accounting_sign) FILTER (WHERE t.type='receita' AND t.financial_status='liquidado'),0) AS receitas,
         COALESCE(SUM(t.amount * t.accounting_sign) FILTER (WHERE t.type='despesa' AND t.financial_status='liquidado'),0) AS despesas,
         COALESCE(SUM(t.amount * t.accounting_sign) FILTER (WHERE t.type='despesa'),0) AS comprometido,

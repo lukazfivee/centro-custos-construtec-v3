@@ -56,6 +56,12 @@
   };
 
   async function sendOne(item) {
+    // Despesa de servico (lancamento rapido): rota propria, recibo no mesmo envio; o client_id evita duplicar.
+    if (item.servicoId) {
+      await CC.api(`/servicos/${item.servicoId}/gastos`, { method: 'POST', body: { ...item.payload, client_id: item.client_id, ...(item.recibo ? { recibo: item.recibo } : {}) } });
+      await CC.store.del('fila', item.client_id);
+      return;
+    }
     if (!item.lancamento_id) {
       const { data } = await CC.api('/lancamentos', { method: 'POST', body: { ...item.payload, client_id: item.client_id } });
       item.lancamento_id = data.id;

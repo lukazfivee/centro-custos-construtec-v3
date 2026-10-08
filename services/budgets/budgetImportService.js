@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { freeServiceCode } = require('../servicos/codigoProposta');
 const { validateProposalEnvelope, computeSha256, canonicalJsonStringify } = require('./budgetCanonical');
 const { previewImport } = require('./budgetImportPreview');
 const { recordAudit } = require('../audit');
@@ -8,6 +9,8 @@ const { notifyAll } = require('../notify');
 
 async function confirmImport(db, params, userId) {
   const { previewId, confirmedHash, costCenterId, envelope } = params;
+  // Obra ou servico: vale so quando a importacao cria o centro de custo.
+  const costCenterKind = params.costCenterKind === 'servico' ? 'servico' : 'obra';
 
   let payload = null;
   let eventId = null;
@@ -109,8 +112,8 @@ async function confirmImport(db, params, userId) {
         resolvedCostCenterId = costCenterId;
       } else {
         const baseCode = `CC-${proposal.number}`;
-        let code = baseCode;
-        const checkCode = await tx.query('SELECT id FROM cost_centers WHERE LOWER(code) = LOWER($1)', [code]);
+        let code = costCenterKind === 'servico' ? await freeServiceCode(tx, proposal.number) : baseCode;
+        const checkCode = costCenterKind === 'servico' ? { rows: [] } : await tx.query('SELECT id FROM cost_centers WHERE LOWER(code) = LOWER($1)', [code]);
         if (checkCode.rows[0]) {
           code = `${baseCode}-${String(Date.now()).slice(-4)}`;
         }
@@ -118,8 +121,8 @@ async function confirmImport(db, params, userId) {
         const name = `${proposal.number} - ${clientName} - ${work.name}`.slice(0, 140);
         const newCc = await tx.query(`
           INSERT INTO cost_centers
-            (public_id, code, name, responsible, monthly_budget, active, client, contract_number, contract_amount, project_status)
-          VALUES ($1, $2, $3, $4, 0, true, $5, $6, $7, 'planejamento')
+            (public_id, code, name, responsible, monthly_budget, active, client, contract_number, contract_amount, project_status, kind)
+          VALUES ($1, $2, $3, $4, 0, true, $5, $6, $7, 'planejamento', $8)
           RETURNING id
         `, [
           crypto.randomUUID(),
@@ -129,6 +132,7 @@ async function confirmImport(db, params, userId) {
           clientName,
           proposal.number,
           Number(totals.contractValue),
+          costCenterKind,
         ]);
         resolvedCostCenterId = newCc.rows[0].id;
       }

@@ -35,7 +35,8 @@
       if (budget > 0 && spent > budget) {
         tasks.push({ alert: true, icon: 'trend-up', title: 'Custo acima do orçado', sub: c.nome + ' passou ' + moneyShort(spent - budget) + ' do orçado', action: 'Ver obra', go: ['obra', { id: c.id }] });
       } else if (Number(c.qtd_lancamentos) === 0 && c.situacao !== 'concluido') {
-        tasks.push({ alert: false, icon: 'buildings', title: 'Obra sem lançamentos', sub: c.nome, action: 'Abrir obra', go: ['obra', { id: c.id }] });
+        const sv = c.tipo_centro === 'servico';
+        tasks.push({ alert: false, icon: sv ? 'wrench' : 'buildings', title: sv ? 'Serviço sem lançamentos' : 'Obra sem lançamentos', sub: c.nome, action: sv ? 'Abrir serviço' : 'Abrir obra', go: [sv ? 'servico' : 'obra', { id: c.id }] });
       }
     }
     if (dash.aPagar > 0) {
@@ -75,28 +76,89 @@
     CC.$$('[data-task]').forEach((b) => b.addEventListener('click', () => { const t = tasks[Number(b.dataset.task)]; CC.go(t.go[0], t.go[1]); }));
   };
 
+  // Abas Obras / Servicos / Todos da lista, lembradas no celular (sem armazenamento, volta para Obras). Prototipo: Rodada 28 (28a a 28j).
+  const TIPO_CHAVE = 'cc.m.obras.tipo';
+  const TIPOS = [['obra', 'Obras'], ['servico', 'Serviços'], ['todos', 'Todos']];
+  function tipoAtual() {
+    try { const v = localStorage.getItem(TIPO_CHAVE); if (TIPOS.some(([t]) => t === v)) return v; } catch (e) { /* sem armazenamento */ }
+    return 'obra';
+  }
+  function guardarTipo(v) { try { localStorage.setItem(TIPO_CHAVE, v); } catch (e) { /* sem armazenamento */ } }
+
+  function obraRow(c) {
+    const budget = Number(c.orcamento), spent = Number(c.total_comprometido), p = pct(spent, budget);
+    const over = p !== null && p > 100;
+    const tag = Number(c.total_lancamentos || 0) === 0 && !spent ? '<span class="tag">Nova</span>'
+      : (p === null ? '<span class="tag">Sem orçamento</span>' : `<span class="tag${over ? ' warn' : ''}">${p}% gasto</span>`);
+    return `<button class="row" type="button" data-obra="${c.id}">
+      <span class="line"><span class="grow"><span class="name">${esc(c.nome)}</span><br><span class="cli">${esc(c.cliente || c.codigo || '')}</span></span>${tag}${icon('caret-right', 16)}</span>
+      ${p === null ? '' : `<span class="bar${over ? ' warn' : ''}"><span style="width:${Math.min(100, p)}%"></span></span>`}
+      <span class="foot">Gasto ${esc(moneyShort(spent))}${budget > 0 ? ` de ${esc(moneyShort(budget))} orçado` : ''}</span></button>`;
+  }
+
+  // Cartao compacto do servico: codigo, data, nome, cliente, tecnico, situacao e cobrado, gasto e resultado numa linha.
+  function servicoRow(v) {
+    const ve = v.valor !== undefined;
+    return `<button class="row sv-row" type="button" data-servico="${v.id}">
+      <span class="line"><span class="grow"><small class="sv-cod">${esc(v.codigo)}${v.data ? ` · ${esc(CC.dateBr(v.data))}` : ''}</small><span class="name">${esc(v.nome)}</span>
+        <span class="cli">${esc([v.cliente, v.responsavel].filter(Boolean).join(' · '))}</span></span>${CC.sv.badge(v.situacao)}${icon('caret-right', 16)}</span>
+      <span class="sv-nums">${ve ? `<span>Cobrado <b>${esc(money(v.valor))}</b></span>` : ''}<span>Gasto <b>${Number(v.gastos) ? esc(money(v.gastos)) : 'Sem gastos'}</b></span>
+        ${ve ? `<span>Resultado <b class="${Number(v.resultado) < 0 ? 'down' : 'up'}">${esc(money(v.resultado))}</b></span>` : ''}</span></button>`;
+  }
+
+  // Tres totais que acompanham a aba. Tecnico (sem valores) ve contagem e gastos.
+  function totais(tipo, obras, servs) {
+    const ve = servs.length ? servs.some((v) => v.valor !== undefined) : CC.sv.can('p1');
+    const sum = (list, f) => list.reduce((a, x) => a + (Number(f(x)) || 0), 0);
+    const mes = servs.filter((v) => String(v.data || '').startsWith(CC.month()));
+    const oGas = sum(obras, (c) => c.total_comprometido), oCont = sum(obras, (c) => c.valor_contrato);
+    const andamento = servs.filter((v) => v.situacao === 'em_andamento').length;
+    let k;
+    if (tipo === 'obra') k = [['Obras', String(obras.length), `${obras.filter((c) => c.situacao !== 'concluido').length} em execução`], ['Contratado', moneyShort(oCont), 'soma dos contratos'], ['Gasto', moneyShort(oGas), 'até hoje']];
+    else if (tipo === 'servico') {
+      k = ve ? [['Cobrado', moneyShort(sum(mes, (v) => v.valor)), `${mes.length} em ${CC.monthName()}`], ['Gastos', moneyShort(sum(mes, (v) => v.gastos)), 'do mês'], ['Resultado', moneyShort(sum(mes, (v) => v.resultado)), 'cobrado − gastos']]
+        : [['Serviços', String(servs.length), CC.sv.plural(servs.filter((v) => v.situacao === 'agendado').length, 'agendado', 'agendados')], ['Em andamento', String(andamento), 'agora'], ['Gastos', moneyShort(sum(servs, (v) => v.gastos)), 'lançados']];
+    } else {
+      k = [['Centros', String(obras.length + servs.length), `${obras.length} obras · ${servs.length} serviços`],
+        ve ? ['Receita', moneyShort(oCont + sum(servs, (v) => v.valor)), 'contratos e serviços'] : ['Em andamento', String(andamento), 'serviços'],
+        ['Gasto', moneyShort(oGas + sum(servs, (v) => v.gastos)), 'até hoje']];
+    }
+    return `<div class="summary sv-totais">${k.map(([l, v, s]) => `<span><small>${esc(l)}</small><b>${esc(v)}</b><small>${esc(s)}</small></span>`).join('')}</div>`;
+  }
+
   CC.screens.obras = async function (params) {
-    const el = CC.render(`${header('Obras')}<div class="skeleton"></div><div class="skeleton"></div>`);
-    let result;
+    const tipo = tipoAtual();
+    if (CC.sv) await CC.sv.loadPerms();
+    const novo = CC.sv && CC.sv.can('p5') ? `<button class="sv-novo" type="button" id="novo">${icon('plus', 16)}Novo</button>` : '';
+    const top = `<div class="top"><span class="brand"><img src="simbolo.png" alt=""><span>Centro de Custos</span></span>${CC.bellBtn ? CC.bellBtn() : ''}${novo}${CC.suitePill()}</div>
+      <div class="seg obras-tipo" role="group" aria-label="Obra ou serviço">${TIPOS.map(([v, t]) => `<button type="button" data-tipo="${v}" aria-pressed="${v === tipo}">${t}</button>`).join('')}</div>`;
+    const bind = () => {
+      CC.$$('[data-tipo]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.tipo === tipo) return; guardarTipo(b.dataset.tipo); CC.screens.obras(params); }));
+      const n = CC.$('#novo');
+      if (n) n.addEventListener('click', () => CC.sv.form({ tipo: tipo === 'obra' ? 'obra' : 'servico' }));
+    };
+    const el = CC.render(`${top}<div class="skeleton" style="height:72px"></div><div class="skeleton"></div><div class="skeleton"></div>`, false, params);
+    bind();
+    let obrasRes = { data: [] }, servRes = { data: [] };
     try {
-      result = await CC.cached('obras', `/centros-custo?mes=${CC.month()}`);
+      [obrasRes, servRes] = await Promise.all([tipo === 'servico' ? obrasRes : CC.cached('obras', `/centros-custo?mes=${CC.month()}`),
+        tipo === 'obra' ? servRes : CC.cached('servicos', '/servicos?ativo=true')]);
     } catch (error) {
       return CC.errorScreen(el, error, () => CC.screens.obras());
     }
-    const list = (result.data || []).filter((c) => c.ativo !== false);
-    const running = list.filter((c) => c.situacao !== 'concluido').length;
-    const rows = list.map((c) => {
-      const budget = Number(c.orcamento), spent = Number(c.total_comprometido), p = pct(spent, budget);
-      const over = p !== null && p > 100;
-      const tag = Number(c.total_lancamentos || 0) === 0 && !spent ? '<span class="tag">Nova</span>'
-        : (p === null ? '<span class="tag">Sem orçamento</span>' : `<span class="tag${over ? ' warn' : ''}">${p}% gasto</span>`);
-      return `<button class="row" type="button" data-obra="${c.id}">
-        <span class="line"><span class="grow"><span class="name">${esc(c.nome)}</span><br><span class="cli">${esc(c.cliente || c.codigo || '')}</span></span>${tag}${icon('caret-right', 16)}</span>
-        ${p === null ? '' : `<span class="bar${over ? ' warn' : ''}"><span style="width:${Math.min(100, p)}%"></span></span>`}
-        <span class="foot">Gasto ${esc(moneyShort(spent))}${budget > 0 ? ` de ${esc(moneyShort(budget))} orçado` : ''}</span></button>`;
-    }).join('');
-    CC.render(`${header('Obras')}<p class="sub">${running === 1 ? '1 obra em execução' : `${running} obras em execução`}</p>${staleNote(result)}
-      <div class="rows">${rows || `<div class="empty">${icon('buildings', 28)}Nenhuma obra cadastrada.</div>`}</div>`, false, params);
+    const obras = (obrasRes.data || []).filter((c) => c.ativo !== false && (c.tipo || 'obra') === 'obra');
+    const servs = (servRes.data || []).filter((v) => v.ativo !== false);
+    const stale = obrasRes.stale ? obrasRes : servRes;
+    const title = tipo === 'obra' ? 'Obras' : tipo === 'servico' ? 'Serviços' : 'Obras e serviços';
+    const sub = tipo === 'obra' ? `${obras.length} obras · orçado × gasto` : tipo === 'servico' ? `${servs.length} serviços · ${CC.monthName()}` : `${obras.length} obras e ${servs.length} serviços`;
+    const vazio = `<div class="empty">${icon(tipo === 'servico' ? 'wrench' : 'buildings', 28)}${tipo === 'servico' ? 'Nenhum serviço cadastrado.' : tipo === 'todos' ? 'Nenhuma obra ou serviço cadastrado.' : 'Nenhuma obra cadastrada.'}</div>`;
+    const lista = tipo === 'obra' ? obras.map(obraRow).join('') : tipo === 'servico' ? servs.map(servicoRow).join('')
+      : `${obras.length ? `<div class="group">Obras</div>${obras.map(obraRow).join('')}` : ''}${servs.length ? `<div class="group">Serviços</div>${servs.map(servicoRow).join('')}` : ''}`;
+    CC.render(`${top}<h1 class="title">${title}</h1><p class="sub">${esc(sub)}</p>${staleNote(stale)}${totais(tipo, obras, servs)}
+      <div class="rows">${lista || vazio}</div>`, false, params);
+    bind();
     CC.$$('[data-obra]').forEach((b) => b.addEventListener('click', () => CC.go('obra', { id: Number(b.dataset.obra) })));
+    CC.$$('[data-servico]').forEach((b) => b.addEventListener('click', () => CC.go('servico', { id: Number(b.dataset.servico) })));
+    return undefined;
   };
 })(window.CC = window.CC || {});

@@ -19,7 +19,7 @@ router.get('/exportar.csv', exigirPermissao('p5'), bloquearEscopado, asyncRoute(
   const [suppliers, categories, centers] = await Promise.all([
     db.query(`SELECT public_id,name,document,contact_name,email,phone,notes,active,revision,updated_at FROM suppliers ORDER BY name`),
     db.query(`SELECT public_id,name,type,active,revision,updated_at FROM categories ORDER BY name`),
-    db.query(`SELECT public_id,code,name,responsible,client,contract_number,monthly_budget,project_status,active,description,revision,updated_at FROM cost_centers ORDER BY name`),
+    db.query(`SELECT public_id,code,name,responsible,client,contract_number,monthly_budget,project_status,active,description,kind,revision,updated_at FROM cost_centers ORDER BY name`),
   ]);
 
   const headers = ['secao','public_id','nome','tipo','codigo','documento','contato','email','telefone','observacoes','cliente','contrato','orcamento_mensal','situacao','ativo','revisao','alterado_em'];
@@ -37,7 +37,7 @@ router.get('/exportar.csv', exigirPermissao('p5'), bloquearEscopado, asyncRoute(
   ])));
 
   centers.rows.forEach(r => lines.push(csvLine([
-    'obras', r.public_id, r.name, '', r.code, '', '', '', '', r.description || '',
+    'obras', r.public_id, r.name, r.kind || 'obra', r.code, '', '', '', '', r.description || '',
     r.client || '', r.contract_number || '', String(r.monthly_budget || 0),
     r.project_status, r.active ? 'sim' : 'nao', r.revision || 1, new Date(r.updated_at).toISOString(),
   ])));
@@ -159,19 +159,21 @@ async function importCostCenter(tx, row, instance, result) {
   const updatedAt = new Date(row.alterado_em) || new Date();
   const status = ['planejamento','execucao','pausado','concluido'].includes(row.situacao) ? row.situacao : 'planejamento';
   const budget = Number(row.orcamento_mensal) || 0;
+  // Na secao obras, a coluna tipo diz se e obra ou servico (CSV antigo vem vazio: obra).
+  const kind = row.tipo === 'servico' ? 'servico' : 'obra';
   if (!existing) {
-    await tx.query(`INSERT INTO cost_centers (public_id,code,name,responsible,monthly_budget,client,contract_number,project_status,active,description,revision,updated_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+    await tx.query(`INSERT INTO cost_centers (public_id,code,name,responsible,monthly_budget,client,contract_number,project_status,active,description,revision,updated_at,kind)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
       [row.public_id, code, name, null, budget, row.cliente.slice(0,160)||null,
-       row.contrato.slice(0,80)||null, status, active, row.observacoes||null, revision, updatedAt]);
+       row.contrato.slice(0,80)||null, status, active, row.observacoes||null, revision, updatedAt, kind]);
     result.obras.incluidos++; addDetail(result, row.line, 'incluido', `Obra "${name}" incluída.`);
   } else if (Number(existing.revision) >= revision) {
     result.obras.ignorados++;
   } else {
     await tx.query(`UPDATE cost_centers SET code=$1,name=$2,monthly_budget=$3,client=$4,contract_number=$5,
-      project_status=$6,active=$7,description=$8,revision=$9,updated_at=$10 WHERE public_id=$11`,
+      project_status=$6,active=$7,description=$8,revision=$9,updated_at=$10,kind=$12 WHERE public_id=$11`,
       [code, name, budget, row.cliente.slice(0,160)||null, row.contrato.slice(0,80)||null,
-       status, active, row.observacoes||null, revision, updatedAt, row.public_id]);
+       status, active, row.observacoes||null, revision, updatedAt, row.public_id, kind]);
     result.obras.atualizados++;
   }
 }

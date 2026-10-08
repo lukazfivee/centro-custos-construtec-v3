@@ -255,3 +255,4 @@ html[data-theme="escuro"] .tab { text-shadow: 0 1px 3px rgba(0, 18, 27, .75); }
 .top.obra-top .grow { order: 9; flex: 1 0 100%; min-width: 0; }
 .top.obra-top #obra-mais { margin-left: auto; }
 
+.obras-tipo { margin: 4px 0 12px; }

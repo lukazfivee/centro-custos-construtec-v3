@@ -45,6 +45,9 @@ const STRUCTURE = [
   ['budget_labor_lines', `baseline_id IN (${BASELINES})`],
   ['cost_center_proposals', 'cost_center_id=$1'],
   ['user_cost_centers', 'cost_center_id=$1'],
+  // Servico curto: situacao, checklist, aceite, faturamento e fotos.
+  ['service_jobs', 'cost_center_id=$1'],
+  ['service_photos', 'cost_center_id=$1'],
   // Lancamentos excluidos da obra (historico) e o que pende deles.
   ['transactions', `id IN (${DELETED_TX})`],
   ['transaction_attachments', `transaction_id IN (${DELETED_TX})`],
@@ -152,7 +155,8 @@ async function listDiscarded(db) {
   const { rows } = await db.query(`SELECT id, code, name, reason, discarded_by_name, discarded_at, restored_at, restored_by_name,
       (payload->'project_contracts'->0->>'id') IS NOT NULL AS tinha_contrato,
       payload->'cost_centers'->0->>'client' AS cliente, payload->'cost_centers'->0->>'contract_amount' AS valor_contrato,
-      payload->'project_contracts'->0->>'number' AS contrato_numero
+      payload->'project_contracts'->0->>'number' AS contrato_numero,
+      COALESCE(payload->'cost_centers'->0->>'kind', 'obra') AS tipo
     FROM discarded_cost_centers ORDER BY discarded_at DESC LIMIT 200`);
   return rows;
 }
@@ -169,8 +173,10 @@ async function restoreCostCenter(db, discardId, user) {
     if (clash.length) throw httpError(409, 'Já existe uma obra com o mesmo código ou identificador. Renomeie ou exclua a existente antes de restaurar.');
     await toggleGuards(tx, false);
     for (const [table] of STRUCTURE) {
-      const rows = payload[table] || [];
+      let rows = payload[table] || [];
       if (!rows.length) continue;
+      // Descartes anteriores ao tipo (obra ou servico) nao trazem kind: voltam como obra.
+      if (table === 'cost_centers') rows = rows.map((r) => ({ ...r, kind: r.kind === 'servico' ? 'servico' : 'obra' }));
       await tx.query(`INSERT INTO ${table} SELECT * FROM jsonb_populate_recordset(NULL::${table}, $1::jsonb) ON CONFLICT DO NOTHING`, [JSON.stringify(rows)]);
     }
     await toggleGuards(tx, true);

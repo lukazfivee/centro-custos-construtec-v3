@@ -8,7 +8,9 @@
 
   function campos(o) {
     const sit = Object.entries(O.SITUACAO).map(([valor, [rotulo]]) => ({ valor, rotulo }));
+    const tipos = [{ valor: 'obra', rotulo: 'Obra' }, { valor: 'servico', rotulo: 'Serviço (curto, ex.: instalar uma câmera)' }];
     return `<form class="form-lanc" novalidate>
+      ${U.campo({ rotulo: 'Obra ou serviço', name: 'tipo', tipo: 'select', valor: o.tipo || 'obra', opcoes: tipos })}
       <div class="duas">${U.campo({ rotulo: 'Código', name: 'codigo', valor: o.codigo, placeholder: 'Ex.: CC-031' })}
         ${U.campo({ rotulo: 'Situação', name: 'situacao', tipo: 'select', valor: o.situacao || 'planejamento', opcoes: sit })}</div>
       ${U.campo({ rotulo: 'Nome da obra', name: 'nome', valor: o.nome, placeholder: 'Ex.: Residencial Aurora' })}
@@ -26,7 +28,7 @@
     const v = (n) => (CC.$(`[name="${n}"]`, corpo) || {}).value || '';
     const ativo = CC.$('[name="ativo"]', corpo);
     return {
-      codigo: v('codigo').trim(), nome: v('nome').trim(), situacao: v('situacao'), cliente: v('cliente').trim(), contrato: v('contrato').trim(),
+      tipo: v('tipo') === 'servico' ? 'servico' : 'obra', codigo: v('codigo').trim(), nome: v('nome').trim(), situacao: v('situacao'), cliente: v('cliente').trim(), contrato: v('contrato').trim(),
       responsavel: v('responsavel').trim(), data_inicio: v('data_inicio'), data_fim: v('data_fim'),
       valor_contrato: v('valor_contrato'), orcamento: v('orcamento'), descricao: v('descricao').trim(), ativo: ativo ? ativo.checked : true,
     };
@@ -47,10 +49,12 @@
   O.formulario = async function (o, aoSalvar) {
     const obra = o || {};
     let enviando = false;
+    const edita = Boolean(o && o.id);
+    const servico = obra.tipo === 'servico';
     const ctl = await D.painel.abrir({
-      icone: o ? 'pencil-simple' : 'plus', titulo: o ? 'Editar obra' : 'Nova obra', sub: o ? [o.codigo, o.nome].filter(Boolean).join(' · ') : 'Obra ou centro de custo',
+      icone: edita ? 'pencil-simple' : 'plus', titulo: edita ? (servico ? 'Editar serviço' : 'Editar obra') : (servico ? 'Novo serviço' : 'Nova obra'), sub: edita ? [o.codigo, o.nome].filter(Boolean).join(' · ') : 'Obra ou centro de custo',
       corpo: campos(obra),
-      rodape: `<button type="button" class="btn btn-s" data-fechar>Cancelar</button><button type="button" class="btn btn-p" data-salvar>${D.ic('check')}${o ? 'Salvar alterações' : 'Criar obra'}</button>`,
+      rodape: `<button type="button" class="btn btn-s" data-fechar>Cancelar</button><button type="button" class="btn btn-p" data-salvar>${D.ic('check')}${edita ? 'Salvar alterações' : (servico ? 'Criar serviço' : 'Criar obra')}</button>`,
     });
     if (!ctl) return;
     const salvar = async () => {
@@ -63,11 +67,11 @@
       enviando = true;
       const body = { ...d, valor_contrato: valorContrato, orcamento, data_inicio: d.data_inicio || null, data_fim: d.data_fim || null };
       try {
-        if (o) await CC.api(`/centros-custo/${o.id}`, { method: 'PUT', body: { ...body, revisao: Number(o.revision) } });
+        if (edita) await CC.api(`/centros-custo/${o.id}`, { method: 'PUT', body: { ...body, revisao: Number(o.revision) } });
         else await CC.api('/centros-custo', { method: 'POST', body });
         ctl.marcarSalvo();
         ctl.fechar(true);
-        CC.toast(o ? 'Obra atualizada' : 'Obra criada');
+        CC.toast(d.tipo === 'servico' ? (edita ? 'Serviço atualizado' : 'Serviço criado') : (edita ? 'Obra atualizada' : 'Obra criada'));
         if (D.lanc && D.lanc.esquecerApoio) D.lanc.esquecerApoio();
         if (aoSalvar) aoSalvar();
       } catch (error) {
