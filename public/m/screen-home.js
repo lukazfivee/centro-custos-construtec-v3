@@ -35,7 +35,8 @@
       if (budget > 0 && spent > budget) {
         tasks.push({ alert: true, icon: 'trend-up', title: 'Custo acima do orçado', sub: c.nome + ' passou ' + moneyShort(spent - budget) + ' do orçado', action: 'Ver obra', go: ['obra', { id: c.id }] });
       } else if (Number(c.qtd_lancamentos) === 0 && c.situacao !== 'concluido') {
-        tasks.push({ alert: false, icon: 'buildings', title: 'Obra sem lançamentos', sub: c.nome, action: 'Abrir obra', go: ['obra', { id: c.id }] });
+        const sv = c.tipo_centro === 'servico';
+        tasks.push({ alert: false, icon: sv ? 'wrench' : 'buildings', title: sv ? 'Serviço sem lançamentos' : 'Obra sem lançamentos', sub: c.nome, action: sv ? 'Abrir serviço' : 'Abrir obra', go: [sv ? 'servico' : 'obra', { id: c.id }] });
       }
     }
     if (dash.aPagar > 0) {
