@@ -123,3 +123,7 @@ html[data-theme="escuro"] { --up: #5fd39a; --up-soft: #0f3a2b; --down: #ff8f75; 
 
 /* Relatorio */
 .sv-rel { width: 100%; height: 62dvh; border: 0; border-radius: 12px; background: #fff; box-shadow: var(--shadow); }
+.sv-foto.pend { position: relative; box-shadow: inset 0 0 0 2px var(--accent-300); align-items: end; justify-items: end; padding: 4px; color: #fff; }
+.sv-foto.pend svg { background: rgba(0, 0, 0, .6); border-radius: 999px; padding: 3px; box-sizing: content-box; }
+.sv-pend { margin-left: auto; display: inline-flex; color: var(--accent-300); }
+.sv-fila .tx { padding-left: 0; padding-right: 0; }

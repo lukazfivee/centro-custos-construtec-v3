@@ -1,8 +1,8 @@
 // Guarda o site do celular para abrir sem internet. A API nunca e guardada aqui:
 // os dados offline ficam no IndexedDB (queue.js), com a fila de lancamentos.
-const CACHE = 'cc-celular-v13';
+const CACHE = 'cc-celular-v14';
 const SHELL = ['./', 'index.html', 'm.css', 'anim.css', 'barra.css', 'tema.js', 'icons.js', 'core.js', 'queue.js', 'app.js',
-  'screen-home.js', 'screen-obra.js', 'screen-lancar.js', 'screen-misc.js', 'screen-obra-acoes.js', 'screen-servico.js', 'screen-servico-exec.js', 'screen-servico-gasto.js', 'screen-servico-fim.js', 'screen-servico-form.js', 'servico.css', 'screen-descartadas.js', 'suite.js', 'screen-avisos.js', 'screen-pedidos.js', 'screen-perfil.js', 'screen-atualizacao.js',
+  'screen-home.js', 'screen-obra.js', 'screen-lancar.js', 'screen-misc.js', 'screen-obra-acoes.js', 'screen-servico.js', 'screen-servico-fila.js', 'screen-servico-exec.js', 'screen-servico-gasto.js', 'screen-servico-fim.js', 'screen-servico-form.js', 'servico.css', 'screen-descartadas.js', 'suite.js', 'screen-avisos.js', 'screen-pedidos.js', 'screen-perfil.js', 'screen-atualizacao.js',
   'ia-config.js', 'ia-tools.js', 'ia-chat.js', 'screen-entrar.js', 'simbolo.png',
   'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png',
   'fonts/plex-400.woff2', 'fonts/plex-500.woff2', 'fonts/plex-600.woff2', 'fonts/plex-700.woff2'];

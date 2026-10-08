@@ -37,25 +37,35 @@
   function emit() { listeners.forEach((fn) => { try { fn(state); } catch { /* tela fechada */ } }); }
 
   // So os itens da conta atual (outra conta no mesmo celular nao envia nem ve a fila alheia).
-  CC.queue.mine = async () => (await CC.store.all('fila').catch(() => [])).filter((i) => i.owner && i.owner === CC.owner());
+  const mineAll = async () => (await CC.store.all('fila').catch(() => [])).filter((i) => i.owner && i.owner === CC.owner());
+  // Lancamentos e despesas de servico (tem payload) ficam separados das operacoes de campo do servico (op:
+  // checklist, foto e aceite), que as telas de lancamentos nao sabem desenhar.
+  CC.queue.mine = async () => (await mineAll()).filter((i) => !i.op);
+  CC.queue.ops = async () => (await mineAll()).filter((i) => i.op);
 
   CC.queue.refresh = async function () {
-    const items = await CC.queue.mine();
+    const items = await mineAll();
     state.pending = items.filter((i) => i.estado !== 'erro').length;
     state.errors = items.filter((i) => i.estado === 'erro').length;
     emit();
     return items;
   };
 
+  // Hora crescente: dois itens no mesmo milissegundo nao trocam de ordem no envio.
+  let ultimo = 0;
+  const agora = () => { ultimo = Math.max(Date.now(), ultimo + 1); return ultimo; };
+
   // Guarda a despesa no celular. Ela sai da fila so depois de o servidor confirmar.
   CC.queue.add = async function (item) {
     // Se nao der para gravar (ex.: sem espaco), o erro sobe e a tela mantem o rascunho.
-    await CC.store.put('fila', { ...item, owner: CC.owner(), estado: 'fila', erro: '', lancamento_id: null, criado_em: Date.now() });
+    await CC.store.put('fila', { ...item, owner: CC.owner(), estado: 'fila', erro: '', lancamento_id: null, criado_em: agora() });
     await CC.queue.refresh();
     try { await CC.queue.run(); } catch { /* segue na fila; tenta de novo depois */ }
   };
 
   async function sendOne(item) {
+    // Checklist, foto e aceite do servico: envio em screen-servico-fila.js.
+    if (item.op) return CC.sv.sendOp(item);
     // Despesa de servico (lancamento rapido): rota propria, recibo no mesmo envio; o client_id evita duplicar.
     if (item.servicoId) {
       await CC.api(`/servicos/${item.servicoId}/gastos`, { method: 'POST', body: { ...item.payload, client_id: item.client_id, ...(item.recibo ? { recibo: item.recibo } : {}) } });
@@ -80,7 +90,7 @@
   // Envia a fila em ordem. Para na primeira falha de rede; erros de dados ficam marcados.
   CC.queue.run = async function () {
     if (state.syncing || CC.offline() || !CC.session.token()) return CC.queue.refresh();
-    const items = (await CC.queue.mine()).filter((i) => i.estado !== 'erro').sort((a, b) => a.criado_em - b.criado_em);
+    const items = (await mineAll()).filter((i) => i.estado !== 'erro').sort((a, b) => a.criado_em - b.criado_em);
     if (!items.length) return CC.queue.refresh();
     state.syncing = true;
     emit();
@@ -104,7 +114,7 @@
     }
     if (sent && state.wasOffline) {
       state.wasOffline = false;
-      CC.toast(sent === 1 ? 'Internet de volta · 1 lançamento enviado' : `Internet de volta · ${sent} lançamentos enviados`, 'cloud-arrow-up');
+      CC.toast(sent === 1 ? 'Internet de volta · 1 item enviado' : `Internet de volta · ${sent} itens enviados`, 'cloud-arrow-up');
     }
     if (sent && CC.onQueueSent) CC.onQueueSent();
     return sent;
@@ -129,11 +139,11 @@
     const n = state.pending;
     if (state.syncing) {
       bar.className = 'netbar sync';
-      bar.innerHTML = `<span class="spin" aria-hidden="true"></span><span class="msg">${n === 1 ? 'Enviando 1 lançamento…' : `Enviando ${n} lançamentos…`}</span>`;
+      bar.innerHTML = `<span class="spin" aria-hidden="true"></span><span class="msg">${n === 1 ? 'Enviando 1 item…' : `Enviando ${n} itens…`}</span>`;
       return;
     }
     bar.className = 'netbar off';
-    const msg = n ? (n === 1 ? 'Sem internet · 1 lançamento na fila' : `Sem internet · ${n} lançamentos na fila`) : 'Sem internet · você pode continuar usando';
+    const msg = n ? (n === 1 ? 'Sem internet · 1 item na fila' : `Sem internet · ${n} itens na fila`) : 'Sem internet · você pode continuar usando';
     bar.innerHTML = `${CC.icon('wifi-slash', 17)}<span class="msg">${msg}</span><button type="button" id="net-retry">Tentar agora</button>`;
     CC.$('#net-retry', bar).addEventListener('click', () => {
       if (CC.offline()) CC.toast('Ainda sem internet · seus dados estão salvos no celular', 'cloud-slash');

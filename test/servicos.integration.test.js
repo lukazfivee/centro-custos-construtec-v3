@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const os = require('node:os');
 const path = require('node:path');
 
@@ -159,6 +160,20 @@ test('Servicos curtos: cadastro, gastos por tipo, campo, concluir, relatorio e t
     assert.equal(ok.situacao, 'concluido');
     await request(`/servicos/${id}/concluir`, 'POST', {}, 409, tec);
     assert.equal((await db.query('SELECT project_status FROM cost_centers WHERE id=$1', [id])).rows[0].project_status, 'concluido');
+  });
+
+  await context.test('checklist: incluir item e repetir o envio (celular sem internet) nao duplica', async () => {
+    const s3 = await request('/servicos', 'POST', { cliente: 'Loja Z', valor: 200 }, 201);
+    const item = { id: '3f2a9c1e-5b7d-4e8a-9c01-aa11bb22cc33', texto: 'Trocar o disjuntor' };
+    const a = await request(`/servicos/${s3.id}/checklist`, 'POST', item, 201);
+    assert.deepEqual(a.itens, [{ ...item, feito: false }]);
+    const b = await request(`/servicos/${s3.id}/checklist`, 'POST', item, 201);
+    assert.equal(b.itens.length, 1, 'mesmo id nao duplica');
+    await request(`/servicos/${s3.id}/checklist`, 'POST', { id: item.id, texto: '' }, 400);
+    await request(`/servicos/${s3.id}/checklist/${item.id}`, 'PATCH', { feito: true });
+    await request(`/servicos/${s3.id}/checklist/${item.id}`, 'PATCH', { feito: true });
+    assert.equal((await request(`/servicos/${s3.id}`)).checklist[0].feito, true);
+    await request(`/servicos/${s3.id}/checklist/${crypto.randomUUID()}`, 'PATCH', { feito: true }, 404);
   });
 
   await context.test('concluir com pendencias exige flag explicita e guarda o que faltava', async () => {

@@ -135,7 +135,7 @@
       if (params.__nav && params.__nav !== CC.nav) return undefined;
       return erro(el, error, { id, tab });
     }
-    const s = result.data;
+    const s = await CC.sv.overlay(result.data); // soma o que ainda esta na fila do celular
     CC.sv.atual = s;
     const body = tab === 'resumo' ? resumo(s) : tab === 'exec' ? CC.sv.execucao(s) : await lancamentos(s, params);
     const [secL, secI, secK] = secundario(s);

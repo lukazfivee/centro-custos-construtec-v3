@@ -5,8 +5,9 @@
 
   async function queueBlock() {
     const items = (await CC.queue.mine()).sort((a, b) => a.criado_em - b.criado_em);
-    if (!items.length) return '';
-    return `<span class="label">No celular</span>${items.map((i) => `<div class="tx"><span class="grow"><b>${esc(i.payload.favorecido || i.payload.descricao)}</b>
+    const ops = CC.sv && CC.sv.opRows ? await CC.sv.opRows() : ''; // checklist, fotos e aceite de servico
+    if (!items.length && !ops) return '';
+    return `<span class="label">No celular</span>${ops}${items.map((i) => `<div class="tx"><span class="grow"><b>${esc(i.payload.favorecido || i.payload.descricao)}</b>
         <small>${esc(i.obra_nome)} · ${esc(CC.dateBr(i.payload.data))}</small>
         <small class="${i.estado === 'erro' ? 'state' : ''}">${i.estado === 'erro' ? esc('Não aceito: ' + i.erro) : (CC.queue.state.syncing ? 'Enviando…' : 'Na fila, sem internet')}</small>
         ${i.estado === 'erro' ? `<span class="grid2" style="margin-top:6px"><button class="btn2" type="button" data-retry="${esc(i.client_id)}">Tentar de novo</button>

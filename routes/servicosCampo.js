@@ -50,6 +50,25 @@ router.put('/:id/checklist', exigirPermissao('p2'), asyncRoute(async (req, res) 
   res.json({ itens: list });
 }));
 
+// Inclui um item. O id vem do celular (criado sem internet), entao repetir o envio nao duplica.
+router.post('/:id/checklist', exigirPermissao('p2'), asyncRoute(async (req, res) => {
+  const id = positiveId(req.params.id);
+  const [item] = readChecklist([{ id: req.body?.id, texto: req.body?.texto, feito: false }]);
+  let list;
+  await getDb().transaction(async (tx) => {
+    const { center, job } = await core.loadService(tx, id, { lock: true });
+    assertEditable(job);
+    list = Array.isArray(job.checklist) ? job.checklist : [];
+    if (list.some((i) => i.id === item.id)) return;
+    if (list.length >= MAX_ITEMS) throw httpError(400, `O checklist aceita até ${MAX_ITEMS} itens.`);
+    list.push(item);
+    await saveChecklist(tx, id, list);
+    await recordAudit({ entityType: 'servico', entityId: center.public_id, action: 'checklist_item_incluido', client: tx,
+      summary: `Checklist do serviço ${center.code}: item "${item.texto}" incluído`, data: { item: item.id }, user: req.usuario });
+  });
+  res.status(201).json({ itens: list });
+}));
+
 // Marca ou desmarca um item.
 router.patch('/:id/checklist/:itemId', exigirPermissao('p2'), asyncRoute(async (req, res) => {
   const id = positiveId(req.params.id);
