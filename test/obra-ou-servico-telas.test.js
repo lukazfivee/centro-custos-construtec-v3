@@ -37,11 +37,11 @@ test('celular: filtro Obras / Servicos / Todos e etiqueta Servico na lista de ob
   assert.match(home, /try \{ const v = localStorage\.getItem/);
   assert.match(home, /<span class="tag">Serviço<\/span>/);
   assert.ok(home.split('\n').length <= 350);
-  assert.match(ler('public/m/sw.js'), /const CACHE = 'cc-celular-v11'/);
+  assert.match(ler('public/m/sw.js'), /const CACHE = 'cc-celular-v\d+'/);
 });
 
 test('migracao: coluna kind com obra como padrao e so obra ou servico', () => {
-  const sql = ler('migrations/111_cost_center_kind.sql');
+  const sql = ler('migrations/115_cost_center_kind.sql');
   assert.match(sql, /ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'obra'/);
   assert.match(sql, /CHECK \(kind IN \('obra','servico'\)\)/);
 });

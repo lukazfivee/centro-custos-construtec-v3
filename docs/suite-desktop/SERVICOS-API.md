@@ -4,7 +4,7 @@ Base: `/api/servicos`. Todas as rotas exigem `Authorization: Bearer <token>`. Co
 Erros sempre no formato `{ "erro": "mensagem em português", "requestId": "..." }` (com campos extras quando indicado).
 
 Código: `routes/servicos.js` (cadastro, situação, gastos, concluir, faturar, relatório), `routes/servicosCampo.js` (checklist, fotos, aceite),
-`services/servicos/*`. Migração `migrations/112_servicos.sql`. Testes: `test/servicos.integration.test.js`, `test/servicos-faturar.integration.test.js`.
+`services/servicos/*`. Migração `migrations/116_servicos.sql`. Testes: `test/servicos.integration.test.js`, `test/servicos-faturar.integration.test.js`.
 
 ## Modelo
 
