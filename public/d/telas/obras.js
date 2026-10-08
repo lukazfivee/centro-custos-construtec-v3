@@ -67,25 +67,42 @@
         ${['admin', 'gestor'].includes(D.papel()) ? `<button type="button" class="btn btn-d" data-excluir="${esc(o.id)}">Excluir</button>` : ''}</div></article>`;
   }
 
+  const TITULOS = { obra: ['Obras e centros de custo', 'Carteira da Construtec · orçado, realizado e medição por obra'], servico: ['Serviços', 'Serviços curtos: valor cobrado, gastos e resultado, sem orçamento importado'], todos: ['Obras e serviços', 'Tudo o que tem centro de custo, obras e serviços juntos'] };
+  const FILTROS_SV = [['', 'Todos'], ['agendado', 'Agendados'], ['em_andamento', 'Em andamento'], ['concluido', 'Concluídos'], ['faturado', 'Faturados']];
+  let filtroSv = '';
+
   async function render(el, rota, vivo) {
+    const [titulo, sub] = TITULOS[tipo];
     el.innerHTML = `<div class="pagina obras">
-      ${U.cabecalho({ grupo: 'Operação', titulo: 'Obras e centros de custo', sub: 'Carteira da Construtec · orçado, realizado e medição por obra',
-        acoes: `${D.papel() === 'admin' ? `<button type="button" class="btn btn-s" data-descartadas>${D.ic('arrow-counter-clockwise')}Obras descartadas</button>` : ''}${D.pode('cadastrar') ? `<button type="button" class="btn btn-s" data-importar>${D.ic('file-arrow-up')}Importar orçamento</button><button type="button" class="btn btn-p" data-nova>${D.ic('plus')}Nova obra</button>` : ''}` })}
+      ${U.cabecalho({ grupo: 'Operação', titulo, sub,
+        acoes: `${D.papel() === 'admin' && tipo !== 'servico' ? `<button type="button" class="btn btn-s" data-descartadas>${D.ic('arrow-counter-clockwise')}Obras descartadas</button>` : ''}${D.pode('cadastrar') ? `${tipo !== 'servico' ? `<button type="button" class="btn btn-s" data-importar>${D.ic('file-arrow-up')}Importar orçamento</button>` : ''}<button type="button" class="btn btn-p" data-nova>${D.ic('plus')}Novo</button>` : ''}` })}
       <div data-corpo>${U.carregando('Carregando a carteira…')}</div></div>`;
+    const recarregar = () => render(el, rota, vivo);
     const nova = CC.$('[data-nova]', el);
-    if (nova) nova.addEventListener('click', () => O.formulario(tipo === 'servico' ? { tipo: 'servico' } : null, () => render(el, rota, vivo)));
+    if (nova) nova.addEventListener('click', () => D.serv.novo(tipo === 'servico' ? 'servico' : 'obra', recarregar));
     const descartadas = CC.$('[data-descartadas]', el);
-    if (descartadas) descartadas.addEventListener('click', () => O.descartadas(() => render(el, rota, vivo)));
+    if (descartadas) descartadas.addEventListener('click', () => O.descartadas(recarregar));
     const importar = CC.$('[data-importar]', el);
-    if (importar) importar.addEventListener('click', () => O.importar(null, (r) => (r && r.costCenterId ? D.ir(`obras/${r.costCenterId}`) : render(el, rota, vivo))));
-    const [lista, resumo] = await Promise.all([
-      CC.api('/centros-custo').then((r) => (Array.isArray(r.data) ? r.data : [])),
-      CC.api(`/centros-custo/portfolio-summary${tipo === 'todos' ? '' : `?kind=${tipo}`}`).then((r) => r.data).catch(() => ({ portfolio: {}, porObra: [] })),
-    ]);
+    if (importar) importar.addEventListener('click', () => O.importar(null, (r) => (r && r.costCenterId ? D.ir(`obras/${r.costCenterId}`) : recarregar())));
+    const abas = `<div class="abas-tipo">${U.seg('tipo', TIPOS, tipo, 'Obra ou serviço')}</div>`;
+    let lista; let resumo; let servicos;
+    try {
+      [lista, resumo, servicos] = await Promise.all([
+        tipo === 'servico' ? [] : CC.api('/centros-custo').then((r) => (Array.isArray(r.data) ? r.data : [])),
+        tipo === 'servico' ? {} : CC.api(`/centros-custo/portfolio-summary${tipo === 'todos' ? '' : `?kind=${tipo}`}`).then((r) => r.data).catch(() => ({ portfolio: {}, porObra: [] })),
+        tipo === 'obra' ? [] : CC.api('/servicos').then((r) => (Array.isArray(r.data) ? r.data : [])),
+      ]);
+    } catch (error) {
+      if (!vivo()) return;
+      CC.$('[data-corpo]', el).innerHTML = `${abas}<div class="card">${U.vazio('cloud-slash', error.status === 0 ? 'Sem internet' : 'Não foi possível abrir a lista', error.status === 0 ? 'A lista volta quando a conexão voltar.' : error.message)}</div>`;
+      ligarTipo(el, rota, vivo);
+      return;
+    }
     if (!vivo()) return;
+    if (tipo !== 'obra') { pintarServicos(el, rota, vivo, { abas, lista, resumo, servicos }); return; }
     const p = resumo.portfolio || {};
     const numeros = new Map((resumo.porObra || []).map((x) => [x.id, x]));
-    const doTipo = tipo === 'todos' ? lista : lista.filter((o) => (o.tipo || 'obra') === tipo);
+    const doTipo = lista.filter((o) => (o.tipo || 'obra') === tipo);
     const ativas = doTipo.filter((o) => o.ativo !== false);
     const pintar = () => {
       const base = atividade === 'inativas' ? doTipo.filter((o) => o.ativo === false) : atividade === 'todas' ? doTipo : ativas;
@@ -113,13 +130,41 @@
         }
       }));
     };
-    CC.$('[data-corpo]', el).innerHTML = `<div class="abas-tipo">${U.seg('tipo', TIPOS, tipo, 'Obra ou serviço')}</div><div class="kpis seis">${kpis(p, ativas)}</div>${alerta(p)}
+    CC.$('[data-corpo]', el).innerHTML = `${abas}<div class="kpis seis">${kpis(p, ativas)}</div>${alerta(p)}
       <div class="barra-filtro">${U.seg('situacao', FILTROS.map(([valor, rotulo]) => ({ valor, rotulo })), filtro, 'Situação da obra')}
-        ${U.seg('atividade', [{valor:'ativas',rotulo:'Ativas'},{valor:'inativas',rotulo:'Inativas'},{valor:'todas',rotulo:'Todas'}], atividade, 'Atividade da obra')}<span class="muted" data-conta></span></div>
+        ${U.seg('atividade', [{ valor: 'ativas', rotulo: 'Ativas' }, { valor: 'inativas', rotulo: 'Inativas' }, { valor: 'todas', rotulo: 'Todas' }], atividade, 'Atividade da obra')}<span class="muted" data-conta></span></div>
       <div class="grade-obras" data-cartoes></div>`;
-    CC.$$('[data-seg="tipo"]', el).forEach((b) => b.addEventListener('click', () => { if (b.dataset.valor === tipo) return; tipo = b.dataset.valor; guardarTipo(tipo); render(el, rota, vivo); }));
+    ligarTipo(el, rota, vivo);
     CC.$$('[data-seg="situacao"]', el).forEach((b) => b.addEventListener('click', () => { filtro = b.dataset.valor; U.segEscolher(b.parentElement, b); pintar(); }));
     CC.$$('[data-seg="atividade"]', el).forEach((b) => b.addEventListener('click', () => { atividade = b.dataset.valor; U.segEscolher(b.parentElement, b); pintar(); }));
+    pintar();
+  }
+
+  function ligarTipo(el, rota, vivo) {
+    CC.$$('[data-seg="tipo"]', el).forEach((b) => b.addEventListener('click', () => { if (b.dataset.valor === tipo) return; tipo = b.dataset.valor; guardarTipo(tipo); render(el, rota, vivo); }));
+  }
+
+  // Abas Servicos (28Db, filtro por situacao) e Todos (28De, obras e servicos na mesma grade).
+  function pintarServicos(el, rota, vivo, { abas, lista, resumo, servicos }) {
+    const S = D.serv;
+    const recarregar = () => render(el, rota, vivo);
+    const numeros = new Map(((resumo && resumo.porObra) || []).map((x) => [x.id, x]));
+    const obras = lista.filter((o) => (o.tipo || 'obra') === 'obra' && o.ativo !== false);
+    const svAtivos = servicos.filter((v) => v.ativo !== false);
+    const todos = tipo === 'todos';
+    CC.$('[data-corpo]', el).innerHTML = `${abas}<div class="kpis seis">${todos ? S.kpisTodos(obras, numeros, svAtivos) : S.kpisServicos(svAtivos)}</div>
+      <div class="barra-filtro">${todos ? '<span></span>' : U.seg('situacao-sv', FILTROS_SV.map(([valor, rotulo]) => ({ valor, rotulo })), filtroSv, 'Situação do serviço')}<span class="muted" data-conta></span></div>
+      <div class="grade-obras" data-cartoes></div>`;
+    const pintar = () => {
+      const vis = todos ? svAtivos : svAtivos.filter((v) => !filtroSv || v.situacao === filtroSv);
+      const html = (todos ? obras.map((o) => cartao(o, numeros)) : []).concat(vis.map(S.cartao));
+      CC.$('[data-cartoes]', el).innerHTML = html.length ? html.join('') : U.vazio('wrench', todos ? 'Nenhuma obra ou serviço ainda.' : 'Nenhum serviço nesta situação.', D.pode('cadastrar') ? 'Use Novo para criar um serviço.' : '');
+      CC.$('[data-conta]', el).textContent = todos ? `${obras.length} obras · ${svAtivos.length} serviços` : `${vis.length} de ${svAtivos.length} serviços`;
+      S.ligarCartoes(el, servicos, recarregar);
+      CC.$$('[data-editar]', el).forEach((b) => b.addEventListener('click', () => O.formulario(lista.find((o) => String(o.id) === b.dataset.editar), recarregar)));
+    };
+    ligarTipo(el, rota, vivo);
+    CC.$$('[data-seg="situacao-sv"]', el).forEach((b) => b.addEventListener('click', () => { filtroSv = b.dataset.valor; U.segEscolher(b.parentElement, b); pintar(); }));
     pintar();
   }
 

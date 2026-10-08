@@ -35,7 +35,7 @@ test('celular: filtro Obras / Servicos / Todos e etiqueta Servico na lista de ob
   assert.match(home, /\['obra', 'Obras'\], \['servico', 'Serviços'\], \['todos', 'Todos'\]/);
   assert.match(home, /return 'obra';/, 'padrao Obras');
   assert.match(home, /try \{ const v = localStorage\.getItem/);
-  assert.match(home, /<span class="tag">Serviço<\/span>/);
+  assert.match(home, /function servicoRow\(v\)/, 'cartao proprio do servico');
   assert.ok(home.split('\n').length <= 350);
   assert.match(ler('public/m/sw.js'), /const CACHE = 'cc-celular-v\d+'/);
 });

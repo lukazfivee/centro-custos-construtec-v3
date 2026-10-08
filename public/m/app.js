@@ -4,7 +4,7 @@
   CC.screens = CC.screens || {};
   const TABS = [
     ['home', 'Início', 'squares-four', ['home']],
-    ['obras', 'Obras', 'buildings', ['obras', 'obra']],
+    ['obras', 'Obras', 'buildings', ['obras', 'obra', 'servico', 'servico-rel']],
     ['lancar', 'Lançar', 'plus-circle', ['lancar', 'ok']],
     ['lancamentos', 'Lançamentos', 'list-bullets', ['lancamentos']],
     ['menu', 'Menu', 'list', ['menu', 'pedidos', 'perfil', 'descartadas', 'descartada', 'atualizacao']],
@@ -69,7 +69,7 @@
       <a class="btn" href="suite://entrar" style="padding:0 22px;text-decoration:none">Entrar</a></div>`);
   }
   CC.onUnauthorized = () => { if (CC.ia && CC.ia.reset) CC.ia.reset(); signedOut('Sua sessão terminou'); };
-  CC.onQueueSent = () => { if (['home', 'lancamentos', 'obra'].includes(current)) CC.go(current, currentParams); };
+  CC.onQueueSent = () => { if (['home', 'lancamentos', 'obra', 'servico'].includes(current)) CC.go(current, currentParams); };
 
   async function consumeHandoff(code) {
     history.replaceState(null, '', location.pathname + location.search);
@@ -116,7 +116,7 @@
     if (obra > 0) return CC.go('obra', { id: obra });
     if (pedidos) return CC.go('pedidos');
     const first = location.hash.slice(1);
-    CC.go(CC.screens[first] && !['ok', 'obra', 'login', 'descartada'].includes(first) ? first : 'home');
+    CC.go(CC.screens[first] && !['ok', 'obra', 'login', 'descartada', 'servico', 'servico-rel'].includes(first) ? first : 'home');
   }
 
   document.addEventListener('DOMContentLoaded', boot);
