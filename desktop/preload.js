@@ -6,4 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getMobileAccess: () => ipcRenderer.sendSync('get-mobile-access'),
   setMobileAccess: (value) => ipcRenderer.invoke('set-mobile-access', value),
   openWebmail: () => ipcRenderer.invoke('open-webmail'),
+  // App Suíte unificado: troca a tela da mesma janela (Centro de Custos <-> Orçamentos).
+  suiteSwitch: (target, hash) => ipcRenderer.invoke('suite:switch', target, hash),
 });

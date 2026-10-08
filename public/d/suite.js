@@ -9,6 +9,7 @@
     ['wrench', 'Chamados e O.S.', 'Etapa 03 · ChamadoPro', 'https://chamadopro-app.lucas-coelho5923.workers.dev/'],
   ];
   const WEBMAIL = 'https://webmailpro.uol.com.br/';
+  const ORCAMENTOS = ITENS[0][3];
 
   const item = ([icone, titulo, sub, url]) => {
     const miolo = `<span class="ic">${D.ic(icone, 17)}</span><span class="tx"><b>${esc(titulo)}</b><span>${esc(sub)}</span></span>`;
@@ -39,6 +40,11 @@
       if (link && link.href === WEBMAIL && window.electronAPI && window.electronAPI.openWebmail) {
         event.preventDefault();
         window.electronAPI.openWebmail();
+      }
+      // No app Suíte do Windows o Orçamentos é a outra tela da mesma janela, não uma aba do navegador.
+      if (link && link.href === ORCAMENTOS && window.electronAPI && window.electronAPI.suiteSwitch) {
+        event.preventDefault();
+        window.electronAPI.suiteSwitch('orcamentos');
       }
       if (link) abrir(false);
     });

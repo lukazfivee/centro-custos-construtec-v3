@@ -212,6 +212,22 @@ router.get('/me', autenticar, asyncRoute(async (req, res) => res.json({
   instancia: getInstanceIdentity(),
 })));
 
+// Código de uso único para abrir o Orçamentos já logado, dentro do app Suíte do Windows (uma janela, duas telas).
+// Só contas corporativas têm sessão central; as locais entram pela tela de login do Orçamentos.
+router.post('/suite-handoff', autenticar, asyncRoute(async (req, res) => {
+  const target = String(req.body?.target || '');
+  if (target !== 'orcamentos') throw httpError(400,'Destino inválido.');
+  if (!req.usuario.cloud_managed || !req.usuario.cloud_session_token) throw httpError(409,'Só contas corporativas entram direto no Orçamentos.');
+  let remote;
+  try { remote = await cloudAuth.handoff(req.usuario.cloud_session_token,target); }
+  catch (error) {
+    if (error.status === 401) throw httpError(428,'Sua sessão corporativa expirou. Entre novamente.');
+    throw httpError(503,'Não foi possível abrir o Orçamentos com a sua conta agora.');
+  }
+  if (!remote?.code) throw httpError(502,'A autenticação corporativa não retornou o código de acesso.');
+  res.json({ code:remote.code });
+}));
+
 router.get('/foto-perfil', autenticar, asyncRoute(async (req, res) => {
   let synchronized = true;
   if (req.usuario.cloud_managed && cloudAuth.corporateEmail(req.usuario.email) && req.usuario.cloud_session_token) {

@@ -32,6 +32,14 @@ jobs:
           cache: npm
       - name: Instalar dependencias
         run: npm ci
+      - name: Baixar codigo do Orcamentos (tela da Suite)
+        uses: actions/checkout@v7
+        with:
+          repository: lukazfivee/construtec-orcamentos
+          path: orcamentos-src
+      - name: Instalar dependencias do Orcamentos
+        working-directory: orcamentos-src
+        run: npm ci
       - name: Definir versao do pre-lancamento
         run: |
           $version = "3.1.0-rc.$env:RC_NUMBER"

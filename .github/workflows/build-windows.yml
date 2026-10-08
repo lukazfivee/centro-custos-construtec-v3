@@ -8,6 +8,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'desktop/**'
+      - 'scripts/build-suite-modules.js'
       - 'public/**'
       - 'routes/**'
       - 'services/**'
@@ -36,6 +37,14 @@ jobs:
           node-version: 20
           cache: npm
       - name: Instalar dependencias
+        run: npm ci
+      - name: Baixar codigo do Orcamentos (tela da Suite)
+        uses: actions/checkout@v7
+        with:
+          repository: lukazfivee/construtec-orcamentos
+          path: orcamentos-src
+      - name: Instalar dependencias do Orcamentos
+        working-directory: orcamentos-src
         run: npm ci
       - name: Auditoria de producao
         run: npm audit --omit=dev --audit-level=high
