@@ -1,33 +1,25 @@
+// Gera modules/ (Orçamentos: renderer, processo principal e preload) para o app Suíte do Windows.
+// O código do Orçamentos vive em outro repositório: informe a pasta em ORCAMENTOS_REPO ou deixe-o ao lado
+// deste (../construtec-orcamentos). Precisa de `npm ci` feito lá.
 const { spawnSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const appRoot = path.join(__dirname, '..');
-const budgetsRoot = path.join(appRoot, '..', 'Construtec orçamentos', 'construtec-orcamentos');
-const vite = path.join(budgetsRoot, 'node_modules', 'vite', 'bin', 'vite.js');
-const esbuild = path.join(budgetsRoot, 'node_modules', 'esbuild', 'bin', 'esbuild');
-const rendererOutput = path.join(appRoot, 'modules', 'orcamentos');
-const apiOutput = path.join(appRoot, 'modules', 'orcamentos-api', 'index.cjs');
+const candidates = [
+  process.env.ORCAMENTOS_REPO,
+  path.join(appRoot, '..', 'construtec-orcamentos'),
+  path.join(appRoot, 'orcamentos-src'),
+].filter(Boolean);
+const repo = candidates.find((dir) => fs.existsSync(path.join(dir, 'scripts', 'build-suite-bundle.mjs')));
+if (!repo) {
+  console.error('Repositório do Orçamentos não encontrado (precisa de scripts/build-suite-bundle.mjs). Defina ORCAMENTOS_REPO.');
+  process.exit(1);
+}
 
-const renderer = spawnSync(process.execPath, [
-  vite,
-  'build',
-  '--config', path.join(budgetsRoot, 'vite.renderer.config.mjs'),
-  '--outDir', rendererOutput,
-  '--emptyOutDir',
-], { cwd: budgetsRoot, stdio: 'inherit' });
-
-if (renderer.error) throw renderer.error;
-if (renderer.status !== 0) process.exit(renderer.status || 1);
-
-const api = spawnSync(process.execPath, [
-  esbuild,
-  path.join(budgetsRoot, 'src', 'server', 'suite.ts'),
-  '--bundle',
-  '--platform=node',
-  '--format=cjs',
-  '--packages=external',
-  `--outfile=${apiOutput}`,
-], { cwd: budgetsRoot, stdio: 'inherit' });
-
-if (api.error) throw api.error;
-if (api.status !== 0) process.exit(api.status || 1);
+const result = spawnSync(process.execPath, [
+  path.join(repo, 'scripts', 'build-suite-bundle.mjs'),
+  '--out', path.join(appRoot, 'modules'),
+], { cwd: repo, stdio: 'inherit' });
+if (result.error) throw result.error;
+process.exit(result.status === null ? 1 : result.status);

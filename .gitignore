@@ -12,8 +12,7 @@ run.bat
 start-electron.vbs
 start-hidden.vbs
 start-3334.cjs
-modules/orcamentos/
-modules/orcamentos-api/
+modules/
 *.log
 servidor-erro.log
 electron-stdout.txt
@@ -34,3 +33,4 @@ test-bcrypt.js
 CONTINUAR-NO-OPENCODE.md
 
 .worktrees/
+orcamentos-src/

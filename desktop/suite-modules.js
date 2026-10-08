@@ -1,24 +1,20 @@
 const path = require('path');
 
+// Onde cada tela da Suíte vive. Os arquivos do Orçamentos (modules/) são gerados por
+// scripts/build-suite-modules.js a partir do repositório do Orçamentos e não ficam no Git.
 module.exports = function suiteModules(appRoot) {
-  const workspace = path.dirname(appRoot);
+  const orcamentos = path.join(appRoot, 'modules');
   return {
     centro: {
       id: 'centro',
-      route: '/',
-      port: 3334,
+      port: 3333,
     },
     orcamentos: {
       id: 'orcamentos',
-      route: '/orcamentos/',
-      apiPort: 5176,
-      root: path.join(workspace, 'Construtec orçamentos', 'construtec-orcamentos'),
-    },
-    chamados: {
-      id: 'chamados',
-      route: '/chamados/',
-      apiPort: 4555,
-      root: path.join(workspace, 'chamadopro'),
+      apiPort: Number(process.env.CONSTRUTEC_API_PORT || 5176),
+      entry: path.join(orcamentos, 'orcamentos-main', 'index.cjs'),
+      preload: path.join(orcamentos, 'orcamentos-main', 'preload.cjs'),
+      renderer: path.join(orcamentos, 'orcamentos', 'index.html'),
     },
   };
 };
