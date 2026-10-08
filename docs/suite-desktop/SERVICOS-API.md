@@ -150,6 +150,10 @@ Editar ou excluir o gasto: rotas comuns de lançamentos (`/api/lancamentos/:id`,
 `{ "itens": [{ "id"?: "uuid", "texto": "Fixar câmeras", "feito"?: false }] }`: substitui a lista toda (incluir, remover, reordenar).
 Item sem `id` ganha um. Até 100 itens, texto até 200 caracteres. `200 { itens }`. 409 se faturado.
 
+### POST /api/servicos/:id/checklist (p2)
+`{ "id": "uuid", "texto": "Fixar câmeras" }`: inclui um item no fim da lista, sem reescrever a lista. O `id` vem do cliente (o celular cria o
+item sem internet); repetir o mesmo `id` não duplica e também responde `201 { itens }`. 400 texto vazio ou lista cheia (100). 409 se faturado.
+
 ### PATCH /api/servicos/:id/checklist/:itemId (p2)
 `{ "feito": true }` (boolean obrigatório). `200 { itens }`. 404 item não encontrado. 409 se faturado.
 
@@ -239,3 +243,10 @@ Código: `services/servicos/codigoProposta.js`.
 `audit_log` com `entity_type = 'servico'` e `entity_id = publicId`: `criado`, `atualizado`, `situacao`, `checklist`, `checklist_item`,
 `foto_adicionada`, `foto_removida`, `aceite_registrado`, `aceite_removido`, `gasto_lancado` (mais o `criado` do lançamento),
 `concluido`, `faturado`.
+
+## Celular sem internet (checklist, fotos e aceite)
+
+O celular guarda estas alterações numa fila (`public/m/screen-servico-fila.js`, `queue.js`) e as envia em ordem quando a conexão volta. O servidor
+precisa aceitar o mesmo envio mais de uma vez: `PATCH` do checklist grava o valor final, `POST` do checklist ignora `id` repetido, `POST` de foto
+responde `409 Esta mesma foto já foi enviada.` para a foto repetida (o celular conta como enviada) e `PUT` do aceite substitui o anterior; o aceite
+leva `dataHora` de quando o cliente assinou, não de quando o envio aconteceu.
