@@ -38,6 +38,11 @@ jobs:
           cache: npm
       - name: Instalar dependencias
         run: npm ci
+      - name: Auditoria de producao
+        run: npm audit --omit=dev --audit-level=high
+      - name: Testar aplicacao
+        run: npm run verify
+      # Depois do verify: o node --test do Centro descobriria e rodaria os testes do Orcamentos aqui dentro.
       - name: Baixar codigo do Orcamentos (tela da Suite)
         uses: actions/checkout@v7
         with:
@@ -46,10 +51,6 @@ jobs:
       - name: Instalar dependencias do Orcamentos
         working-directory: orcamentos-src
         run: npm ci
-      - name: Auditoria de producao
-        run: npm audit --omit=dev --audit-level=high
-      - name: Testar aplicacao
-        run: npm run verify
       - name: Gerar instalador e versao portatil
         run: npm run build
       - name: Publicar artefatos
