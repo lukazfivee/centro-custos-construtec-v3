@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Suíte Construtec</title>
+<style>
+  /* Barra de título da Suíte (Windows): mesma cor e efeitos da barra do Orçamentos. Os botões de minimizar, maximizar e
+     fechar são os do Windows (titleBarOverlay), pintados na cor da barra. Arrastar move a janela; clique duplo maximiza. */
+  :root { --nav: #031f29; --mx: 30%; --controls: 138px; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 36px; overflow: hidden; background: var(--nav); }
+  .titlebar { position: relative; height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 var(--controls) 0 14px; overflow: hidden; background: var(--nav); color: #b9d4dd; -webkit-app-region: drag; user-select: none; font-family: 'Segoe UI', system-ui, sans-serif; transition: filter .25s ease; }
+  .titlebar.inativa { filter: saturate(.55) brightness(.82); }
+  .titlebar img { width: 18px; height: 18px; object-fit: contain; pointer-events: none; }
+  .titulo { font-size: 12.5px; font-weight: 600; letter-spacing: .02em; color: #dcecf1; white-space: nowrap; pointer-events: none; }
+  .atual { font-size: 12px; color: #7fa7b3; white-space: nowrap; pointer-events: none; }
+  .atual::before { content: '·'; margin-right: 10px; color: #4d7a88; }
+  .titlebar::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .35s ease; background: radial-gradient(260px circle at var(--mx, 30%) 50%, rgba(18, 169, 209, .26), rgba(18, 169, 209, 0) 70%); }
+  .titlebar:hover::before { opacity: 1; }
+  .titlebar::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; pointer-events: none; background: rgba(18, 169, 209, .22); }
+  .shine { position: absolute; bottom: 0; left: 0; width: 28%; height: 2px; pointer-events: none; background: linear-gradient(90deg, rgba(18, 169, 209, 0), #12a9d1 40%, #8be6f8 60%, rgba(139, 230, 248, 0)); filter: drop-shadow(0 0 6px rgba(18, 169, 209, .9)); transform: translateX(-120%); animation: shine 7s cubic-bezier(.4, 0, .2, 1) infinite; }
+  @keyframes shine { 0% { transform: translateX(-120%); } 45%, 100% { transform: translateX(480%); } }
+  @media (prefers-reduced-motion: reduce) { .shine { animation: none; transform: translateX(0); width: 100%; opacity: .35; } .titlebar::before { transition: none; } }
+</style>
+</head>
+<body>
+<div class="titlebar" id="barra" role="presentation">
+  <img src="../public/d/simbolo.png" alt="">
+  <span class="titulo">Suíte Construtec</span>
+  <span class="atual" id="atual">Centro de Custos</span>
+  <i class="shine" aria-hidden="true"></i>
+</div>
+<script src="titlebar.js"></script>
+</body>
+</html>

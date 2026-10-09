@@ -32,6 +32,10 @@ const APP_ROOT = path.join(__dirname, '..');
 const MODULES = suiteModules(APP_ROOT);
 const CENTRO_URL = `http://127.0.0.1:${MODULES.centro.port}/d/`;
 const TARGETS = ['centro', 'orcamentos'];
+// Barra de título própria (Windows): faixa fixa no topo; as duas telas ocupam o que sobra abaixo dela.
+const BAR_HEIGHT = 36;
+const BAR_COLOR = '#031f29';
+const BAR_SYMBOLS = '#b9d4dd';
 const runtime = createCentroRuntime({ appRoot: APP_ROOT, port: MODULES.centro.port });
 const { loadEnv, loadPrefs, savePrefs, configureLocalFirewall, afterServerStart } = runtime;
 
@@ -58,7 +62,7 @@ if (!gotLock) {
   function fitViews() {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     const [width, height] = mainWindow.getContentSize();
-    for (const view of [centroView, orcView]) liveView(view)?.setBounds({ x: 0, y: 0, width, height });
+    for (const view of [centroView, orcView]) liveView(view)?.setBounds({ x: 0, y: BAR_HEIGHT, width, height: Math.max(0, height - BAR_HEIGHT) });
   }
 
   function showTarget(target) {
@@ -70,6 +74,7 @@ if (!gotLock) {
       active.setVisible(true);
       active.webContents.focus();
     }
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('suite:active', target);
     mainWindow?.setTitle(target === 'orcamentos' ? 'Suíte Construtec — Orçamentos' : 'Suíte Construtec — Centro de Custos');
   }
 
@@ -245,9 +250,19 @@ if (!gotLock) {
       width: 1400, height: 900, minWidth: 1000, minHeight: 600,
       title: 'Suíte Construtec — Centro de Custos',
       icon: fs.existsSync(ICON) ? nativeImage.createFromPath(ICON) : nativeImage.createEmpty(),
-      show: true, backgroundColor: '#021D26',
+      show: true, backgroundColor: BAR_COLOR,
       autoHideMenuBar: true,
+      // Barra própria (desktop/titlebar.html); os botões do Windows ficam por cima, na cor dela.
+      titleBarStyle: 'hidden',
+      titleBarOverlay: { color: BAR_COLOR, symbolColor: BAR_SYMBOLS, height: BAR_HEIGHT },
+      webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, preload: path.join(__dirname, 'titlebar-preload.js') },
     });
+    mainWindow.loadFile(path.join(__dirname, 'titlebar.html')).catch(() => {});
+    // O título da janela (barra de tarefas) é o da tela ativa, não o <title> da página da barra.
+    mainWindow.on('page-title-updated', (event) => event.preventDefault());
+    mainWindow.on('focus', () => mainWindow?.webContents.send('suite:focus', true));
+    mainWindow.on('blur', () => mainWindow?.webContents.send('suite:focus', false));
+    mainWindow.webContents.once('did-finish-load', () => mainWindow?.webContents.send('suite:active', activeTarget));
 
     centroView = new WebContentsView({
       webPreferences: { nodeIntegration: false, contextIsolation: true, preload: CENTRO_PRELOAD },

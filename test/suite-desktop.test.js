@@ -21,6 +21,21 @@ test('o app Suíte do Windows junta Centro e Orçamentos numa janela só', () =>
   }
 });
 
+test('a Suíte tem barra de título própria com as telas abaixo dela', () => {
+  const main = read('desktop/main-unified.js');
+  assert.match(main, /titleBarStyle: 'hidden'/);
+  assert.match(main, /titleBarOverlay: \{ color: BAR_COLOR, symbolColor: BAR_SYMBOLS, height: BAR_HEIGHT \}/);
+  assert.match(main, /y: BAR_HEIGHT, width, height: Math\.max\(0, height - BAR_HEIGHT\)/, 'Centro e Orçamentos começam abaixo da barra');
+  assert.match(main, /page-title-updated/, 'o título da janela é o da tela ativa');
+  assert.match(main, /send\('suite:active', target\)/);
+  const html = read('desktop/titlebar.html');
+  assert.match(html, /-webkit-app-region: drag/);
+  assert.match(html, /prefers-reduced-motion: reduce/);
+  assert.match(html, /--nav: #031f29/, 'mesma cor do menu do Orçamentos');
+  const pkg = JSON.parse(read('package.json'));
+  for (const file of ['desktop/titlebar.html', 'desktop/titlebar.js', 'desktop/titlebar-preload.js']) assert.ok(pkg.build.files.includes(file), `${file} entra no pacote`);
+});
+
 test('o preload e o menu Suíte do Centro trocam de tela pelo app', () => {
   assert.match(read('desktop/preload.js'), /suiteSwitch:\s*\(target, hash\)\s*=>\s*ipcRenderer\.invoke\('suite:switch'/);
   const menu = read('public/d/suite.js');
