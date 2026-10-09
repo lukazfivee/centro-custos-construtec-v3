@@ -20,8 +20,8 @@ jobs:
       # Unico lugar que muda a cada pre-lancamento: o numero da RC. O versionCode do
       # Android sai dele (3.1.0-rc.N -> 31000+N; ver versionCodeFor no Worker) e o app
       # instalado so oferece a atualizacao quando o codigo da release for maior.
-      RC_NUMBER: '23'
-      APP_NOTES: 'Suíte unificada: se o Orçamentos avulso estiver aberto, o app avisa e deixa tentar de novo sem reiniciar.'
+      RC_NUMBER: '24'
+      APP_NOTES: 'Suíte unificada: aviso do Orçamentos avulso com o texto certo e Tentar de novo testado no app instalado.'
     steps:
       - name: Baixar codigo
         uses: actions/checkout@v7

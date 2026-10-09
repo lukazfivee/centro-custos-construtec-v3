@@ -301,7 +301,7 @@ if (!gotLock) {
   async function startOrcamentos() {
     if (!orcamentosAvailable()) throw new Error('Os arquivos do Orçamentos não estão nesta instalação.');
     if (await portInUse(MODULES.orcamentos.apiPort)) {
-      throw new Error('O aplicativo Construtec Orçamentos avulso está aberto. Feche-o e abra a Suíte de novo para usar o Orçamentos aqui.');
+      throw new Error('O aplicativo Construtec Orçamentos avulso está aberto. Feche-o e clique em Tentar de novo para usar o Orçamentos aqui.');
     }
     const { startOrcamentosMain } = require(MODULES.orcamentos.entry);
     const userDataPath = path.join(app.getPath('appData'), 'Construtec Orçamentos');
