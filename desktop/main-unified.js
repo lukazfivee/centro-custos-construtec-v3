@@ -128,11 +128,21 @@ if (!gotLock) {
         dialog.showErrorBox('Orçamentos indisponível', 'Os arquivos do Orçamentos não foram encontrados nesta instalação.');
         return { switched: false };
       }
-      try {
-        await orcamentosStart;
-      } catch (error) {
-        dialog.showErrorBox('Orçamentos não iniciou', error.message);
-        return { switched: false };
+      // Se o Orçamentos não subiu (ex.: o app avulso está aberto), a pessoa fecha o que atrapalha e tenta de novo
+      // aqui mesmo, sem reiniciar a Suíte.
+      for (;;) {
+        try {
+          await orcamentosStart;
+          break;
+        } catch (error) {
+          const resposta = await dialog.showMessageBox(mainWindow, {
+            type: 'warning', title: 'Orçamentos não iniciou', message: 'Não foi possível abrir o Orçamentos.', detail: error.message,
+            buttons: ['Tentar de novo', 'Cancelar'], defaultId: 0, cancelId: 1, noLink: true,
+          });
+          if (resposta.response !== 0) return { switched: false };
+          orcamentosStart = startOrcamentos();
+          orcamentosStart.catch(() => {});
+        }
       }
       if (!liveView(orcView)) return { switched: false };
       const safeHash = typeof hash === 'string' && /^[A-Za-z0-9_=&-]{1,200}$/.test(hash) ? hash : '';
