@@ -12,6 +12,7 @@ test('o app Suíte do Windows junta Centro e Orçamentos numa janela só', () =>
   assert.match(main, /new WebContentsView/, 'cada tela é uma view da mesma janela');
   assert.match(main, /ipcMain\.handle\('suite:switch'/);
   assert.match(main, /\/api\/auth\/suite-handoff/, 'o Orçamentos recebe a sessão do Centro');
+  assert.match(main, /buttons: \['Tentar de novo', 'Cancelar'\]/, 'o Orçamentos que não subiu pode ser tentado de novo sem reiniciar a Suíte');
   assert.doesNotMatch(main, /chamadopro|start-construtec|spawn\(/, 'nenhum processo filho nem pasta de fora do app');
   const modules = require('../desktop/suite-modules')(ROOT);
   assert.equal(modules.centro.port, 3333, 'porta do firewall do acesso móvel');
