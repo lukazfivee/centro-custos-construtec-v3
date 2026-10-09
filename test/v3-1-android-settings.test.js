@@ -47,11 +47,11 @@ test('QR Code do desktop abre diretamente a versao mobile HTTPS', () => {
   assert.match(app, /version\.mobileAppUrl/);
 });
 
-test('workflow RC20 publica instalador Windows e APK Android', () => {
+test('workflow da RC publica instalador Windows e APK Android', () => {
   const workflow = read('.github/workflows/publish-v3-1.yml');
   const androidBuild = read('android/app/build.gradle');
   assert.match(workflow, /assembleDebug/);
-  assert.match(workflow, /RC_NUMBER: '20'/);
+  assert.match(workflow, /RC_NUMBER: '\d+'/); // o numero muda a cada pre-lancamento
   assert.match(workflow, /Centro-de-Custos-Construtec-Android-\$env:APP_VERSION\.apk/);
   assert.match(workflow, /dist\/\*\.apk/);
   // Chave de assinatura fixa (segredo), para uma RC instalar por cima da outra.
