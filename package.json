@@ -42,11 +42,11 @@
   },
   "devDependencies": {
     "@cloudflare/containers": "^0.3.7",
-    "electron": "^41.7.1",
+    "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
     "impeccable": "^4.1.0",
-    "selenium-webdriver": "^4.49.0",
-    "wrangler": "^4.131.2"
+    "selenium-webdriver": "^4.50.0",
+    "wrangler": "^4.147.0"
   },
   "build": {
     "appId": "com.construtec.suite",
