@@ -119,7 +119,8 @@ test('histórico: filtros, antes → depois, origem, CSV e 403', async (context)
   });
 
   await context.test('filtros: pessoa, período, busca e tipo', async () => {
-    const hoje = new Date().toISOString().slice(0, 10);
+    // O servidor filtra pelo dia de Sao Paulo (history.js, DIA_BR); em UTC o teste falhava das 21h a meia-noite de Brasilia.
+    const hoje = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo' }).format(new Date());
     const porId = (await chamar(`/historico?pagina=1&usuario=${tec.id}`, { token: admin, status: 200 })).data;
     assert.equal(porId.itens.length, 0, 'o técnico não fez nada ainda');
     const admins = (await chamar('/historico?pagina=1&usuario=Administrador', { token: admin, status: 200 })).data;
