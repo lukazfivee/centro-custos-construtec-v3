@@ -1,7 +1,7 @@
 // Detalhe da obra: Resumo, Lancamentos e Caixa. Prototipo: sObra (otResumo, otLanc, otCaixa).
 (function (CC) {
   const { esc, icon, money, moneyShort } = CC;
-  const TABS = [['resumo', 'Resumo'], ['lanc', 'Lançamentos'], ['caixa', 'Caixa']];
+  const TABS = [['resumo', 'Resumo'], ['lanc', 'Lançamentos'], ['caixa', 'Caixa'], ['orcado', 'Orçado × realizado'], ['nf', 'Notas fiscais']];
 
   function amountOf(t) {
     const v = Number(t.valor) * Number(t.sinal_contabil || 1);
@@ -71,7 +71,7 @@
     CC.$('#voltar', el).addEventListener('click', () => CC.go('obras'));
     let result;
     try {
-      result = await CC.cached(`obra-${id}`, `/centros-custo/${id}/detalhes?mes=${CC.month()}`);
+      [result] = await Promise.all([CC.cached(`obra-${id}`, `/centros-custo/${id}/detalhes?mes=${CC.month()}`), CC.sv ? CC.sv.loadPerms() : null]);
     } catch (error) {
       return CC.errorScreen(el, error, () => CC.screens.obra(params));
     }
@@ -80,17 +80,22 @@
     const queued = tab === 'lanc' ? await CC.queuedRows((i) => Number(i.payload.cost_center_id) === id) : '';
     const body = tab === 'resumo' ? resumo(c, list)
       : (tab === 'caixa' ? caixa(list)
-        : (list.length || queued ? `${queued}${byDate(list)}` : `<div class="empty">${icon('receipt', 28)}Nenhum lançamento nesta obra ainda.</div>`));
+        : (tab === 'orcado' || tab === 'nf' ? '<div id="obra-aba"></div>'
+          : (list.length || queued ? `${queued}${byDate(list)}` : `<div class="empty">${icon('receipt', 28)}Nenhum lançamento nesta obra ainda.</div>`)));
     CC.render(`<div class="top obra-top"><button class="back" type="button" id="voltar" aria-label="Voltar">${icon('caret-left', 20)}</button>
         <span class="grow"><h1>${esc(c.nome)}</h1><small class="muted">${esc([c.cliente, c.codigo].filter(Boolean).join(' · '))}</small></span>
         ${CC.obraMenu ? `<button class="back" type="button" id="obra-mais" aria-label="Mais ações da obra" aria-haspopup="dialog">${icon('dots-three', 22)}</button>` : ''}${CC.bellBtn ? CC.bellBtn() : ''}${CC.suitePill()}</div>
       ${CC.staleNote(result)}
-      <div class="seg" role="group" aria-label="Seções da obra">${TABS.map(([k, label]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${label}</button>`).join('')}</div>
+      <div class="chips obra-abas" role="group" aria-label="Seções da obra">${TABS.map(([k, label]) => `<button class="chip-act" type="button" data-tab="${k}" aria-pressed="${k === tab}">${label}</button>`).join('')}</div>
       ${body}
       <div class="actions"><button class="btn" type="button" id="lancar">${icon('camera', 18)}Lançar despesa</button></div>`, true, params);
     CC.$('#voltar').addEventListener('click', () => CC.go('obras'));
     CC.$$('[data-tab]').forEach((b) => b.addEventListener('click', () => CC.screens.obra({ id, tab: b.dataset.tab })));
     CC.wireTx(document, ['obra', { id, tab }]);
+    const aba = CC.$('#obra-aba');
+    if (aba) (tab === 'orcado' ? CC.obraOrcado : CC.obraNf)(aba, c);
+    const sel = CC.$('.obra-abas [aria-pressed="true"]');
+    if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: 'nearest', inline: 'center' });
     const mais = CC.$('#obra-mais');
     if (mais) mais.addEventListener('click', () => CC.obraMenu(c));
     CC.$('#lancar').addEventListener('click', () => CC.go('lancar', { obraId: id, from: ['obra', { id, tab: 'lanc' }] }));

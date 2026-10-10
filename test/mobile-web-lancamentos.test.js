@@ -57,3 +57,19 @@ test('celular: alterar senha sem derrubar a sessao e versao completa no /d/', ()
   assert.doesNotMatch(menu, /href="\/" id="m-web"/); // a raiz manda celular de volta para /m/
   assert.match(menu, /CC\.senhaSheet\(\)/);
 });
+
+test('celular: obra com Orcado x realizado, Notas fiscais, editar e filtros da lista', () => {
+  const abas = read('screen-obra-abas.js');
+  assert.match(abas, /`\/centros-custo\/\$\{c\.id\}\/orcado-realizado`/);
+  assert.match(abas, /`\/centros-custo\/\$\{c\.id\}\/notas-fiscais`, \{ method: 'POST', body \}/);
+  assert.match(abas, /`\/centros-custo\/notas-fiscais\/\$\{n\.id\}`, \{ method: 'PUT'/);
+  assert.match(abas, /CC\.sv\.can\('p6'\)/); // mesma permissao do servidor para NF
+  const obra = read('screen-obra.js');
+  assert.match(obra, /\['orcado', 'Orçado × realizado'\], \['nf', 'Notas fiscais'\]/);
+  const form = read('screen-obra-form.js');
+  assert.match(form, /`\/centros-custo\/\$\{id\}`, \{ method: 'PUT', body: \{ \.\.\.d, revisao: Number\(o\.revision\) \} \}/);
+  assert.match(read('screen-obra-acoes.js'), /CC\.sv\.can\('p5'\)/);
+  const home = read('screen-home.js');
+  assert.match(home, /\['inativas', 'Inativas'\]/);
+  assert.match(home, /p > 80/);
+});
