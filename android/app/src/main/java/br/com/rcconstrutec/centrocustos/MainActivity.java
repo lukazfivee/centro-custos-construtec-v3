@@ -37,7 +37,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private FrameLayout root;
     private FrameLayout appLayer;
-    private SuiteViews views;
+    private SuiteViews views; private BarColors barColors;
     private AuthWebView authView;
     private AuthBridge bridge;
     private AuthController auth;
@@ -59,7 +59,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         root.setBackgroundColor(Color.rgb(2, 24, 32));
         appLayer = new FrameLayout(this);
         appLayer.setBackgroundColor(navy);
-        views = new SuiteViews(this, appLayer);
+        views = new SuiteViews(this, appLayer); barColors = new BarColors(getWindow(), appLayer, navy, this::authVisible, views::active);
         root.addView(appLayer, match());
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             SystemBars.Insets bars = SystemBars.read(insets);
@@ -280,7 +280,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
         webView.loadUrl(url);
     }
 
-    @Override protected void onResume() { super.onResume(); updater.resume(); }
+    @Override protected void onResume() { super.onResume(); updater.resume(); barColors.start(); }
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != FILE_CHOOSER_REQUEST || fileCallback == null) return;
@@ -291,7 +291,7 @@ public final class MainActivity extends Activity implements AuthController.Shell
 
     @Override protected void onStop() {
         super.onStop();
-        backgroundAt = SystemClock.elapsedRealtime();
+        backgroundAt = SystemClock.elapsedRealtime(); barColors.stop();
     }
 
     @Override protected void onStart() {

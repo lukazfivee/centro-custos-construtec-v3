@@ -76,12 +76,12 @@
     CC.$$('[data-task]').forEach((b) => b.addEventListener('click', () => { const t = tasks[Number(b.dataset.task)]; CC.go(t.go[0], t.go[1]); }));
   };
 
-  // Abas Obras / Servicos / Todos da lista, lembradas no celular (sem armazenamento, volta para Obras). Prototipo: Rodada 28 (28a a 28j).
+  // Abas Obras / Servicos / Todos da lista, lembradas no celular (sem armazenamento, volta para Todos). Prototipo: Rodada 28 (28a a 28j).
   const TIPO_CHAVE = 'cc.m.obras.tipo';
   const TIPOS = [['obra', 'Obras'], ['servico', 'Serviços'], ['todos', 'Todos']];
   function tipoAtual() {
     try { const v = localStorage.getItem(TIPO_CHAVE); if (TIPOS.some(([t]) => t === v)) return v; } catch (e) { /* sem armazenamento */ }
-    return 'obra';
+    return 'todos';
   }
   function guardarTipo(v) { try { localStorage.setItem(TIPO_CHAVE, v); } catch (e) { /* sem armazenamento */ } }
   // Filtro de situacao da lista (como no desktop), lembrado por tipo. Obras inativas so aparecem no filtro proprio.
