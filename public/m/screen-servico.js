@@ -4,7 +4,8 @@
   const { esc, icon, money } = CC;
   const role = () => ((CC.session.user() || {}).role || '');
   // Matriz padrao do servidor (services/permissions.js). O servidor sempre confere de novo.
-  const PERM = { p1: ['admin', 'gestor', 'financeiro', 'engenharia'], p5: ['admin', 'gestor'], p6: ['admin', 'gestor', 'financeiro'] };
+  const PERM = { p1: ['admin', 'gestor', 'financeiro', 'engenharia'], p2: ['admin', 'gestor', 'financeiro', 'engenharia', 'tecnico'],
+    p3: ['admin', 'gestor', 'financeiro'], p4: ['admin', 'gestor', 'financeiro'], p5: ['admin', 'gestor'], p6: ['admin', 'gestor', 'financeiro'] };
   const ST = {
     agendado: ['Agendado', 'calendar-blank', 'ac'], em_andamento: ['Em andamento', 'play-circle', 'wn'],
     concluido: ['Concluído', 'check-circle', 'up'], faturado: ['Faturado', 'receipt', 'neu'],

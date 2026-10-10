@@ -48,11 +48,14 @@
     const item = (id, ic, t, s, cls) => `<button type="button" class="suite-item om-item${cls ? ` ${cls}` : ''}" id="${id}">${icon(ic, 22)}<span><b>${esc(t)}</b><small>${esc(s)}</small></span></button>`;
     const sh = CC.sheet('obra-menu', `${CC.sheetHead('buildings', c.nome)}
       <p class="sheet-sec">${esc(c.codigo)}</p>
+      ${CC.sv && CC.sv.can('p5') && CC.screens['obra-editar'] ? item('om-edit', 'pencil-simple', 'Editar obra', 'Dados, contrato, datas, situação e orçamento') : ''}
       ${item('om-copy', 'copy', 'Copiar código da obra', c.codigo)}
       ${linked ? `<a class="suite-item om-item" id="om-prop" href="${esc(CC.suite.orcLink(c.proposta_origem.id))}"${/SuiteConstrutec\//.test(navigator.userAgent) ? '' : ' target="_blank" rel="noopener"'}>${icon('file-text', 22)}<span><b>Proposta de origem</b><small>${esc(propLabel)} · no Orçamentos</small></span></a>` : ''}
       ${canDel ? item('om-del', 'trash', 'Excluir obra', 'Obra sem vínculo com orçamento · apaga de vez', 'danger') : ''}
       ${canDesc ? item('om-desc', 'trash', 'Descartar obra', `Ligada à ${propLabel} · fica guardada`, 'danger') : ''}`);
     CC.$('#om-copy', sh.el).addEventListener('click', () => { sh.close(); copy(c.codigo); });
+    const edit = CC.$('#om-edit', sh.el);
+    if (edit) edit.addEventListener('click', () => { sh.close(); CC.go('obra-editar', { id: c.id }); });
     const prop = CC.$('#om-prop', sh.el);
     if (prop) prop.addEventListener('click', () => setTimeout(sh.close, 0));
     const del = CC.$('#om-del', sh.el);

@@ -28,7 +28,7 @@
       tasks.push({ alert: true, icon: 'warning-circle', title: 'Lançamentos com erro', sub: queue.errors === 1 ? '1 lançamento não foi aceito pelo servidor' : `${queue.errors} lançamentos não foram aceitos pelo servidor`, action: 'Ver', go: ['lancamentos'] });
     }
     if (dash.qtdVencidos > 0) {
-      tasks.push({ alert: true, icon: 'warning-circle', title: 'Contas vencidas', sub: dash.qtdVencidos === 1 ? '1 conta passou do vencimento' : `${dash.qtdVencidos} contas passaram do vencimento`, value: money(dash.vencidos), action: 'Ver', go: ['lancamentos', { situacao: 'vencido' }] });
+      tasks.push({ alert: true, icon: 'warning-circle', title: 'Contas vencidas', sub: dash.qtdVencidos === 1 ? '1 conta passou do vencimento' : `${dash.qtdVencidos} contas passaram do vencimento`, value: money(dash.vencidos), action: 'Ver', go: ['lancamentos', { situacao: 'vencido', mes: '' }] });
     }
     for (const c of dash.porCentro || []) {
       const budget = Number(c.orcamento), spent = Number(c.comprometido);
@@ -84,12 +84,17 @@
     return 'obra';
   }
   function guardarTipo(v) { try { localStorage.setItem(TIPO_CHAVE, v); } catch (e) { /* sem armazenamento */ } }
+  // Filtro de situacao da lista (como no desktop), lembrado por tipo. Obras inativas so aparecem no filtro proprio.
+  const SIT_OBRA = [['', 'Ativas'], ['execucao', 'Em execução'], ['planejamento', 'Planejamento'], ['pausado', 'Pausadas'], ['concluido', 'Concluídas'], ['inativas', 'Inativas']];
+  const SIT_SERV = [['', 'Todos'], ['agendado', 'Agendados'], ['em_andamento', 'Em andamento'], ['concluido', 'Concluídos'], ['faturado', 'Faturados']];
+  const sitAtual = (tipo) => { try { return localStorage.getItem(`cc.m.obras.sit.${tipo}`) || ''; } catch (e) { return ''; } };
+  const guardarSit = (tipo, v) => { try { localStorage.setItem(`cc.m.obras.sit.${tipo}`, v); } catch (e) { /* sem armazenamento */ } };
 
   function obraRow(c) {
     const budget = Number(c.orcamento), spent = Number(c.total_comprometido), p = pct(spent, budget);
-    const over = p !== null && p > 100;
-    const tag = Number(c.total_lancamentos || 0) === 0 && !spent ? '<span class="tag">Nova</span>'
-      : (p === null ? '<span class="tag">Sem orçamento</span>' : `<span class="tag${over ? ' warn' : ''}">${p}% gasto</span>`);
+    const over = p !== null && p > 100, atencao = p !== null && p > 80; // desktop: atencao acima de 80%
+    const tag = c.ativo === false ? '<span class="tag">Inativa</span>' : (Number(c.total_lancamentos || 0) === 0 && !spent ? '<span class="tag">Nova</span>'
+      : (p === null ? '<span class="tag">Sem orçamento</span>' : `<span class="tag${atencao ? ' warn' : ''}">${p}% gasto</span>`));
     return `<button class="row" type="button" data-obra="${c.id}">
       <span class="line"><span class="grow"><span class="name">${esc(c.nome)}</span><br><span class="cli">${esc(c.cliente || c.codigo || '')}</span></span>${tag}${icon('caret-right', 16)}</span>
       ${p === null ? '' : `<span class="bar${over ? ' warn' : ''}"><span style="width:${Math.min(100, p)}%"></span></span>`}
@@ -114,7 +119,7 @@
     const oGas = sum(obras, (c) => c.total_comprometido), oCont = sum(obras, (c) => c.valor_contrato);
     const andamento = servs.filter((v) => v.situacao === 'em_andamento').length;
     let k;
-    if (tipo === 'obra') k = [['Obras', String(obras.length), `${obras.filter((c) => c.situacao !== 'concluido').length} em execução`], ['Contratado', moneyShort(oCont), 'soma dos contratos'], ['Gasto', moneyShort(oGas), 'até hoje']];
+    if (tipo === 'obra') k = [['Obras', String(obras.length), `${obras.filter((c) => c.situacao === 'execucao').length} em execução`], ['Contratado', moneyShort(oCont), 'soma dos contratos'], ['Gasto', moneyShort(oGas), 'até hoje']];
     else if (tipo === 'servico') {
       k = ve ? [['Cobrado', moneyShort(sum(mes, (v) => v.valor)), `${mes.length} em ${CC.monthName()}`], ['Gastos', moneyShort(sum(mes, (v) => v.gastos)), 'do mês'], ['Resultado', moneyShort(sum(mes, (v) => v.resultado)), 'cobrado − gastos']]
         : [['Serviços', String(servs.length), CC.sv.plural(servs.filter((v) => v.situacao === 'agendado').length, 'agendado', 'agendados')], ['Em andamento', String(andamento), 'agora'], ['Gastos', moneyShort(sum(servs, (v) => v.gastos)), 'lançados']];
@@ -146,17 +151,22 @@
     } catch (error) {
       return CC.errorScreen(el, error, () => CC.screens.obras());
     }
-    const obras = (obrasRes.data || []).filter((c) => c.ativo !== false && (c.tipo || 'obra') === 'obra');
-    const servs = (servRes.data || []).filter((v) => v.ativo !== false);
+    const sitO = tipo === 'obra' ? sitAtual('obra') : '', sitS = tipo === 'servico' ? sitAtual('servico') : '';
+    const obras = (obrasRes.data || []).filter((c) => (c.tipo || 'obra') === 'obra'
+      && (sitO === 'inativas' ? c.ativo === false : c.ativo !== false && (!sitO || c.situacao === sitO)));
+    const servs = (servRes.data || []).filter((v) => v.ativo !== false && (!sitS || v.situacao === sitS));
+    const sits = tipo === 'obra' ? SIT_OBRA : (tipo === 'servico' ? SIT_SERV : null);
+    const chips = sits ? `<div class="chips" role="group" aria-label="Situação">${sits.map(([k, l]) => `<button class="chip-act" type="button" data-sit="${k}" aria-pressed="${k === (tipo === 'obra' ? sitO : sitS)}">${l}</button>`).join('')}</div>` : '';
     const stale = obrasRes.stale ? obrasRes : servRes;
     const title = tipo === 'obra' ? 'Obras' : tipo === 'servico' ? 'Serviços' : 'Obras e serviços';
     const sub = tipo === 'obra' ? `${obras.length} obras · orçado × gasto` : tipo === 'servico' ? `${servs.length} serviços · ${CC.monthName()}` : `${obras.length} obras e ${servs.length} serviços`;
-    const vazio = `<div class="empty">${icon(tipo === 'servico' ? 'wrench' : 'buildings', 28)}${tipo === 'servico' ? 'Nenhum serviço cadastrado.' : tipo === 'todos' ? 'Nenhuma obra ou serviço cadastrado.' : 'Nenhuma obra cadastrada.'}</div>`;
+    const vazio = `<div class="empty">${icon(tipo === 'servico' ? 'wrench' : 'buildings', 28)}${sitO || sitS ? 'Nada nesta situação.' : (tipo === 'servico' ? 'Nenhum serviço cadastrado.' : tipo === 'todos' ? 'Nenhuma obra ou serviço cadastrado.' : 'Nenhuma obra cadastrada.')}</div>`;
     const lista = tipo === 'obra' ? obras.map(obraRow).join('') : tipo === 'servico' ? servs.map(servicoRow).join('')
       : `${obras.length ? `<div class="group">Obras</div>${obras.map(obraRow).join('')}` : ''}${servs.length ? `<div class="group">Serviços</div>${servs.map(servicoRow).join('')}` : ''}`;
-    CC.render(`${top}<h1 class="title">${title}</h1><p class="sub">${esc(sub)}</p>${staleNote(stale)}${totais(tipo, obras, servs)}
+    CC.render(`${top}<h1 class="title">${title}</h1><p class="sub">${esc(sub)}</p>${staleNote(stale)}${totais(tipo, obras, servs)}${chips}
       <div class="rows">${lista || vazio}</div>`, false, params);
     bind();
+    CC.$$('[data-sit]').forEach((b) => b.addEventListener('click', () => { guardarSit(tipo, b.dataset.sit); CC.screens.obras(params); }));
     CC.$$('[data-obra]').forEach((b) => b.addEventListener('click', () => CC.go('obra', { id: Number(b.dataset.obra) })));
     CC.$$('[data-servico]').forEach((b) => b.addEventListener('click', () => CC.go('servico', { id: Number(b.dataset.servico) })));
     return undefined;
