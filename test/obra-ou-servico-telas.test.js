@@ -33,7 +33,7 @@ test('desktop: busca Ctrl K mostra Servico no subtitulo', () => {
 test('celular: filtro Obras / Servicos / Todos e etiqueta Servico na lista de obras', () => {
   const home = ler('public/m/screen-home.js');
   assert.match(home, /\['obra', 'Obras'\], \['servico', 'Serviços'\], \['todos', 'Todos'\]/);
-  assert.match(home, /return 'obra';/, 'padrao Obras');
+  assert.match(home, /return 'todos';/, 'padrao Todos');
   assert.match(home, /try \{ const v = localStorage\.getItem/);
   assert.match(home, /function servicoRow\(v\)/, 'cartao proprio do servico');
   assert.ok(home.split('\n').length <= 350);
