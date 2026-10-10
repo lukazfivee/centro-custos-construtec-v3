@@ -218,6 +218,15 @@ router.post('/suite-handoff', autenticar, asyncRoute(async (req, res) => {
   const target = String(req.body?.target || '');
   if (target !== 'orcamentos') throw httpError(400,'Destino inválido.');
   if (!req.usuario.cloud_managed || !req.usuario.cloud_session_token) throw httpError(409,'Só contas corporativas entram direto no Orçamentos.');
+  // O código só é trocado no Centro com a chave de serviço, segredo do servidor que não vai no instalador.
+  // Dentro da Suíte, o processo principal (único que conhece a chave interna desta execução) pede a própria
+  // sessão corporativa, que o Orçamentos valida só com ela.
+  const internalKey = String(process.env.CONSTRUTEC_SUITE_INTERNAL_KEY || '');
+  const suppliedKey = String(req.get('x-suite-internal') || '');
+  if (internalKey.length >= 32 && suppliedKey.length === internalKey.length
+    && crypto.timingSafeEqual(Buffer.from(suppliedKey),Buffer.from(internalKey))) {
+    return res.json({ sessionToken:req.usuario.cloud_session_token });
+  }
   let remote;
   try { remote = await cloudAuth.handoff(req.usuario.cloud_session_token,target); }
   catch (error) {

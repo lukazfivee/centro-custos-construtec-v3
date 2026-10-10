@@ -8,6 +8,7 @@ const { app, BrowserWindow, WebContentsView, nativeImage, dialog, ipcMain, shell
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
+const crypto = require('crypto');
 const suiteModules = require('./suite-modules');
 const createCentroRuntime = require('./centro-runtime');
 
@@ -84,17 +85,19 @@ if (!gotLock) {
     try { return (await centro.webContents.executeJavaScript("localStorage.getItem('cc_token')")) || null; } catch { return null; }
   }
 
-  // Código de uso único da sessão central, pedido ao servidor do Centro com o token da tela do Centro.
-  async function requestOrcamentosHandoff(token) {
+  // Sessão corporativa do usuário, pedida ao servidor do Centro com o token da tela do Centro. A troca de um
+  // código de uso único no Centro exige a chave de serviço (segredo do servidor, fora do instalador); aqui os
+  // dois servidores rodam no mesmo processo e o Centro só entrega a sessão a quem tem a chave interna da execução.
+  async function requestOrcamentosSession(token) {
     try {
       const response = await fetch(`http://127.0.0.1:${MODULES.centro.port}/api/auth/suite-handoff`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}`, 'x-suite-internal': process.env.CONSTRUTEC_SUITE_INTERNAL_KEY },
         body: JSON.stringify({ target: 'orcamentos' }),
       });
       if (!response.ok) return null;
       const data = await response.json();
-      return typeof data.code === 'string' ? data.code : null;
+      return typeof data.sessionToken === 'string' && data.sessionToken ? data.sessionToken : null;
     } catch {
       return null;
     }
@@ -121,9 +124,9 @@ if (!gotLock) {
       return;
     }
     handoffToken = centroToken;
-    const code = centroToken ? await requestOrcamentosHandoff(centroToken) : null;
-    if (loaded && !code) await resetOrcamentosSession();
-    await loadOrcamentos([code ? `handoff=${code}` : '', safeHash].filter(Boolean).join('&'));
+    const session = centroToken ? await requestOrcamentosSession(centroToken) : null;
+    if (loaded && !session) await resetOrcamentosSession();
+    await loadOrcamentos([session ? `sessao=${encodeURIComponent(session)}` : '', safeHash].filter(Boolean).join('&'));
   }
 
   async function switchTo(target, hash) {
@@ -335,6 +338,8 @@ if (!gotLock) {
   }
 
   async function startCentro() {
+    // Chave só desta execução, em memória: autoriza o processo principal a pedir a sessão do Orçamentos.
+    process.env.CONSTRUTEC_SUITE_INTERNAL_KEY = crypto.randomBytes(32).toString('hex');
     process.env.PORT = String(MODULES.centro.port);
     const { start } = require(path.join(APP_ROOT, 'server.js'));
     centroServer = await start();
