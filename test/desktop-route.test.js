@@ -52,9 +52,11 @@ test('rota /d/ entrega o desktop novo e os arquivos que ele usa', async (context
     assert.equal(entrada.status, 200, consulta);
     assert.doesNotMatch(await entrada.text(), /d-core\.js/);
   }
-  // Sem sessao o desktop novo manda para a tela de entrada, e depois de entrar a pagina antiga volta para /d/.
+  // Sem sessao o desktop novo mostra a propria tela de entrar (Rodada 29), sem passar pela pagina antiga;
+  // quem ainda entra pela pagina antiga volta para /d/.
   const appD = fs.readFileSync(path.join(__dirname, '..', 'public', 'd', 'app.js'), 'utf8');
-  assert.match(appD, /location\.replace\('\/\?entrar=1'\)/);
+  assert.doesNotMatch(appD, /\?entrar=1/);
+  assert.match(appD, /D\.entrar\(\{ aviso, aoEntrar/);
   const appAntigo = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.js'), 'utf8');
   assert.match(appAntigo, /irParaDesktopNovo\(\)/);
 });

@@ -169,7 +169,8 @@
     if (!sim) return;
     if (D.painel.aberto()) D.painel.fecharJa();
     CC.session.clear();
-    location.href = '/?entrar=1';
+    D.sessao.avisar('sair');
+    location.replace('/d/');
   }
 
   // Marca o item atual do menu a cada troca de tela.
