@@ -26,7 +26,7 @@
 .nav[aria-current="page"]::after { content: ''; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: #12a9d1; box-shadow: 0 0 10px rgba(18, 169, 209, .7); animation: menuBarra .3s cubic-bezier(.2, .8, .2, 1) both; }
 .nav .rot { transition: opacity .18s ease; }
 .nav:focus-visible { outline: 2px solid #5fd0ee; outline-offset: -2px; }
-.side .grupo > span { transition: opacity .18s ease, max-height .28s ease, padding .28s ease; max-height: 20px; overflow: hidden; white-space: nowrap; }
+.side .grupo > span { transition: opacity .18s ease, max-height .28s ease, padding .28s ease; max-height: 28px; overflow: hidden; white-space: nowrap; }
 
 /* Recolhido */
 .app.recolhido { --side-w: 72px; }
@@ -37,7 +37,7 @@
 .app.recolhido .side .grupo { gap: 4px; }
 .app.recolhido .nav { padding: 0 15px; gap: 0; }
 .app.recolhido .nav .rot { width: 0; flex: 0 0 0; }
-.app.recolhido .nav .badge { position: absolute; top: 2px; right: 4px; min-width: 16px; height: 16px; font-size: 10px; padding: 0 4px; }
+.app.recolhido .nav .badge { position: absolute; top: 2px; right: 4px; min-width: 16px; height: 16px; font-size: calc(10px * var(--fs, 1)); padding: 0 4px; }
 .app.recolhido .nav[aria-current="page"]::after { left: -10px; }
 .app.recolhido .side .quem { flex-direction: column; padding: 10px 0 0; }
 .app.recolhido .side .quem .nome { display: none; }
@@ -46,7 +46,7 @@
 
 @keyframes menuBarra { from { transform: scaleY(0); opacity: 0 } to { transform: none; opacity: 1 } }
 /* Dica fica fora do menu (position fixed) para a lista poder rolar em telas baixas. */
-.menu-dica { position: fixed; z-index: 60; transform: translateY(-50%); padding: 7px 11px; border-radius: 8px; background: #0b3544; color: #fefefe; font: 500 12.5px var(--font-body); white-space: nowrap; box-shadow: 0 8px 20px rgba(0, 0, 0, .3); pointer-events: none; animation: menuDica .18s cubic-bezier(.2, .8, .2, 1) both; }
+.menu-dica { position: fixed; z-index: 60; transform: translateY(-50%); padding: 7px 11px; border-radius: 8px; background: #0b3544; color: #fefefe; font: 500 calc(12.5px * var(--fs, 1)) var(--font-body); white-space: nowrap; box-shadow: 0 8px 20px rgba(0, 0, 0, .3); pointer-events: none; animation: menuDica .18s cubic-bezier(.2, .8, .2, 1) both; }
 .side nav { scrollbar-width: none; margin: 0 -14px; padding: 0 14px; }
 .app.recolhido .side nav { margin: 0 -10px; padding: 0 10px; }
 

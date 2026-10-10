@@ -3,7 +3,10 @@
    cada versao do Chrome conta o vh de um jeito com "zoom" na raiz, e a conta errada deixava o documento
    mais alto que a janela (segunda barra de rolagem). Assim so o .conteudo rola. */
 @media screen and (min-width: 1200px) {
-  html { zoom: .75; }
+  /* Letras: o zoom de .75 deixava o texto com 9 a 10 px na tela; --fs devolve o texto ao tamanho de leitura
+     (13 px no codigo = cerca de 12,7 px na tela) sem mexer nos espacos, que seguem compactos. */
+  html { zoom: .75; --fs: 1.3; }
+  html:root { --side-w: 264px; }
   .app { position: fixed; inset: 0; height: auto; }
   .abertura { position: fixed; inset: 0; min-height: 0; }
   .dialogo { max-width: calc((100vw - 32px) / .75); }
