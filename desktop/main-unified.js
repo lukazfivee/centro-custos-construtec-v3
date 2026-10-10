@@ -103,8 +103,13 @@ if (!gotLock) {
     }
   }
 
-  function loadOrcamentos(hash) {
-    return orcView.webContents.loadFile(MODULES.orcamentos.renderer, hash ? { hash } : undefined);
+  // Com a tela já aberta, trocar só o # é navegação no mesmo documento: o app não reinicia e a sessão nova
+  // não entra. Por isso, nesse caso, recarrega depois de pôr o # novo.
+  async function loadOrcamentos(hash) {
+    const web = orcView.webContents;
+    const reload = web.getURL().startsWith('file:');
+    await web.loadFile(MODULES.orcamentos.renderer, hash ? { hash } : undefined);
+    if (reload && !web.isDestroyed()) web.reload();
   }
 
   // Encerra a sessão que o Orçamentos recebeu do Centro (o Centro saiu ou entrou outra conta).
