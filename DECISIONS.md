@@ -48,3 +48,7 @@
 - Sintoma: na Suíte instalada, a tela de login do Orçamentos mostrava "Integração de contas com o Centro de Custos não configurada neste servidor". A troca do código de uso único (`/v1/auth/handoff/consume`) exige a chave de serviço `CONSTRUTEC_IDENTITY_KEY`, segredo do servidor que não existe no app instalado. A prova de 09/10 só tinha rodado contra uma central simulada.
 - A chave não pode ir no instalador (repositório e releases públicos). Dentro da Suíte os servidores do Centro e do Orçamentos rodam no mesmo processo: o processo principal gera uma chave interna por execução (`CONSTRUTEC_SUITE_INTERNAL_KEY`, em memória, enviada no cabeçalho `x-suite-internal`) e `POST /api/auth/suite-handoff` devolve a sessão corporativa da própria conta só a quem a apresenta (comparação em tempo constante). Sem o cabeçalho, a rota segue emitindo código como antes.
 - O Orçamentos valida essa sessão no Centro só com o Bearer (`/v1/auth/session`, que não exige a chave) e aplica `apps` e permissões pelo `suiteGuard`. Os dois apps passam a compartilhar a mesma sessão central: sair de um encerra a do outro, como já era a intenção.
+
+## 2026-10-10 — Suíte: recarregar o Orçamentos ao entregar a sessão
+
+- Visto no app RC26 isolado: com a tela do Orçamentos já aberta, entregar uma sessão nova só trocava o `#` do endereço (navegação no mesmo documento), o `AuthGate` não rodava de novo e a conta não entrava. `loadOrcamentos` agora recarrega a tela quando ela já estava carregada; sem tela aberta, a carga normal basta.
