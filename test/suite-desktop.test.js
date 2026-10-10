@@ -14,6 +14,7 @@ test('o app Suíte do Windows junta Centro e Orçamentos numa janela só', () =>
   assert.match(main, /\/api\/auth\/suite-handoff/, 'o Orçamentos recebe a sessão do Centro');
   assert.match(main, /'x-suite-internal': process\.env\.CONSTRUTEC_SUITE_INTERNAL_KEY/, 'o pedido da sessão leva a chave interna da execução');
   assert.match(main, /sessao=\$\{encodeURIComponent\(session\)\}/, 'a sessão vai ao Orçamentos em #sessao=, sem a chave de serviço do servidor');
+  assert.match(main, /const reload = web\.getURL\(\)\.startsWith\('file:'\)[\s\S]*?web\.reload\(\)/, 'tela já aberta recarrega: trocar só o # não reinicia o app nem entrega a sessão nova');
   assert.doesNotMatch(main, /CONSTRUTEC_IDENTITY_KEY/, 'o segredo do servidor não é usado nem embutido no app');
   assert.match(main, /buttons: \['Tentar de novo', 'Cancelar'\]/, 'o Orçamentos que não subiu pode ser tentado de novo sem reiniciar a Suíte');
   assert.doesNotMatch(main, /chamadopro|start-construtec|spawn\(/, 'nenhum processo filho nem pasta de fora do app');
