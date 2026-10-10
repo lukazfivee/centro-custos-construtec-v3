@@ -42,3 +42,9 @@
 - Instalação silenciosa (`quitAndInstall(true, true)`): antes de rodar o instalador o app encerra o Express do Centro, o banco (PGlite), o Orçamentos e o ChamadoPro (`encerrarServicos`, também usado no before-quit). Sem isso o instalador encontrava arquivos do banco em uso.
 - O instalador NSIS não é assinado e o app não define `publisherName`, então o electron-updater não exige assinatura. Se um dia houver certificado, defina `build.win.publisherName`. A versão portátil não se atualiza.
 - Verificação em segundo plano no desktop novo: só no Electron, só para quem tem p9, no máximo uma vez a cada 6 horas.
+
+## 2026-10-10 — Suíte: Orçamentos recebe a sessão do Centro, não um código de uso único
+
+- Sintoma: na Suíte instalada, a tela de login do Orçamentos mostrava "Integração de contas com o Centro de Custos não configurada neste servidor". A troca do código de uso único (`/v1/auth/handoff/consume`) exige a chave de serviço `CONSTRUTEC_IDENTITY_KEY`, segredo do servidor que não existe no app instalado. A prova de 09/10 só tinha rodado contra uma central simulada.
+- A chave não pode ir no instalador (repositório e releases públicos). Dentro da Suíte os servidores do Centro e do Orçamentos rodam no mesmo processo: o processo principal gera uma chave interna por execução (`CONSTRUTEC_SUITE_INTERNAL_KEY`, em memória, enviada no cabeçalho `x-suite-internal`) e `POST /api/auth/suite-handoff` devolve a sessão corporativa da própria conta só a quem a apresenta (comparação em tempo constante). Sem o cabeçalho, a rota segue emitindo código como antes.
+- O Orçamentos valida essa sessão no Centro só com o Bearer (`/v1/auth/session`, que não exige a chave) e aplica `apps` e permissões pelo `suiteGuard`. Os dois apps passam a compartilhar a mesma sessão central: sair de um encerra a do outro, como já era a intenção.

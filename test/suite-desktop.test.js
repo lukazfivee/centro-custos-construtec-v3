@@ -12,6 +12,9 @@ test('o app Suíte do Windows junta Centro e Orçamentos numa janela só', () =>
   assert.match(main, /new WebContentsView/, 'cada tela é uma view da mesma janela');
   assert.match(main, /ipcMain\.handle\('suite:switch'/);
   assert.match(main, /\/api\/auth\/suite-handoff/, 'o Orçamentos recebe a sessão do Centro');
+  assert.match(main, /'x-suite-internal': process\.env\.CONSTRUTEC_SUITE_INTERNAL_KEY/, 'o pedido da sessão leva a chave interna da execução');
+  assert.match(main, /sessao=\$\{encodeURIComponent\(session\)\}/, 'a sessão vai ao Orçamentos em #sessao=, sem a chave de serviço do servidor');
+  assert.doesNotMatch(main, /CONSTRUTEC_IDENTITY_KEY/, 'o segredo do servidor não é usado nem embutido no app');
   assert.match(main, /buttons: \['Tentar de novo', 'Cancelar'\]/, 'o Orçamentos que não subiu pode ser tentado de novo sem reiniciar a Suíte');
   assert.doesNotMatch(main, /chamadopro|start-construtec|spawn\(/, 'nenhum processo filho nem pasta de fora do app');
   const modules = require('../desktop/suite-modules')(ROOT);
@@ -90,4 +93,50 @@ test('POST /auth/suite-handoff só serve conta corporativa e só para o Orçamen
   assert.equal((await post(null, { target: 'orcamentos' })).status, 401, 'sem sessão');
   assert.equal((await post(token, { target: 'chamados' })).status, 400, 'destino que não existe');
   assert.equal((await post(token, { target: 'orcamentos' })).status, 409, 'conta local não tem sessão central');
+});
+
+test('POST /auth/suite-handoff entrega a sessão corporativa só ao processo principal da Suíte', async (context) => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'centro-custos-suite-session-'));
+  process.env.PGLITE_DATA_DIR = path.join(tempRoot, 'database');
+  process.env.RESTORE_ROOT_DIR = path.join(tempRoot, 'restore');
+  process.env.JWT_SECRET = 'segredo-de-teste-com-mais-de-trinta-e-dois-caracteres';
+  process.env.ADMIN_INITIAL_PASSWORD = 'senha-teste-123';
+  process.env.ADMIN_INITIAL_EMAIL = 'admin@teste.local';
+  process.env.CONSTRUTEC_SUITE_INTERNAL_KEY = 'k'.repeat(64);
+  process.env.SYNC_API_URL = 'http://127.0.0.1:9';
+  delete process.env.DATABASE_URL;
+
+  const jwt = require('jsonwebtoken');
+  const { initializeDatabase, closeDatabase, getDb } = require('../db');
+  const { mirrorCloudUser } = require('../services/cloudUserMirror');
+  const { createApp } = require('../server');
+  await initializeDatabase();
+  const server = createApp().listen(0, '127.0.0.1');
+  await new Promise((resolve) => server.once('listening', resolve));
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  context.after(async () => {
+    delete process.env.CONSTRUTEC_SUITE_INTERNAL_KEY;
+    delete process.env.SYNC_API_URL;
+    if (server.listening) await new Promise((resolve) => server.close(resolve));
+    await closeDatabase();
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  const user = await mirrorCloudUser(getDb(), { id: 'cloud-9', name: 'Corporativa', email: 'conta@rcconstrutec.com.br', role: 'gestor' }, { sessionToken: 'sessao+central/de+teste' });
+  const token = jwt.sign({}, process.env.JWT_SECRET, { subject: String(user.id), expiresIn: '1h' });
+  const post = (internal) => fetch(`${base}/auth/suite-handoff`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(internal ? { 'x-suite-internal': internal } : {}) },
+    body: JSON.stringify({ target: 'orcamentos' }),
+  });
+
+  const ok = await post('k'.repeat(64));
+  assert.equal(ok.status, 200);
+  assert.deepEqual(await ok.json(), { sessionToken: 'sessao+central/de+teste' });
+  for (const wrong of [undefined, '', 'k'.repeat(63), 'x'.repeat(64)]) {
+    const response = await post(wrong);
+    const body = await response.json();
+    assert.notEqual(response.status, 200, `chave ${JSON.stringify(wrong)} não entrega a sessão`);
+    assert.equal(body.sessionToken, undefined);
+  }
 });
