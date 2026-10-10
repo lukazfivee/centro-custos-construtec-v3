@@ -112,6 +112,7 @@ Decisões do Lucas: Firebase AI Logic com a Gemini Developer API (plano gratuito
 
 - `public/m/ia-config.js` (app web "Suíte celular" do projeto `suite-construtec`, modelos `gemini-3.8-flash` e reserva `gemini-3.5-flash-lite`, instruções), `ia-tools.js` (10 ferramentas com a sessão de quem pergunta), `ia-chat.js` (folha de conversa; SDK 12.19.0 do gstatic só ao abrir; relato só envia pelo botão).
 - Estrela no cabeçalho (`ia-btn`) e Menu › Assistente / Reportar problema. Cache do sw `cc-celular-v6`.
+- 10/10/2026: a estrela do cabeçalho virou um botão flutuante (`#ia-fab`, montado por `ia-chat.js` fora das telas): aparece em todas as telas depois do login, sobe acima da barra de ações fixa e some com o teclado aberto. Cache do sw `cc-celular-v16`. O Orçamentos (`public/m/`) ganhou o mesmo botão com IA própria.
 - `/api/assistente/orcamentos/propostas[/:id]`: handoff `target:orcamentos` pelo Worker e troca no servidor do Orçamentos (sem CORS); sessão guardada 20 min.
 - 429 e 500/503 ("high demand") passam para o modelo reserva.
 - Testado com Gemini real no servidor local. Pendente: App Check e voz.

@@ -84,7 +84,7 @@ function summary(p) {
 async function listProposals(usuario, { busca, status } = {}) {
   const all = ((await get(usuario, '/api/proposals')).proposals || []).filter((p) => p.isLatest !== false);
   const term = plain(busca).trim();
-  const wanted = Object.keys(STATUS).find((k) => k === status || STATUS[k] === plain(status));
+  const wanted = Object.keys(STATUS).find((k) => k === status || plain(STATUS[k]) === plain(status));
   const list = all
     .filter((p) => !wanted || p.status === wanted)
     .filter((p) => !term || plain(`${p.number} ${p.clientName} ${p.workName}`).includes(term))

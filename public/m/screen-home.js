@@ -6,7 +6,7 @@
   CC.suitePill = () => `<button class="suite-pill" type="button" data-suite aria-haspopup="dialog">${icon('squares-four', 16)}Suíte</button>`;
 
   function header(title) {
-    return `<div class="top"><span class="brand"><img src="simbolo.png" alt=""><span>Centro de Custos</span></span>${CC.iaBtn ? CC.iaBtn() : ''}${CC.bellBtn ? CC.bellBtn() : ''}${CC.suitePill()}</div>
+    return `<div class="top"><span class="brand"><img src="simbolo.png" alt=""><span>Centro de Custos</span></span>${CC.bellBtn ? CC.bellBtn() : ''}${CC.suitePill()}</div>
       ${title ? `<h1 class="title">${esc(title)}</h1>` : ''}`;
   }
   CC.header = header;

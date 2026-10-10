@@ -6,13 +6,37 @@
   const { esc, icon } = CC;
   const IA = CC.ia = CC.ia || {};
   const SUGESTOES = ['Quais obras estão acima do orçado?', 'Quanto tenho a pagar este mês?', 'Como lanço uma despesa com foto?', 'Resumo das propostas enviadas', 'Quero reportar um problema'];
+  IA.sugestoes = SUGESTOES; // o desktop troca as sugestões do celular (public/d/ia-desktop.js)
   const PASSOS = { listar_obras: 'Procurando as obras', ver_obra: 'Abrindo a obra', orcado_realizado: 'Comparando orçado e realizado', resumo_geral: 'Somando o mês',
     buscar_lancamentos: 'Procurando lançamentos', listar_categorias: 'Lendo as categorias', listar_propostas: 'Consultando o Orçamentos', ver_proposta: 'Abrindo a proposta',
     abrir_tela: 'Preparando a tela', preparar_reporte: 'Montando o relato' };
-  const state = { chat: null, sdk: null, model: 0, busy: false, log: [], cards: [], live: '' };
+  const state = { chat: null, sdk: null, model: 0, busy: false, log: [], cards: [], live: '', screen: '' };
 
   IA.ready = () => Boolean(CC.iaConfig && CC.iaConfig.firebase);
-  CC.iaBtn = () => (IA.ready() ? `<button class="ia-btn" type="button" data-ia aria-label="Assistente">${icon('sparkle', 22)}</button>` : '');
+
+  // Botao flutuante: um so, fora das telas, por isso aparece em todas depois do login.
+  // Sobe quando a tela tem barra de acoes fixa embaixo, para nao cobrir o botao principal.
+  function mountFab() {
+    if (!IA.ready() || document.getElementById('ia-fab')) return;
+    const fab = document.createElement('button');
+    fab.id = 'ia-fab'; fab.className = 'ia-fab'; fab.type = 'button'; fab.hidden = true;
+    fab.setAttribute('data-ia', ''); fab.setAttribute('aria-label', 'Assistente');
+    fab.innerHTML = icon('sparkle-fill', 24);
+    document.body.appendChild(fab);
+    const sync = () => {
+      fab.hidden = !CC.session.token() || Boolean(document.querySelector('.login'));
+      const bar = document.querySelector('#view .actions');
+      fab.style.setProperty('--fab-lift', `${bar ? bar.offsetHeight + (document.body.classList.contains('no-tabs') ? 0 : 20) : 0}px`);
+    };
+    const observer = new MutationObserver(sync);
+    const root = document.getElementById('view') || document.getElementById('app'); // #app: desktop (/d/)
+    if (root) observer.observe(root, { childList: true });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    sync();
+  }
+
+  // App Check (reCAPTCHA) so vale em site https de verdade; no app do Windows (127.0.0.1) ele nao se aplica.
+  const secureOrigin = () => location.protocol === 'https:' && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 
   function sdk() {
     if (!state.sdk) state.sdk = load().catch((error) => { state.sdk = null; throw error; });
@@ -23,9 +47,8 @@
     const [app, ai] = await Promise.all([import(`${base}firebase-app.js`), import(`${base}firebase-ai.js`)]);
     const fb = app.getApps()[0] || app.initializeApp(CC.iaConfig.firebase);
     // App Check (reCAPTCHA v3): so este site consegue usar a cota do Gemini do projeto.
-    if (CC.iaConfig.recaptcha) {
+    if (CC.iaConfig.recaptcha && secureOrigin()) {
       const check = await import(`${base}firebase-app-check.js`);
-      if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true; // teste local
       check.initializeAppCheck(fb, { provider: new check.ReCaptchaV3Provider(CC.iaConfig.recaptcha), isTokenAutoRefreshEnabled: true });
     }
     return { ai, backend: ai.getAI(fb, { backend: new ai.GoogleAIBackend() }) };
@@ -41,6 +64,7 @@
       generationConfig: { temperature: 0.3, maxOutputTokens: 1200, thinkingConfig: { thinkingLevel: m.pensar } },
     });
     state.chat = model.startChat({ history: history || [] });
+    state.screen = CC.current ? CC.current() : '';
   }
 
   const quota = (e) => /\b429\b|quota|RESOURCE_EXHAUSTED|rate.?limit/i.test(`${e && e.message} ${e && e.customErrorData && e.customErrorData.status}`);
@@ -64,6 +88,7 @@
 
   async function send(content) {
     if (!state.chat) await newChat();
+    else if (CC.current && state.screen !== CC.current()) await newChat(await state.chat.getHistory()); // a instrucao conta a tela aberta agora
     try {
       return await stream(content);
     } catch (error) {
@@ -226,7 +251,7 @@
       <div class="ia-log" id="ia-log" aria-live="polite"></div>
       <form class="ia-input" id="ia-form"><textarea id="ia-q" rows="1" maxlength="1500" placeholder="Pergunte ou peça uma tela" aria-label="Mensagem para o assistente"></textarea>
         <button class="ia-send" type="submit" aria-label="Enviar">${icon('paper-plane-right', 20)}</button></form>
-      <small class="ia-note">A IA pode errar. Confira os valores nas telas.${CC.iaConfig.recaptcha ? ' Protegido pelo reCAPTCHA (<a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacidade</a>, <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Termos</a>).' : ''}</small></div>`;
+      <small class="ia-note">A IA pode errar. Confira os valores nas telas.${CC.iaConfig.recaptcha && secureOrigin() ? ' Protegido pelo reCAPTCHA (<a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacidade</a>, <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Termos</a>).' : ''}</small></div>`;
     el.addEventListener('click', (event) => { if (event.target === el || event.target.closest('.sheet-x')) close(); });
     document.body.appendChild(el);
     document.addEventListener('keydown', onKey);
@@ -244,4 +269,5 @@
   IA.reset = () => { state.log = []; state.chat = null; state.model = 0; close(); };
   document.addEventListener('click', (event) => { if (event.target.closest('[data-ia]')) IA.open(); });
   window.addEventListener('load', () => setTimeout(() => { if (CC.session.token()) IA.warm(); }, 2500));
+  mountFab();
 })(window.CC = window.CC || {});
