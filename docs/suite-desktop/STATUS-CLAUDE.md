@@ -1,5 +1,23 @@
 # Status: Claude Code (desktop do Centro de Custos)
 
+## Login do desktop (Rodada 29) — 10/10/2026, sem push nem deploy
+
+Branch `feat/desktop-login` (worktree `_tools/_worktrees/centro/wt-login`, de `origin/main` em `731e12f`).
+
+- **Tela nova em `/d/`** (`public/d/login.js`, `public/d/css/login.css`): marca à esquerda, formulário à direita, tema no canto. Estados 29a a 29p: falta preencher, senha errada com tentativas restantes, bloqueado até HH:MM com "Criar uma senha nova", sem internet ("Tentar de novo"), sessão terminada, depois de Sair, recuperar senha, e-mail inválido e "Confira seu e-mail" com Reenviar (travado por 60 s, como o celular). Em janela com menos de 860 px só o formulário aparece.
+- **`/d/` não passa mais pela página antiga:** sem sessão, mostra a própria tela; Sair e 401 no meio do uso recarregam com o aviso (`sessionStorage cc_d_aviso`) e voltam para a mesma tela depois de entrar. `/?entrar=1` continua funcionando para quem tiver o link.
+- **Manter conectado:** desmarcado, a sessão vale até fechar o navegador (cookie de sessão `cc_d_aberta`, comum às abas; sem ele, a sessão guardada é descartada na abertura).
+- **Servidor:** o 401 do login traz `tentativasRestantes` (e `bloqueadoMinutos` na última); o 429 traz `bloqueadoMinutos`. `lib/loginThrottle.fail` devolve a contagem. Novo `routes/passwordResetLocal.js`: na Suíte o servidor local não tem `/v1`, então `POST /v1/auth/password-reset/request` é repassado ao diretório (`cloudAuth.requestPasswordReset`); na nuvem o Worker atende `/v1` antes do Container.
+- **Testes:** `test/desktop-login.test.js` (estrutura, contagem, 4-3-2-1-0 e 429, repasse 202/503); `test/desktop-route.test.js` ajustado.
+- **Conferido no navegador** (servidor local com conta de teste e diretório simulado): 1440 × 900 claro e 1280 × 800 escuro, entrar e cair na tela pedida (`#/obras`), Sair, senha errada, bloqueio, recuperar e janela estreita. Não testado: conta corporativa real e e-mail de verdade.
+
+**Diferenças do protótipo (seguem o servidor):**
+- O bloqueio é depois de **5** senhas erradas (por e-mail e computador), não 3. A tela mostra o que o servidor informa.
+- "Ela fecha sozinha depois de 30 minutos sem uso" saiu do aviso de sessão terminada: hoje a sessão dura 8 h e não existe fechamento por inatividade.
+- O rodapé do protótipo traz `suporte@rcconstrutec.com.br` e "Privacidade"; o e-mail não aparece em nenhum lugar do sistema e não há página de privacidade. Ficou "Fale com um administrador do Centro de Custos".
+- "Conexão segura" só aparece em https ou no próprio computador (127.0.0.1).
+- "Confira seu e-mail" diz "Se houver uma conta com…", porque o diretório não revela se o e-mail existe.
+
 ## D6 em andamento — 29/09/2026
 
 O Lucas autorizou o CODEX a iniciar a D6 sem Maestri e pediu um gancho para o

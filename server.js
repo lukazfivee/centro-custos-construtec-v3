@@ -82,6 +82,7 @@ function createApp({ orcamentosApp } = {}) {
   });
 
   app.use('/api/auth', require('./routes/auth'));
+  app.use('/v1/auth/password-reset', require('./routes/passwordResetLocal')); // so local; na nuvem o Worker atende /v1
   app.use('/api/usuarios', require('./routes/usersAccess'));
   app.use('/api/usuarios', require('./routes/users'));
   app.use('/api/centros-custo', require('./routes/costCenterDiscard'));

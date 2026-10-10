@@ -1,11 +1,20 @@
 // Entrada do desktop novo: sessao (mesma do Centro de Custos web, cc_token), handoff da Suite,
-// montagem da estrutura e inicio do roteador.
+// tela de entrar (login.js), montagem da estrutura e inicio do roteador.
 (function (CC) {
   const D = CC.d;
+  let montado = false;
 
-  // Sem sessao, limpa o que sobrou e vai para a tela de entrada (pagina de login em /?entrar=1).
-  const paraLogin = () => { try { CC.session.clear(); } catch { /* sem armazenamento */ } location.replace('/?entrar=1'); };
-  CC.onUnauthorized = paraLogin;
+  // Sem sessao, a tela de entrar do proprio /d/. No meio do uso (401), recarrega com o aviso de sessao
+  // terminada e volta para a mesma tela depois de entrar (o endereco fica).
+  const paraLogin = (aviso) => {
+    try { CC.session.clear(); } catch { /* sem armazenamento */ }
+    D.entrar({ aviso, aoEntrar: async () => { await conferirSessao(); abrir(); } });
+  };
+  CC.onUnauthorized = () => {
+    if (!montado) return; // na abertura, o iniciar() cuida
+    D.sessao.avisar('exp');
+    location.reload();
+  };
 
   async function consumirHandoff(code) {
     history.replaceState(null, '', location.pathname + location.search);
@@ -13,6 +22,7 @@
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.token || !data.usuario || !data.instancia) throw new Error('Não foi possível entrar pelo aplicativo.');
     CC.session.save(data);
+    D.sessao.manter(true);
   }
 
   // Confere a sessao e atualiza nome e papel guardados (o papel pode ter mudado).
@@ -28,14 +38,8 @@
     }
   }
 
-  async function iniciar() {
-    D.tema.inicial();
-    const code = new URLSearchParams(location.hash.slice(1)).get('handoff');
-    if (code) {
-      try { await consumirHandoff(code); } catch { /* sem handoff valido: usa a sessao que houver */ }
-    }
-    if (!CC.session.token()) return paraLogin();
-    if (!(await conferirSessao())) return paraLogin();
+  function abrir() {
+    montado = true;
     D.montarEstrutura();
     D.montarBusca();
     D.montarSuite();
@@ -44,7 +48,19 @@
     if (D.cobr && D.cobr.atualizarContador) D.cobr.atualizarContador();
     D.tema.sincronizar();
     D.iniciarRotas();
-    return undefined;
+  }
+
+  async function iniciar() {
+    D.tema.inicial();
+    D.sessao.conferirTemporaria();
+    const aviso = D.sessao.aviso();
+    const code = new URLSearchParams(location.hash.slice(1)).get('handoff');
+    if (code) {
+      try { await consumirHandoff(code); } catch { /* sem handoff valido: usa a sessao que houver */ }
+    }
+    if (!CC.session.token()) return paraLogin(aviso);
+    if (!(await conferirSessao())) return paraLogin('exp');
+    return abrir();
   }
 
   iniciar();

@@ -201,6 +201,14 @@ async function changePassword(sessionToken, currentPassword, newPassword) {
   });
 }
 
+// Link de senha nova (vale para o Orcamentos e o Centro). O diretorio sempre responde "aceito".
+async function requestPasswordReset(email) {
+  return request('/v1/auth/password-reset/request', {
+    method:'POST',
+    body:JSON.stringify({ email }),
+  });
+}
+
 async function getProfilePhoto(sessionToken) {
   return request('/v1/auth/profile-photo', {
     method:'GET',
@@ -245,6 +253,7 @@ module.exports = {
   createUser,
   setUserStatus,
   changePassword,
+  requestPasswordReset,
   getProfilePhoto,
   setProfilePhoto,
   removeProfilePhoto,

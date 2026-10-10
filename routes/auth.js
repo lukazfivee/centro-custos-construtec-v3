@@ -46,14 +46,19 @@ setInterval(() => { pairThrottle.sweep(); emailThrottle.sweep(); }, LOGIN_SWEEP_
 
 function assertLoginAllowed(email, ip) {
   const minutes = Math.max(pairThrottle.blockedMinutes(`${loginKey(email)}|${ip}`), emailThrottle.blockedMinutes(loginKey(email)));
-  if (minutes) throw httpError(429, `Muitas tentativas de login para este e-mail. Tente novamente em ${minutes} minuto(s).`);
+  if (!minutes) return;
+  const error = httpError(429, `Muitas tentativas de login para este e-mail. Tente novamente em ${minutes} minuto(s).`);
+  error.extra = { bloqueadoMinutos:minutes };
+  throw error;
 }
 
+// Devolve quantas tentativas restam antes do bloqueio (null sem e-mail).
 function registerLoginFailure(email, ip) {
   const key = loginKey(email);
-  if (!key) return;
-  pairThrottle.fail(`${key}|${ip}`);
-  emailThrottle.fail(key);
+  if (!key) return null;
+  const pair = pairThrottle.fail(`${key}|${ip}`);
+  const global = emailThrottle.fail(key);
+  return Math.max(0, Math.min(LOGIN_MAX_FAILURES - pair, LOGIN_EMAIL_MAX_FAILURES - global));
 }
 
 function clearLoginFailures(email, ip) {
@@ -191,7 +196,13 @@ router.post('/login', asyncRoute(async (req, res) => {
     });
   } catch (error) {
     const status = Number(error.statusCode || error.status || 500);
-    if (status === 401) registerLoginFailure(email, ip);
+    if (status === 401) {
+      const remaining = registerLoginFailure(email, ip);
+      if (remaining !== null) {
+        error.extra = { ...(error.extra || {}), tentativasRestantes:remaining };
+        if (remaining === 0) error.extra.bloqueadoMinutos = LOGIN_BLOCK_MS / 60000;
+      }
+    }
     logger.warn('login_failed', {
       email: email || null,
       requestId:req.requestId,
