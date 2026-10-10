@@ -1,0 +1,60 @@
+/* Assistente de IA no desktop. O JS é o do celular (m/ia-chat.js): o botão flutuante e a folha de conversa
+   ganham aqui o desenho do desktop (painel ancorado embaixo à direita, sem escurecer a tela). */
+.ia-fab { position: fixed; right: 24px; bottom: 24px; z-index: 40; width: 52px; height: 52px; padding: 0; border: 0; border-radius: 26px; background: var(--color-accent-600); color: #fefefe; display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 22px rgba(3, 31, 41, .3), inset 0 0 0 1px rgba(255, 255, 255, .18); transition: transform .12s ease, background-color .15s ease, opacity .15s ease; }
+.ia-fab[hidden] { display: none; }
+.ia-fab:hover { background: var(--color-accent-700); }
+.ia-fab:active { transform: scale(.94); }
+.ia-fab:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.ia-fab i { color: inherit; }
+/* Painéis, diálogos e a impressão da obra ficam por cima: o botão sai enquanto estão abertos. */
+body:has(.camada, .dialogo-camada, .impressao) .ia-fab { display: none; }
+
+#ia-sheet { position: fixed; inset: 0; z-index: 45; display: flex; align-items: flex-end; justify-content: flex-end; padding: 0 24px 88px; background: transparent; pointer-events: none; }
+#ia-sheet .sheet { pointer-events: auto; width: 420px; max-width: 100%; height: min(640px, calc(100vh - 120px)); display: flex; flex-direction: column; overflow: hidden; padding: 14px 16px 12px; border-radius: 18px; background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-pop); animation: fadeUp .18s ease both; }
+#ia-sheet .sheet-handle { display: none; }
+#ia-sheet .sheet-head { display: flex; align-items: center; gap: 6px; }
+#ia-sheet .sheet-head b { display: inline-flex; align-items: center; gap: 8px; font-size: calc(15px * var(--fs, 1)); }
+#ia-sheet .sheet-head b i { color: var(--color-accent-300); }
+#ia-sheet .sheet-head .grow { flex: 1; }
+#ia-sheet .chip-act { min-height: 34px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--color-accent-900); color: var(--color-accent-300); font: 600 calc(12.5px * var(--fs, 1)) var(--font-body); display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+#ia-sheet .chip-act:hover { box-shadow: inset 0 0 0 1px var(--color-accent-300); }
+#ia-sheet .sheet-x { width: 34px; height: 34px; border: 0; border-radius: 10px; background: transparent; color: var(--color-text); display: grid; place-items: center; cursor: pointer; }
+#ia-sheet .sheet-x:hover { background: var(--color-accent-900); }
+#ia-sheet .ia-log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px 2px; overscroll-behavior: contain; }
+#ia-sheet .ia-msg { max-width: 90%; padding: 10px 13px; border-radius: 14px; font-size: calc(13.5px * var(--fs, 1)); line-height: 1.45; overflow-wrap: anywhere; }
+#ia-sheet .ia-msg p { margin: 0 0 6px; } #ia-sheet .ia-msg p:last-child { margin: 0; }
+#ia-sheet .ia-msg ul { margin: 2px 0 6px; padding-left: 18px; } #ia-sheet .ia-msg li { margin: 2px 0; }
+#ia-sheet .ia-msg.eu { align-self: flex-end; background: var(--color-brand); color: var(--on-brand); border-bottom-right-radius: 4px; white-space: pre-wrap; }
+#ia-sheet .ia-msg.ia { align-self: flex-start; background: var(--color-bg); box-shadow: var(--shadow-sm); border-bottom-left-radius: 4px; }
+#ia-sheet .ia-msg.erro { align-self: center; max-width: 100%; background: var(--c-warn-soft); color: var(--c-warn); font-size: calc(12.5px * var(--fs, 1)); text-align: center; }
+#ia-sheet .ia-msg.busy { display: inline-flex; align-items: center; gap: 10px; } #ia-sheet .ia-msg.busy small { color: var(--color-neutral-300); }
+#ia-sheet .ia-dots { display: inline-flex; gap: 4px; }
+#ia-sheet .ia-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent-500); animation: iaDot 1s infinite ease-in-out; }
+#ia-sheet .ia-dots i:nth-child(2) { animation-delay: .15s; } #ia-sheet .ia-dots i:nth-child(3) { animation-delay: .3s; }
+#ia-sheet .ia-hello { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; color: var(--color-neutral-300); font-size: calc(13px * var(--fs, 1)); padding: 0 6px; }
+#ia-sheet .ia-hello i { color: var(--color-accent-300); } #ia-sheet .ia-hello b { color: var(--color-text); font-size: calc(16px * var(--fs, 1)); }
+#ia-sheet .ia-sug { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+#ia-sheet .ia-input { display: flex; align-items: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--color-divider); }
+#ia-sheet .ia-input textarea { flex: 1; min-height: 42px; max-height: 120px; padding: 10px 12px; border: 0; border-radius: 12px; resize: none; background: var(--color-bg); color: var(--color-text); box-shadow: inset 0 0 0 1px var(--color-field); font: 400 calc(14px * var(--fs, 1))/1.35 var(--font-body); outline: none; }
+#ia-sheet .ia-input textarea:focus { box-shadow: inset 0 0 0 2px var(--color-focus); }
+#ia-sheet .ia-send { flex: none; width: 42px; height: 42px; border: 0; border-radius: 12px; background: var(--color-brand); color: var(--on-brand); display: grid; place-items: center; cursor: pointer; }
+#ia-sheet .ia-send:hover { background: var(--color-accent-700); }
+#ia-sheet .ia-note { display: block; margin-top: 6px; text-align: center; font-size: calc(11px * var(--fs, 1)); color: var(--color-neutral-300); }
+#ia-sheet .ia-note a { color: inherit; }
+#ia-sheet .ia-go { display: flex; margin-top: 10px; }
+/* Cartão do relato de problema */
+#ia-sheet .ia-report { display: flex; flex-direction: column; gap: 10px; width: 100%; padding: 12px; border-radius: 12px; background: var(--color-bg); box-shadow: var(--shadow-sm); }
+#ia-sheet .ia-report .label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: calc(12px * var(--fs, 1)); color: var(--color-neutral-300); }
+#ia-sheet .ia-report .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#ia-sheet .ia-report .field { display: flex; flex-direction: column; gap: 4px; }
+#ia-sheet .ia-report .field > span { font-size: calc(11.5px * var(--fs, 1)); font-weight: 600; color: var(--color-neutral-300); }
+#ia-sheet .ia-report input, #ia-sheet .ia-report select, #ia-sheet .ia-report textarea { width: 100%; min-height: 38px; padding: 8px 10px; border: 0; border-radius: 10px; background: var(--color-surface); color: var(--color-text); box-shadow: inset 0 0 0 1px var(--color-field); font: 400 calc(13.5px * var(--fs, 1)) var(--font-body); outline: none; }
+#ia-sheet .ia-report textarea { min-height: 96px; resize: vertical; }
+#ia-sheet .ia-report input:focus, #ia-sheet .ia-report select:focus, #ia-sheet .ia-report textarea:focus { box-shadow: inset 0 0 0 2px var(--color-focus); }
+#ia-sheet .ia-report .sub { margin: 0; font-size: calc(12px * var(--fs, 1)); color: var(--c-err); }
+#ia-sheet .ia-report .btn, #ia-sheet .ia-report .btn2 { height: 38px; padding: 0 14px; border: 0; border-radius: 10px; font: 600 calc(13px * var(--fs, 1)) var(--font-body); display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+#ia-sheet .ia-report .btn { background: var(--color-brand); color: var(--on-brand); }
+#ia-sheet .ia-report .btn2 { background: var(--color-surface); color: var(--color-text); box-shadow: inset 0 0 0 1px var(--color-divider); }
+@keyframes iaDot { 0%, 80%, 100% { transform: scale(.5); opacity: .4; } 40% { transform: none; opacity: 1; } }
+@media (max-width: 560px) { #ia-sheet { padding: 0; } #ia-sheet .sheet { width: 100%; height: min(86vh, 640px); border-radius: 18px 18px 0 0; } }
+@media (prefers-reduced-motion: reduce) { #ia-sheet .sheet, #ia-sheet .ia-dots i { animation: none; } }

@@ -45,7 +45,6 @@ button { cursor: pointer; }
 .top .brand img { height: 14px; width: auto; }
 .top .grow { flex: 1; }
 .top .brand > span { overflow: hidden; text-overflow: ellipsis; }
-.top .ia-btn, .top .ia-btn + .bell-btn { margin-left: -6px; } /* estrela e sino juntos: cabem com a Suíte em 375 px */
 .top h1 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.2; }
 .back { width: 44px; height: 44px; margin-left: -12px; border: 0; border-radius: 10px; background: transparent; display: grid; place-items: center; }
 .back:active { background: var(--accent-900); }
@@ -173,8 +172,8 @@ body.no-tabs .tabs { display: none; }
 @keyframes spin { to { transform: rotate(360deg) } }
 .suite-item.ctx { background: var(--accent-900); box-shadow: none; }
 
-.bell-btn, .ia-btn { position: relative; flex: none; width: 44px; height: 44px; border: 0; border-radius: 22px; background: transparent; display: grid; place-items: center; }
-.bell-btn .ico, .ia-btn .ico { color: var(--accent-300); }
+.bell-btn { position: relative; flex: none; width: 44px; height: 44px; border: 0; border-radius: 22px; background: transparent; display: grid; place-items: center; }
+.bell-btn .ico { color: var(--accent-300); }
 .bell-count { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
 .chips { display: flex; gap: 8px; overflow-x: auto; margin: 4px -20px 12px; padding: 0 20px; }
 .chips .chip-act { flex: none; white-space: nowrap; }

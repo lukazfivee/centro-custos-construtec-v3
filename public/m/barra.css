@@ -26,6 +26,15 @@ body.no-tabs .toast { bottom: calc(24px + var(--sab)); }
 .ia-note a { position: relative; }
 .ia-note a::after { content: ''; position: absolute; inset: -15px -8px; } /* area de toque de 44 px sem aumentar o texto */
 
+/* Botao flutuante do assistente (ia-chat.js): acima da barra de abas, em todas as telas.
+   --fab-lift sobe o botao quando a tela tem barra de acoes fixa; some enquanto o teclado esta aberto. */
+.ia-fab { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(var(--tabs-gap) + var(--tabs-h) + var(--sab) + 14px + var(--fab-lift, 0px)); z-index: 21; width: 52px; height: 52px; border: 0; border-radius: 26px; background: var(--fill); color: #fff; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(2, 24, 32, .28), inset 0 0 0 1px rgba(255, 255, 255, .18); transition: transform .12s, opacity .15s; }
+.ia-fab[hidden] { display: none; }
+.ia-fab:active { transform: scale(.94); }
+.ia-fab .ico { color: inherit; }
+body.no-tabs .ia-fab { bottom: calc(16px + var(--sab) + var(--fab-lift, 0px)); }
+body:has(input:focus, textarea:focus, select:focus) .ia-fab { opacity: 0; pointer-events: none; }
+
 /* Botoes: texto nunca estoura nem quebra feio */
 .btn, .btn2, .chip-act, .suite-pill, .seg button { text-align: center; line-height: 1.2; }
 .btn, .btn2 { padding: 0 16px; }

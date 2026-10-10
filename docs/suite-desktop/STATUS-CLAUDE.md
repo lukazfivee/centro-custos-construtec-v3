@@ -1,4 +1,8 @@
-# Status: Claude Code (desktop do Centro de Custos)
+﻿# Status: Claude Code (desktop do Centro de Custos)
+
+## Assistente de IA no desktop - 10/10/2026
+
+Botão flutuante da IA (`#ia-fab`) em todas as telas do `/d/`, com painel ancorado embaixo à direita. Reaproveita `public/m/ia-config.js`, `ia-tools.js` e `ia-chat.js`; `public/d/ia-desktop.js` troca os destinos de "abrir tela" (rotas do desktop, respeitando `D.podeTela`), as instruções e as sugestões, e `public/d/css/ia.css` dá o desenho do desktop (z-index 40, abaixo de painel, diálogo e impressão; o botão some quando eles abrem). App Check só liga em https de verdade (no app Windows, 127.0.0.1, não se aplica; o Firebase AI não o exige hoje). `test/desktop-assistant.test.js`. Publicado na nuvem; o instalador do Windows só leva a mudança no próximo build.
 
 ## Login do desktop (Rodada 29) — 10/10/2026, sem push nem deploy
 

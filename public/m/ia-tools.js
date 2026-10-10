@@ -30,6 +30,7 @@
   const NOMES = { inicio: 'Início', obras: 'Obras', obra: 'a obra', nova_despesa: 'Nova despesa', lancamentos: 'Lançamentos', lancamentos_em_aberto: 'Lançamentos em aberto',
     lancamentos_vencidos: 'Lançamentos vencidos', notificacoes: 'Notificações', menu: 'Menu', perfil: 'Meu perfil', pedidos_acesso: 'Pedidos de acesso',
     seguranca: 'Segurança', orcamentos: 'Orçamentos', proposta: 'a proposta', versao_completa: 'Versão completa' };
+  IA.telas = TELAS; IA.nomes = NOMES; // o desktop troca os destinos (public/d/ia-desktop.js); as ferramentas de dados são as mesmas
 
   function obraResumo(c) {
     const orcado = Number(c.orcamento) || 0, gasto = Number(c.total_comprometido) || 0;
