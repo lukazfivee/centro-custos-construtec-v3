@@ -1,16 +1,16 @@
 /* D7: Configuracoes (prints 90 a 95). Reaproveita as abas do .usu-abas e os cartoes do desktop. */
 .cfg-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .cfg-card { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-.cfg-card h2 { margin: 0; font: 600 16px var(--font-heading); }
-.cfg-card .muted, .cfg-nota { font-size: 12px; color: var(--color-neutral-300); }
+.cfg-card h2 { margin: 0; font: 600 calc(16px * var(--fs, 1)) var(--font-heading); }
+.cfg-card .muted, .cfg-nota { font-size: calc(12px * var(--fs, 1)); color: var(--color-neutral-300); }
 .cfg-duas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .cfg-rodape { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .cfg-rodape .cfg-nota { flex: 1; }
 .cfg-foto { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.cfg-foto .avatar { width: 88px; height: 88px; font-size: 30px; box-shadow: 0 0 0 3px var(--color-surface), 0 0 0 4px var(--color-divider); }
+.cfg-foto .avatar { width: 88px; height: 88px; font-size: calc(30px * var(--fs, 1)); box-shadow: 0 0 0 3px var(--color-surface), 0 0 0 4px var(--color-divider); }
 .cfg-foto .cfg-nota { flex-basis: 100%; }
 .cfg-foto input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.cfg-link { border: 0; background: none; padding: 6px 4px; color: var(--color-accent-300); font: 600 13px var(--font-body); cursor: pointer; }
+.cfg-link { border: 0; background: none; padding: 6px 4px; color: var(--color-accent-300); font: 600 calc(13px * var(--fs, 1)) var(--font-body); cursor: pointer; }
 .cfg-link:hover { text-decoration: underline; }
 .cfg-link:focus-visible { outline: 2px solid var(--color-accent-300); outline-offset: 2px; border-radius: 6px; }
 .fld .inp[readonly] { background: var(--color-bg); color: var(--color-neutral-300); cursor: default; }
@@ -23,26 +23,26 @@
 .cfg-forca[data-n="2"] i:nth-child(-n+2) { background: var(--c-warn-bar); }
 .cfg-forca[data-n="3"] i:nth-child(-n+3) { background: var(--c-ok); }
 .cfg-forca[data-n="4"] i { background: var(--c-ok); }
-.cfg-forca-txt { font-size: 12px; font-weight: 600; color: var(--color-neutral-300); }
+.cfg-forca-txt { font-size: calc(12px * var(--fs, 1)); font-weight: 600; color: var(--color-neutral-300); }
 
 /* Backup */
 .cfg-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
 .cfg-lista-topo { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; }
-.cfg-lista-topo h2 { margin: 0 0 4px; font: 600 16px var(--font-heading); }
+.cfg-lista-topo h2 { margin: 0 0 4px; font: 600 calc(16px * var(--fs, 1)) var(--font-heading); }
 .cfg-acoes { display: flex; justify-content: flex-end; gap: 4px; }
 .cfg-acoes .cfg-link { display: inline-flex; align-items: center; gap: 5px; }
 .cfg-acoes .cfg-link.perigo { color: var(--c-err); }
-.cfg-nome-arq { display: block; font-size: 12px; color: var(--color-neutral-300); overflow-wrap: anywhere; }
+.cfg-nome-arq { display: block; font-size: calc(12px * var(--fs, 1)); color: var(--color-neutral-300); overflow-wrap: anywhere; }
 .cfg-digite { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; width: 100%; text-align: left; }
 
 /* Sistema */
 .cfg-linhas { display: flex; flex-direction: column; }
-.cfg-linha { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 11px 0; border-top: 1px solid var(--color-divider); font-size: 13px; }
+.cfg-linha { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 11px 0; border-top: 1px solid var(--color-divider); font-size: calc(13px * var(--fs, 1)); }
 .cfg-linha:first-child { border-top: 0; }
 .cfg-linha > span { color: var(--color-neutral-300); }
 .cfg-linha > b { text-align: right; overflow-wrap: anywhere; }
 .cfg-topo-sis { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.cfg-uso { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.cfg-uso { display: flex; flex-direction: column; gap: 6px; font-size: calc(13px * var(--fs, 1)); }
 .cfg-uso .l { display: flex; justify-content: space-between; gap: 12px; }
 .cfg-uso .barra { height: 8px; border-radius: 4px; background: var(--color-divider); overflow: hidden; }
 .cfg-uso .barra i { display: block; height: 100%; border-radius: 4px; background: var(--graf-rec); }
@@ -50,8 +50,8 @@
 .cfg-botoes { display: flex; gap: 10px; flex-wrap: wrap; }
 .cfg-cel { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
 .cfg-cel img { width: 168px; height: 168px; border-radius: 12px; background: #fff; padding: 6px; box-shadow: inset 0 0 0 1px var(--color-divider); }
-.cfg-cel .dados { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; overflow-wrap: anywhere; }
-.cfg-chave { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.cfg-cel .dados { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; font-size: calc(13px * var(--fs, 1)); overflow-wrap: anywhere; }
+.cfg-chave { display: flex; align-items: center; gap: 10px; font-size: calc(13px * var(--fs, 1)); }
 .cfg-chave input { width: 18px; height: 18px; accent-color: var(--color-accent-300); }
 @media (max-width: 1000px) {
   .cfg-grade, .cfg-duas { grid-template-columns: minmax(0, 1fr); }

@@ -2,8 +2,8 @@
 .kpis.quatro { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .cobrancas [data-corpo] { display: flex; flex-direction: column; gap: 14px; }
 .resumo-cob .card { padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; background: var(--color-bg); box-shadow: none; }
-.resumo-cob b { font: 600 20px/1.2 var(--font-heading); font-variant-numeric: tabular-nums; }
-.dl-linha { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--color-divider); font-size: 13.5px; }
+.resumo-cob b { font: 600 calc(20px * var(--fs, 1))/1.2 var(--font-heading); font-variant-numeric: tabular-nums; }
+.dl-linha { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--color-divider); font-size: calc(13.5px * var(--fs, 1)); }
 .dl-linha b { font-weight: 600; text-align: right; }
 .andamento { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
 .andamento li { position: relative; display: flex; gap: 14px; padding-bottom: 20px; }
@@ -16,14 +16,14 @@
 .andamento li.atual .bolinha { background: var(--color-surface); box-shadow: inset 0 0 0 2px var(--color-brand); }
 .andamento li.vencido .bolinha { box-shadow: inset 0 0 0 2px var(--c-err); }
 .andamento .tx { display: flex; flex-direction: column; min-width: 0; }
-.andamento .tx b { font-size: 14px; font-weight: 600; }
-.andamento .tx span { font-size: 12px; color: var(--color-neutral-300); }
+.andamento .tx b { font-size: calc(14px * var(--fs, 1)); font-weight: 600; }
+.andamento .tx span { font-size: calc(12px * var(--fs, 1)); color: var(--color-neutral-300); }
 .andamento li.vencido .tx span { color: var(--c-err); }
 .andamento li:not(.feito):not(.atual) .tx b { color: var(--color-neutral-300); }
 .proximo-passo { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-radius: 12px; background: var(--color-accent-900); }
 .proximo-passo .tx { display: flex; flex-direction: column; gap: 2px; }
 .proximo-passo .lbl { color: var(--color-accent-300); }
-.proximo-passo b { font-size: 14px; font-weight: 600; }
+.proximo-passo b { font-size: calc(14px * var(--fs, 1)); font-weight: 600; }
 .editar-dados { align-self: flex-start; }
 .autorizo { padding: 12px 14px; border-radius: 12px; background: var(--color-bg); font-weight: 600; }
 .form-lanc textarea.inp { height: auto; min-height: 180px; }
@@ -33,7 +33,7 @@
 .tabela-sel .tbl th:first-child, .tabela-sel .tbl td:first-child { width: 44px; padding-right: 0; }
 .tabela-sel .tbl td:first-child + td { padding-left: 6px; }
 .tabela-sel .tbl th:first-child + th { padding-left: 6px; }
-.barra-selecao { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 12px; background: var(--color-accent-900); font-size: 13.5px; }
+.barra-selecao { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 12px; background: var(--color-accent-900); font-size: calc(13.5px * var(--fs, 1)); }
 .barra-selecao[hidden] { display: none; }
 .barra-selecao .grow { flex: 1; }
 .excl-quem span { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

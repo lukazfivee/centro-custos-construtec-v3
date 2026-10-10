@@ -93,4 +93,37 @@
       send('/perfil', 'PUT', { nome, celular: cel ? cel.value : '' }, 'Perfil salvo.');
     });
   };
+
+  // Alterar senha com a sessao aberta (mesma rota do desktop: POST /auth/alterar-senha, minimo de 10 caracteres).
+  CC.senhaSheet = function () {
+    const sh = CC.sheet('senha', `${CC.sheetHead('key', 'Alterar senha')}
+      <label class="field"><span>Senha atual</span><input id="s-atual" type="password" autocomplete="current-password"></label>
+      <label class="field" style="margin-top:12px"><span>Nova senha</span><input id="s-nova" type="password" autocomplete="new-password" minlength="10"></label>
+      <small class="muted">Pelo menos 10 caracteres, com letras maiúsculas e minúsculas, número e símbolo.</small>
+      <label class="field" style="margin-top:12px"><span>Repita a nova senha</span><input id="s-conf" type="password" autocomplete="new-password"></label>
+      <div id="s-err"></div>
+      <div class="grid2 od-acts"><button class="btn2" type="button" id="s-cancel">Cancelar</button><button class="btn" type="button" id="s-ok">${icon('check', 18)}Trocar senha</button></div>`);
+    const v = (id) => CC.$(`#${id}`, sh.el).value;
+    const falha = (e) => { CC.$('#s-err', sh.el).innerHTML = CC.sheetErr(e); };
+    CC.$('#s-cancel', sh.el).addEventListener('click', sh.close);
+    CC.$('#s-ok', sh.el).addEventListener('click', async (e) => {
+      if (!v('s-atual')) return falha({ message: 'Informe a senha atual.' });
+      if (v('s-nova').length < 10) return falha({ message: 'A nova senha precisa ter pelo menos 10 caracteres.' });
+      if (v('s-nova') !== v('s-conf')) return falha({ message: 'A confirmação não confere com a nova senha.' });
+      const b = e.currentTarget;
+      CC.busy(b, 'Trocando…');
+      // fetch direto: o servidor responde 401 para "senha atual incorreta" e o CC.api trataria como sessao encerrada.
+      const r = await fetch('/api/auth/alterar-senha', { method: 'POST', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${CC.session.token()}` },
+        body: JSON.stringify({ senhaAtual: v('s-atual'), novaSenha: v('s-nova') }) }).catch(() => null);
+      const data = r ? await r.json().catch(() => ({})) : {};
+      if (!r || !r.ok) {
+        b.disabled = false; b.innerHTML = `${icon('check', 18)}Trocar senha`;
+        return falha(r ? { status: r.status, message: data.erro || 'Não foi possível trocar a senha agora.' } : { status: 0 });
+      }
+      if (data.token) localStorage.setItem('cc_token', data.token); // modo local: as outras sessoes deixam de valer
+      sh.close();
+      CC.toast('Senha alterada');
+    });
+  };
 })(window.CC = window.CC || {});

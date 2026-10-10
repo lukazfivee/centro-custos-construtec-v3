@@ -2,33 +2,33 @@
 .fech-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .fech-grade { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
 .fech-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--color-divider); }
-.fech-topo b { font-size: 15px; }
+.fech-topo b { font-size: calc(15px * var(--fs, 1)); }
 .fech-tabela .tbl td:first-child { min-width: 190px; }
-.fech-tabela .dois-tx span { font-size: 11.5px; color: var(--color-neutral-300); }
+.fech-tabela .dois-tx span { font-size: calc(11.5px * var(--fs, 1)); color: var(--color-neutral-300); }
 .fech-tabela .dois-tx .pend { color: var(--c-warn); }
 .fech-tabela .dois-tx .reab { color: var(--c-warn); overflow-wrap: anywhere; }
 .fech-tabela tr.sel td { background: var(--color-accent-900); }
 .acoes-fech { display: inline-flex; justify-content: flex-end; }
-.selo-fechado { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--c-ok-soft); color: var(--c-ok); font-size: 13px; font-weight: 600; }
-.selo-fechado .ph { font-size: 17px; }
+.selo-fechado { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--c-ok-soft); color: var(--c-ok); font-size: calc(13px * var(--fs, 1)); font-weight: 600; }
+.selo-fechado .ph { font-size: calc(17px * var(--fs, 1)); }
 
 .fech-lado { padding: 18px; display: flex; flex-direction: column; gap: 4px; }
 .fech-lado .topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 10px; }
-.fech-lado .topo b { font-size: 15px; }
+.fech-lado .topo b { font-size: calc(15px * var(--fs, 1)); }
 .ck { list-style: none; margin: 0; padding: 0; }
 .ck-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid var(--color-divider); }
-.ck-item .dois-tx b { font-size: 13.5px; font-weight: 600; }
-.ck-item .dois-tx span { font-size: 12px; color: var(--color-neutral-300); text-wrap: pretty; }
+.ck-item .dois-tx b { font-size: calc(13.5px * var(--fs, 1)); font-weight: 600; }
+.ck-item .dois-tx span { font-size: calc(12px * var(--fs, 1)); color: var(--color-neutral-300); text-wrap: pretty; }
 .ck-ic { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--c-muted-soft); color: var(--c-muted); }
-.ck-ic .ph { font-size: 17px; }
+.ck-ic .ph { font-size: calc(17px * var(--fs, 1)); }
 .ck-ic.warn { background: var(--c-warn-soft); color: var(--c-warn); }
 .ck-ic.ok { background: var(--c-ok-soft); color: var(--c-ok); }
 .ck-ic.info { background: var(--color-accent-900); color: var(--color-accent-300); }
-.fech-lado .nota { margin: 6px 0 0; padding-top: 12px; border-top: 1px solid var(--color-divider); font-size: 12px; color: var(--color-neutral-300); text-wrap: pretty; }
+.fech-lado .nota { margin: 6px 0 0; padding-top: 12px; border-top: 1px solid var(--color-divider); font-size: calc(12px * var(--fs, 1)); color: var(--color-neutral-300); text-wrap: pretty; }
 
 .dialogo.lista .fld textarea.inp { height: auto; min-height: 84px; resize: vertical; }
 .dialogo.lista .fld { display: flex; flex-direction: column; gap: 6px; }
-.dialogo.lista .fld > span:first-child { font-size: 12px; font-weight: 600; color: var(--color-neutral-300); }
+.dialogo.lista .fld > span:first-child { font-size: calc(12px * var(--fs, 1)); font-weight: 600; color: var(--color-neutral-300); }
 
 @media (max-width: 1300px) {
   .fech-grade { grid-template-columns: 1fr; }

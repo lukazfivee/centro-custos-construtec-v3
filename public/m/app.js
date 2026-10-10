@@ -4,9 +4,9 @@
   CC.screens = CC.screens || {};
   const TABS = [
     ['home', 'Início', 'squares-four', ['home']],
-    ['obras', 'Obras', 'buildings', ['obras', 'obra', 'servico', 'servico-rel']],
+    ['obras', 'Obras', 'buildings', ['obras', 'obra', 'obra-editar', 'servico', 'servico-rel']],
     ['lancar', 'Lançar', 'plus-circle', ['lancar', 'ok']],
-    ['lancamentos', 'Lançamentos', 'list-bullets', ['lancamentos']],
+    ['lancamentos', 'Lançamentos', 'list-bullets', ['lancamentos', 'lanc']],
     ['menu', 'Menu', 'list', ['menu', 'pedidos', 'perfil', 'descartadas', 'descartada', 'atualizacao']],
   ];
   let current = 'home', currentParams = {};
@@ -116,7 +116,7 @@
     if (obra > 0) return CC.go('obra', { id: obra });
     if (pedidos) return CC.go('pedidos');
     const first = location.hash.slice(1);
-    CC.go(CC.screens[first] && !['ok', 'obra', 'login', 'descartada', 'servico', 'servico-rel'].includes(first) ? first : 'home');
+    CC.go(CC.screens[first] && !['ok', 'obra', 'login', 'descartada', 'servico', 'servico-rel', 'lanc', 'obra-editar'].includes(first) ? first : 'home');
   }
 
   document.addEventListener('DOMContentLoaded', boot);
