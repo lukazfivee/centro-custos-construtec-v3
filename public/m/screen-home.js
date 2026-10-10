@@ -28,7 +28,7 @@
       tasks.push({ alert: true, icon: 'warning-circle', title: 'Lançamentos com erro', sub: queue.errors === 1 ? '1 lançamento não foi aceito pelo servidor' : `${queue.errors} lançamentos não foram aceitos pelo servidor`, action: 'Ver', go: ['lancamentos'] });
     }
     if (dash.qtdVencidos > 0) {
-      tasks.push({ alert: true, icon: 'warning-circle', title: 'Contas vencidas', sub: dash.qtdVencidos === 1 ? '1 conta passou do vencimento' : `${dash.qtdVencidos} contas passaram do vencimento`, value: money(dash.vencidos), action: 'Ver', go: ['lancamentos', { situacao: 'vencido' }] });
+      tasks.push({ alert: true, icon: 'warning-circle', title: 'Contas vencidas', sub: dash.qtdVencidos === 1 ? '1 conta passou do vencimento' : `${dash.qtdVencidos} contas passaram do vencimento`, value: money(dash.vencidos), action: 'Ver', go: ['lancamentos', { situacao: 'vencido', mes: '' }] });
     }
     for (const c of dash.porCentro || []) {
       const budget = Number(c.orcamento), spent = Number(c.comprometido);

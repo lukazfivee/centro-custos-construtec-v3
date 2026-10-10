@@ -12,9 +12,14 @@
     const value = amountOf(t);
     const state = t.situacao === 'vencido' ? '<span class="state">Vencida</span>'
       : (t.status_financeiro === 'pendente' ? `<small>${t.tipo === 'receita' ? 'A receber' : 'A pagar'}${t.vencimento ? ` · vence ${esc(CC.dateBr(t.vencimento))}` : ''}</small>` : '');
-    return `<div class="tx"><span class="grow"><b>${esc(t.favorecido || t.descricao)}</b><small>${esc(t.favorecido ? t.descricao : (t.categoria || ''))}${extra ? ` · ${esc(extra)}` : ''}</small>${state}</span>
-      <span class="amt${value > 0 ? ' in' : ''}">${esc(CC.signed(value))}</span></div>`;
+    const estorno = t.estorno_de ? '<small class="state">Estorno</small>' : (t.estornado || t.reversed_at ? '<small>Estornado</small>' : '');
+    // Lancamento do servidor (tem id) abre o detalhe; o que ainda esta na fila do celular nao.
+    const [open, close] = t.id ? [`<button class="tx tx-btn" type="button" data-tx="${Number(t.id)}">`, '</button>'] : ['<div class="tx">', '</div>'];
+    return `${open}<span class="grow"><b>${esc(t.favorecido || t.descricao)}</b><small>${esc(t.favorecido ? t.descricao : (t.categoria || ''))}${extra ? ` · ${esc(extra)}` : ''}</small>${state}${estorno}</span>
+      <span class="amt${value > 0 ? ' in' : ''}">${esc(CC.signed(value))}</span>${close}`;
   };
+  // Liga o toque nas linhas de lancamento da tela (scope) ao detalhe; from = para onde o Voltar leva.
+  CC.wireTx = (scope, from) => CC.$$('[data-tx]', scope).forEach((b) => b.addEventListener('click', () => CC.go('lanc', { id: Number(b.dataset.tx), from })));
 
   CC.queuedRows = async function (filterFn) {
     const items = (await CC.queue.mine()).filter(filterFn || (() => true));
@@ -85,6 +90,7 @@
       <div class="actions"><button class="btn" type="button" id="lancar">${icon('camera', 18)}Lançar despesa</button></div>`, true, params);
     CC.$('#voltar').addEventListener('click', () => CC.go('obras'));
     CC.$$('[data-tab]').forEach((b) => b.addEventListener('click', () => CC.screens.obra({ id, tab: b.dataset.tab })));
+    CC.wireTx(document, ['obra', { id, tab }]);
     const mais = CC.$('#obra-mais');
     if (mais) mais.addEventListener('click', () => CC.obraMenu(c));
     CC.$('#lancar').addEventListener('click', () => CC.go('lancar', { obraId: id, from: ['obra', { id, tab: 'lanc' }] }));

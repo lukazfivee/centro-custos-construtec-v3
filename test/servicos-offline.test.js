@@ -207,7 +207,7 @@ test('telas: arquivo novo carregado no index e no cache offline, e o envio pela 
   const index = ler('public/m/index.html'), sw = ler('public/m/sw.js');
   assert.ok(index.indexOf('screen-servico.js') < index.indexOf('screen-servico-fila.js'), 'fila depois do servico (usa CC.sv)');
   assert.match(sw, /'screen-servico-fila\.js'/);
-  assert.match(sw, /const CACHE = 'cc-celular-v14'/);
+  assert.ok(Number((sw.match(/const CACHE = 'cc-celular-v(\d+)'/) || [])[1]) >= 14, 'cache trocado desde a fila do servico (v14)');
   const exec = ler('public/m/screen-servico-exec.js');
   for (const op of ["op: 'checklist-add'", "op: 'checklist'", "op: 'foto'", "op: 'aceite'"]) assert.ok(exec.includes(op), `${op} na tela de execucao`);
   assert.doesNotMatch(exec, /CC\.api\(`\/servicos\/\$\{s\.id\}\/checklist`, \{ method: 'PUT'/, 'incluir item nao reescreve a lista inteira');

@@ -256,3 +256,18 @@ html[data-theme="escuro"] .tab { text-shadow: 0 1px 3px rgba(0, 18, 27, .75); }
 .top.obra-top #obra-mais { margin-left: auto; }
 
 .obras-tipo { margin: 4px 0 12px; }
+
+/* Lancamentos: linha que abre o detalhe, mes, busca e total (screen-lancamentos.js, screen-lanc*.js). */
+.tx-btn { width: 100%; border: 0; border-top: 1px solid var(--divider); background: transparent; text-align: left; font: inherit; color: inherit; align-items: flex-start; }
+.tx-btn:active { background: var(--accent-900); }
+.mes-step { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+.mes-step b { flex: 1; text-align: center; font-size: 15px; font-weight: 600; }
+.mes-step .back { margin: 0; } .mes-step .back[disabled] { opacity: .3; }
+.field.busca { position: relative; } .field.busca > .ico { position: absolute; left: 14px; top: 15px; color: var(--n300); pointer-events: none; }
+.field.busca input { padding-left: 42px; }
+.lanc-total { padding: 0; } .lanc-total b.in, .lanc-valor.in { color: var(--accent-300); }
+.lanc-valor { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
+.lanc-obs { margin: 6px 0 0; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lanc-docs .lanc-doc { align-items: center; } .lanc-docs .lanc-doc > .ico { color: var(--accent-300); } .lanc-docs .back { margin: 0; }
+.lanc-add { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.lanc-foto { display: block; width: 100%; height: auto; margin-top: 8px; border-radius: 12px; }
