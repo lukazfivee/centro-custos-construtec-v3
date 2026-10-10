@@ -20,8 +20,8 @@ jobs:
       # Unico lugar que muda a cada pre-lancamento: o numero da RC. O versionCode do
       # Android sai dele (3.1.0-rc.N -> 31000+N; ver versionCodeFor no Worker) e o app
       # instalado so oferece a atualizacao quando o codigo da release for maior.
-      RC_NUMBER: '25'
-      APP_NOTES: 'Suíte unificada com barra de título nova: logo, tela ativa, luz que acompanha o mouse e botões do Windows na cor da barra.'
+      RC_NUMBER: '26'
+      APP_NOTES: 'Corrige o login do Orçamentos dentro da Suíte: a conta do Centro agora entra direto, sem a mensagem de integração não configurada.'
     steps:
       - name: Baixar codigo
         uses: actions/checkout@v7
