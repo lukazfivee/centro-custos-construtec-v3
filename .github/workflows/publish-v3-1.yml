@@ -89,7 +89,7 @@ jobs:
           [IO.File]::WriteAllText("dist/latest-android.json", ($meta | ConvertTo-Json), $utf8)
           Get-Content dist/latest-android.json
       - name: Publicar pre-lancamento no GitHub
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ env.APP_VERSION }}
           name: Centro de Custos Construtec V3.1.0 RC${{ env.RC_NUMBER }}
